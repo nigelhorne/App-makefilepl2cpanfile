@@ -8,37 +8,83 @@ use File::Slurp qw(read_file);
 use Text::Diff;
 use App::makefilepl2cpanfile;
 
-my ($with_dev, $no_dev, $dry, $diff);
+my ($with_dev, $no_dev, $dry, $diff, $check);
 
 GetOptions(
-	'with-develop' => \$with_dev,
-	'no-develop'   => \$no_dev,
-	'dry-run'	  => \$dry,
-	'diff'		 => \$diff,
+    'with-develop' => \$with_dev,
+    'no-develop'   => \$no_dev,
+    'dry-run'      => \$dry,
+    'diff'         => \$diff,
+    'check'        => \$check,  # new flag
 );
 
 $with_dev //= !$no_dev;
 
 my $existing = -r 'cpanfile' ? read_file('cpanfile') : '';
 
+# Generate cpanfile text
 my $out = App::makefilepl2cpanfile::generate(
-	makefile	  => 'Makefile.PL',
-	existing	  => $existing,
-	with_develop  => $with_dev,
+    makefile      => 'Makefile.PL',
+    existing      => $existing,
+    with_develop  => $with_dev,
 );
 
-if ($diff && $existing) {
-	print diff \$existing, \$out, { STYLE => 'Unified' };
-	exit;
+# ----------------------------
+# Check: verify expected modules appear
+# ----------------------------
+if ($check) {
+    # Simple sanity: parse Makefile.PL for all PREREQ_PM, TEST_REQUIRES, CONFIGURE_REQUIRES
+    my $content = read_file('Makefile.PL');
+    my %expected;
+
+    for my $key (qw(PREREQ_PM TEST_REQUIRES CONFIGURE_REQUIRES)) {
+        while ($content =~ /
+            $key\s*=>\s*\{
+            ( (?: [^{}] | \{[^}]*\} )*? )
+            \}
+        /gsx) {
+            my $block = $1;
+            while ($block =~ /
+                ['"]([^'"]+)['"]
+                \s*=>\s*
+                ['"]?([\d._]+)?['"]?
+            /gx) {
+                $expected{$1} = $2 // 0;
+            }
+        }
+    }
+
+    my @missing;
+    for my $mod (sort keys %expected) {
+        push @missing, $mod unless $out =~ /\b\Q$mod\E\b/;
+    }
+
+    if (@missing) {
+        warn "WARNING: The following modules from Makefile.PL did not appear in the cpanfile output:\n";
+        warn "  $_\n" for @missing;
+    } else {
+        print "All Makefile.PL prerequisites are present in the output.\n";
+    }
 }
 
+# ----------------------------
+# Show diff if requested
+# ----------------------------
+if ($diff && $existing) {
+    print diff \$existing, \$out, { STYLE => 'Unified' };
+    exit;
+}
+
+# ----------------------------
+# Dry run or write
+# ----------------------------
 if ($dry) {
-	print $out;
-	exit;
+    print $out;
+    exit;
 }
 
 open my $fh, '>', 'cpanfile' or die $!;
 print $fh $out;
 close $fh;
 
-print "cpanfile written\n";
+print "cpanfile written successfully.\n";
