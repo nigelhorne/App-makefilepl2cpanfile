@@ -4,19 +4,19 @@ App::makefilepl2cpanfile - Convert Makefile.PL to a cpanfile automatically
 
 # SYNOPSIS
 
-    use App::makefilepl2cpanfile;
+        use App::makefilepl2cpanfile;
 
-    # Generate a cpanfile string
-    my $cpanfile_text = App::makefilepl2cpanfile::generate(
-        makefile      => 'Makefile.PL',
-        existing      => '',           # optional, existing cpanfile content
-        with_develop  => 1,            # include developer dependencies
-    );
+        # Generate a cpanfile string
+        my $cpanfile_text = App::makefilepl2cpanfile::generate(
+                makefile          => 'Makefile.PL',
+                existing          => '',                   # optional, existing cpanfile content
+                with_develop  => 1,                     # include developer dependencies
+        );
 
-    # Write to disk
-    open my $fh, '>', 'cpanfile' or die $!;
-    print $fh $cpanfile_text;
-    close $fh;
+        # Write to disk
+        open my $fh, '>', 'cpanfile' or die $!;
+        print $fh $cpanfile_text;
+        close $fh;
 
 # DESCRIPTION
 
@@ -32,15 +32,15 @@ The parsing is done \*\*safely\*\*, without evaluating the Makefile.PL.
 
 You may create a YAML file in:
 
-    ~/.config/makefilepl2cpanfile.yml
+        ~/.config/makefilepl2cpanfile.yml
 
 with a structure like:
 
-    develop:
-      Perl::Critic: 0
-      Devel::Cover: 0
-      Test::Pod: 0
-      Test::Pod::Coverage: 0
+        develop:
+          Perl::Critic: 0
+          Devel::Cover: 0
+          Test::Pod: 0
+          Test::Pod::Coverage: 0
 
 This will override the default development tools.
 
@@ -66,10 +66,23 @@ Arguments:
 
 Returns the cpanfile as a string.
 
+# SUPPORT
+
+This module is provided as-is without any warranty.
+
 # AUTHOR
 
 Nigel Horne <njh@nigelhorne.com>
 
-# LICENSE AND COPYRIGHT
+# LICENCE AND COPYRIGHT
 
-This software is licensed under the same terms as Perl itself.
+Copyright 2025 Nigel Horne.
+
+Usage is subject to licence terms.
+
+The licence terms of this software are as follows:
+
+- Personal single user, single computer use: GPL2
+- All other users (including Commercial, Charity, Educational, Government)
+  must apply in writing for a licence for use from Nigel Horne at the
+  above e-mail.
