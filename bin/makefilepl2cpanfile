@@ -11,10 +11,10 @@ use App::makefilepl2cpanfile;
 my ($with_dev, $no_dev, $dry, $diff);
 
 GetOptions(
-    'with-develop' => \$with_dev,
-    'no-develop'   => \$no_dev,
-    'dry-run'      => \$dry,
-    'diff'         => \$diff,
+	'with-develop' => \$with_dev,
+	'no-develop'   => \$no_dev,
+	'dry-run'	  => \$dry,
+	'diff'		 => \$diff,
 );
 
 $with_dev //= !$no_dev;
@@ -22,19 +22,19 @@ $with_dev //= !$no_dev;
 my $existing = -r 'cpanfile' ? read_file('cpanfile') : '';
 
 my $out = App::makefilepl2cpanfile::generate(
-    makefile      => 'Makefile.PL',
-    existing      => $existing,
-    with_develop  => $with_dev,
+	makefile	  => 'Makefile.PL',
+	existing	  => $existing,
+	with_develop  => $with_dev,
 );
 
 if ($diff && $existing) {
-    print diff \$existing, \$out, { STYLE => 'Unified' };
-    exit;
+	print diff \$existing, \$out, { STYLE => 'Unified' };
+	exit;
 }
 
 if ($dry) {
-    print $out;
-    exit;
+	print $out;
+	exit;
 }
 
 open my $fh, '>', 'cpanfile' or die $!;
