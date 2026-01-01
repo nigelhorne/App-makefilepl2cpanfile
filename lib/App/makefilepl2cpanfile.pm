@@ -7,8 +7,91 @@ use File::Slurp qw(read_file);
 use YAML::Tiny;
 use File::HomeDir;
 
-our $VERSION = '0.02';
+our $VERSION = '0.01';
 
+=head1 NAME
+
+App::makefilepl2cpanfile - Convert Makefile.PL to a cpanfile automatically
+
+=head1 SYNOPSIS
+
+    use App::makefilepl2cpanfile;
+
+    # Generate a cpanfile string
+    my $cpanfile_text = App::makefilepl2cpanfile::generate(
+        makefile      => 'Makefile.PL',
+        existing      => '',           # optional, existing cpanfile content
+        with_develop  => 1,            # include developer dependencies
+    );
+
+    # Write to disk
+    open my $fh, '>', 'cpanfile' or die $!;
+    print $fh $cpanfile_text;
+    close $fh;
+
+=head1 DESCRIPTION
+
+This module parses a `Makefile.PL` and produces a `cpanfile` with:
+
+=over 4
+
+=item * Runtime dependencies (`PREREQ_PM`)
+
+=item * Build, test, and configure requirements (`BUILD_REQUIRES`, `TEST_REQUIRES`, `CONFIGURE_REQUIRES`)
+
+=item * Optional author/development dependencies in a `develop` block
+
+=back
+
+The parsing is done **safely**, without evaluating the Makefile.PL.
+
+=head1 CONFIGURATION
+
+You may create a YAML file in:
+
+    ~/.config/makefilepl2cpanfile.yml
+
+with a structure like:
+
+    develop:
+      Perl::Critic: 0
+      Devel::Cover: 0
+      Test::Pod: 0
+      Test::Pod::Coverage: 0
+
+This will override the default development tools.
+
+=head1 METHODS
+
+=head2 generate(%args)
+
+Generates a cpanfile string.
+
+Arguments:
+
+=over 4
+
+=item * makefile
+
+Path to `Makefile.PL`. Defaults to `'Makefile.PL'`.
+
+=item * existing
+
+Optional string containing an existing cpanfile. Existing `develop` blocks are merged.
+
+=item * with_develop
+
+Boolean. Include default or configured author tools. Defaults to true if not overridden.
+
+=back
+
+Returns the cpanfile as a string.
+
+=cut
+
+# ----------------------------
+# Main generate sub
+# ----------------------------
 sub generate {
     my (%args) = @_;
 
@@ -21,16 +104,11 @@ sub generate {
 
     my $content = read_file($makefile);
 
-    # ----------------------------
     # MIN_PERL_VERSION
-    # ----------------------------
     if ($content =~ /MIN_PERL_VERSION\s*=>\s*['"]?([\d._]+)['"]?/) {
         $min_perl = $1;
     }
 
-    # ----------------------------
-    # Map Makefile.PL keys to phases
-    # ----------------------------
     my %map = (
         PREREQ_PM          => 'runtime',
         BUILD_REQUIRES     => 'build',
@@ -38,13 +116,10 @@ sub generate {
         CONFIGURE_REQUIRES => 'configure',
     );
 
-    # ----------------------------
-    # Extract dependency hashes (robust version)
-    # ----------------------------
+    # Robust dependency hash extraction
     for my $mf_key (keys %map) {
         my $phase = $map{$mf_key};
 
-        # Match the hash for this key, tolerate nested braces (simple)
         while ($content =~ /
             $mf_key \s*=>\s* \{
                 ( (?: [^{}] | \{[^}]*\} )*? )
@@ -52,29 +127,24 @@ sub generate {
         /gsx) {
             my $block = $1;
 
-            # Capture all 'Module' => 'Version' pairs
             while ($block =~ /
-                ['"]([^'"]+)['"]      # module
+                ['"]([^'"]+)['"]
                 \s*=>\s*
-                ['"]?([\d._]+)?['"]?  # version
+                ['"]?([\d._]+)?['"]?
             /gx) {
                 $deps{$phase}{$1} = $2 // 0;
             }
         }
     }
 
-    # ----------------------------
     # Preserve existing develop block
-    # ----------------------------
     if ($existing =~ /on\s+'develop'\s*=>\s*sub\s*\{(.*?)\};/s) {
         while ($1 =~ /requires\s+['"]([^'"]+)['"](?:\s*,\s*['"]([^'"]+)['"])?/g) {
             $deps{develop}{$1} //= $2 // 0;
         }
     }
 
-    # ----------------------------
-    # Post-processing hook: develop deps
-    # ----------------------------
+    # Post-processing: develop block
     if ($with_dev) {
         $deps{develop} ||= {};
 
@@ -96,19 +166,18 @@ sub generate {
         }
     }
 
-    # ----------------------------
-    # Emit cpanfile text
-    # ----------------------------
     return _emit(\%deps, $min_perl);
 }
 
+# ----------------------------
+# Emit cpanfile text
+# ----------------------------
 sub _emit {
     my ($deps, $min_perl) = @_;
 
     my $out = "# Generated from Makefile.PL\n\n";
     $out .= "perl '$min_perl';\n\n" if $min_perl;
 
-    # Runtime dependencies at top level
     if (my $rt = $deps->{runtime}) {
         for my $m (sort keys %$rt) {
             $out .= "requires '$m'";
@@ -118,7 +187,6 @@ sub _emit {
         $out .= "\n";
     }
 
-    # Other phases
     for my $phase (qw(configure build test develop)) {
         my $h = $deps->{$phase} or next;
         next unless %$h;
@@ -136,3 +204,15 @@ sub _emit {
 }
 
 1;
+
+__END__
+
+=head1 AUTHOR
+
+Nigel Horne <njh@nigelhorne.com>
+
+=head1 LICENSE AND COPYRIGHT
+
+This software is licensed under the same terms as Perl itself.
+
+=cut
