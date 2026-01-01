@@ -27,7 +27,7 @@ Options:
 
 =head1 DESCRIPTION
 
-This script reads a Makefile.PL and generates a corresponding cpanfile.  
+This script reads a Makefile.PL and generates a corresponding cpanfile.
 It preserves existing develop blocks and allows post-processing checks to ensure
 no dependencies are dropped.
 
@@ -39,12 +39,12 @@ no dependencies are dropped.
 my ($with_dev, $no_dev, $dry, $diff, $check, $help);
 
 GetOptions(
-    'with-develop' => \$with_dev,
-    'no-develop'   => \$no_dev,
-    'dry-run'      => \$dry,
-    'diff'         => \$diff,
-    'check'        => \$check,
-    'help'         => \$help,
+	'with-develop' => \$with_dev,
+	'no-develop'   => \$no_dev,
+	'dry-run'      => \$dry,
+	'diff'         => \$diff,
+	'check'        => \$check,
+	'help'         => \$help,
 ) or usage();
 
 usage() if $help;
@@ -60,9 +60,9 @@ my $existing = -r 'cpanfile' ? read_file('cpanfile') : '';
 # Generate cpanfile content
 # ----------------------------
 my $out = App::makefilepl2cpanfile::generate(
-    makefile      => 'Makefile.PL',
-    existing      => $existing,
-    with_develop  => $with_dev,
+	makefile      => 'Makefile.PL',
+	existing      => $existing,
+	with_develop  => $with_dev,
 );
 
 # ----------------------------
