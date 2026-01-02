@@ -110,9 +110,9 @@ sub generate {
 	}
 
 	my %map = (
-		PREREQ_PM		  => 'runtime',
+		PREREQ_PM		=> 'runtime',
 		BUILD_REQUIRES	 => 'build',
-		TEST_REQUIRES	  => 'test',
+		TEST_REQUIRES	=> 'test',
 		CONFIGURE_REQUIRES => 'configure',
 	);
 
@@ -151,7 +151,7 @@ sub generate {
 		my %default = (
 			'Perl::Critic'		=> 0,
 			'Devel::Cover'		=> 0,
-			'Test::Pod'		   => 0,
+			'Test::Pod'		=> 0,
 			'Test::Pod::Coverage' => 0,
 		);
 
@@ -176,7 +176,7 @@ sub _emit {
 	my ($deps, $min_perl) = @_;
 
 	my $out = "# Generated from Makefile.PL\n\n";
-	$out .= "perl '$min_perl';\n\n" if $min_perl;
+	$out .= "requires 'perl', '$min_perl';\n\n" if $min_perl;
 
 	if (my $rt = $deps->{runtime}) {
 		for my $m (sort keys %$rt) {
@@ -197,7 +197,7 @@ sub _emit {
 			$out .= ", '$h->{$m}'" if $h->{$m};
 			$out .= ";\n";
 		}
-		$out .= "};\n\n";
+		$out .= "};\n";
 	}
 
 	return $out;

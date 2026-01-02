@@ -35,13 +35,9 @@ WriteMakefile(
 		'Test::NoWarnings' => 0,
 		'Test::RequiresInternet' => 0,
 		'Test::Which' => 0,
-		'autodie' => 0,
-		'strict' => 0,
-		'warnings' => 0,
 		'Test::Returns' => 0,
 		'Test::Warn' => 0,
 	}, PREREQ_PM => {
-		'ExtUtils::MakeMaker' => 6.64,	# Minimum version for TEST_REQUIRES
 		'File::HomeDir' => 0,
 		'File::Slurp' => 0,
 		'YAML::Tiny' => 0,
