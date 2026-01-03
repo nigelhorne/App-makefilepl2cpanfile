@@ -20,8 +20,8 @@ App::makefilepl2cpanfile - Convert Makefile.PL to a cpanfile automatically
 	# Generate a cpanfile string
 	my $cpanfile_text = App::makefilepl2cpanfile::generate(
 		makefile	=> 'Makefile.PL',
-		existing	  => '',		   # optional, existing cpanfile content
-		with_develop  => 1,			# include developer dependencies
+		existing	=> '',		# optional, existing cpanfile content
+		with_develop => 1,			# include developer dependencies
 	);
 
 	# Write to disk

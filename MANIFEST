@@ -1,4 +1,5 @@
 bin/makefilepl2cpanfile
+Changes
 cpanfile
 lib/App/makefilepl2cpanfile.pm
 LICENSE
