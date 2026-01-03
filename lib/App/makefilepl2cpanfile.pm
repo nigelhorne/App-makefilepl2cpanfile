@@ -175,7 +175,7 @@ sub generate {
 sub _emit {
 	my ($deps, $min_perl) = @_;
 
-	my $out = "# Generated from Makefile.PL\n\n";
+	my $out = "# Generated from Makefile.PL using makefilepl2cpanfile\n\n";
 	$out .= "requires 'perl', '$min_perl';\n\n" if $min_perl;
 
 	if (my $rt = $deps->{runtime}) {
@@ -217,7 +217,7 @@ Nigel Horne <njh@nigelhorne.com>
 
 =head1 LICENCE AND COPYRIGHT
 
-Copyright 2025 Nigel Horne.
+Copyright 2025-2026 Nigel Horne.
 
 Usage is subject to licence terms.
 
