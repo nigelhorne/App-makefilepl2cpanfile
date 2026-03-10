@@ -38,6 +38,7 @@ WriteMakefile(
 		'Test::Returns' => 0,
 		'Test::Warn' => 0,
 	}, PREREQ_PM => {
+		'autodie' => 0,
 		'File::HomeDir' => 0,
 		'File::Slurp' => 0,
 		'YAML::Tiny' => 0,

@@ -5,6 +5,7 @@ requires 'perl', '5.008';
 requires 'File::HomeDir';
 requires 'File::Slurp';
 requires 'YAML::Tiny';
+requires 'autodie';
 
 on 'configure' => sub {
 	requires 'ExtUtils::MakeMaker', '6.64';
