@@ -2,6 +2,7 @@ package App::makefilepl2cpanfile;
 
 use strict;
 use warnings;
+use autodie qw(:all);
 
 use File::Slurp qw(read_file);
 use YAML::Tiny;
@@ -158,7 +159,8 @@ sub generate {
 
 		my $cfg_file = File::HomeDir->my_home . '/.config/makefilepl2cpanfile.yml';
 		if (-r $cfg_file) {
-			my $y = YAML::Tiny->read($cfg_file)->[0];
+			my $yaml = YAML::Tiny->read($cfg_file) or die "Failed to parse $cfg_file: ", YAML::Tiny->errstr();
+			my $y = $yaml->[0];
 			%default = %{ $y->{develop} } if $y->{develop};
 		}
 
@@ -182,7 +184,7 @@ sub _emit {
 	if (my $rt = $deps->{runtime}) {
 		for my $m (sort keys %$rt) {
 			$out .= "requires '$m'";
-			$out .= ", '$rt->{$m}'" if $rt->{$m};
+			$out .= ", '$rt->{$m}'" if defined $rt->{$m} && $rt->{$m} ne '' && $rt->{$m} != 0;
 			$out .= ";\n";
 		}
 		$out .= "\n";
@@ -195,7 +197,7 @@ sub _emit {
 		$out .= "on '$phase' => sub {\n";
 		for my $m (sort keys %$h) {
 			$out .= "	requires '$m'";
-			$out .= ", '$h->{$m}'" if $h->{$m};
+			$out .= ", '$h->{$m}'" if defined $h->{$m} && $h->{$m} ne '' && $h->{$m} != 0;
 			$out .= ";\n";
 		}
 		$out .= "};\n";
