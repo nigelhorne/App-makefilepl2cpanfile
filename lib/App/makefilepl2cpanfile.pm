@@ -126,6 +126,7 @@ sub generate {
 			\}
 		/gsx) {
 			my $block = $1;
+			$block =~ s/#[^\n]*//g;	# strip comments
 
 			while ($block =~ /
 				['"]([^'"]+)['"]
