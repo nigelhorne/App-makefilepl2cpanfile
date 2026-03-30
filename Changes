@@ -1,6 +1,6 @@
 Revision history for CGI-makefile2cpanfile
 
-0.02
+0.02	Mon Mar 30 19:22:57 EDT 2026
 	Added which tool created it
 	Ignore comments in Makefile.PL
 	Improved handling of version set to '0'

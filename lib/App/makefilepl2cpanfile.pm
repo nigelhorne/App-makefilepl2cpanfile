@@ -8,8 +8,6 @@ use Path::Tiny;
 use YAML::Tiny;
 use File::HomeDir;
 
-our $VERSION = '0.01';
-
 =head1 NAME
 
 App::makefilepl2cpanfile - Convert Makefile.PL to a cpanfile automatically
@@ -29,6 +27,14 @@ App::makefilepl2cpanfile - Convert Makefile.PL to a cpanfile automatically
 	open my $fh, '>', 'cpanfile' or die $!;
 	print $fh $cpanfile_text;
 	close $fh;
+
+=head1 VERSION
+
+Version 0.02
+
+=cut
+
+our $VERSION = '0.02';
 
 =head1 DESCRIPTION
 
