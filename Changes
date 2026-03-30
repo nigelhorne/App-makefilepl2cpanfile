@@ -5,6 +5,8 @@ Revision history for CGI-makefile2cpanfile
 	Ignore comments in Makefile.PL
 	Improved handling of version set to '0'
 	Improved error handling
+	With_develop now defaults to 1.
+	Handle on develop being in quotes
 
 0.01	Fri Jan  2 21:38:25 EST 2026
         First draft

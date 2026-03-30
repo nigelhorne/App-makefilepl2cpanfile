@@ -98,7 +98,7 @@ sub generate {
 
 	my $makefile = $args{makefile} || 'Makefile.PL';
 	my $existing = $args{existing} || '';
-	my $with_dev = $args{with_develop};
+	my $with_dev = exists $args{with_develop} ? $args{with_develop} : 1;
 
 	my %deps;
 	my $min_perl;
@@ -140,7 +140,7 @@ sub generate {
 	}
 
 	# Preserve existing develop block
-	if ($existing =~ /on\s+'develop'\s*=>\s*sub\s*\{(.*?)\};/s) {
+	if ($existing =~ /on\s+["']develop["']\s*=>\s*sub\s*\{(.*?)\};/s) {
 		while ($1 =~ /requires\s+['"]([^'"]+)['"](?:\s*,\s*['"]([^'"]+)['"])?/g) {
 			$deps{develop}{$1} //= $2 // 0;
 		}
