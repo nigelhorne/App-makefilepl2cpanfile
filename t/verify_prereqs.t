@@ -1,6 +1,8 @@
 use Test::Most;
+use File::Slurp;
 use File::Temp qw(tempdir);
-use App::makefilepl2cpanfile;
+
+use_ok('App::makefilepl2cpanfile');
 
 # ----------------------------
 # Setup temporary directory

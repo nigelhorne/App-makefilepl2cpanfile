@@ -1,4 +1,5 @@
 use Test::Most;
+use File::Slurp;
 use File::Temp qw(tempdir);
 
 BEGIN { use_ok('App::makefilepl2cpanfile') }
