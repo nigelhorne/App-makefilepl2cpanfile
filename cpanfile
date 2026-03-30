@@ -3,7 +3,7 @@
 requires 'perl', '5.008';
 
 requires 'File::HomeDir';
-requires 'File::Slurp';
+requires 'IPC::System::Simple';
 requires 'YAML::Tiny';
 requires 'autodie';
 

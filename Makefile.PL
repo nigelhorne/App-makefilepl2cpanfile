@@ -40,7 +40,7 @@ WriteMakefile(
 	}, PREREQ_PM => {
 		'autodie' => 0,
 		'File::HomeDir' => 0,
-		'File::Slurp' => 0,
+		'IPC::System::Simple' => 0,
 		'YAML::Tiny' => 0,
 	}, dist => $dist,
 	clean		=> { FILES => 'App-makefilepl2cpanfile-*' },
