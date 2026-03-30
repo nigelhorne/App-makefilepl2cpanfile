@@ -103,6 +103,8 @@ sub generate {
 	my %deps;
 	my $min_perl;
 
+	die "Cannot read '$makefile': $!" unless -r $makefile;
+
 	my $content = read_file($makefile);
 
 	# MIN_PERL_VERSION
