@@ -12,6 +12,7 @@ on 'configure' => sub {
 };
 
 on 'test' => sub {
+	requires 'File::Slurp';
 	requires 'File::Temp';
 	requires 'Test::Carp';
 	requires 'Test::Compile';
