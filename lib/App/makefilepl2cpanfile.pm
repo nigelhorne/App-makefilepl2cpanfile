@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use autodie qw(:all);
 
-use File::Slurp qw(read_file);
+use Path::Tiny;
 use YAML::Tiny;
 use File::HomeDir;
 
@@ -105,7 +105,7 @@ sub generate {
 
 	die "Cannot read '$makefile': $!" unless -r $makefile;
 
-	my $content = read_file($makefile);
+	my $content = path($makefile)->slurp_utf8;
 
 	# MIN_PERL_VERSION
 	if ($content =~ /MIN_PERL_VERSION\s*=>\s*['"]?([\d._]+)['"]?/) {
@@ -174,9 +174,35 @@ sub generate {
 	return _emit(\%deps, $min_perl);
 }
 
-# ----------------------------
-# Emit cpanfile text
-# ----------------------------
+# _emit - Render collected dependency data as a cpanfile-format string
+#
+#   Converts a structured hash of phase-keyed dependencies and an optional
+#   minimum Perl version into a valid cpanfile string ready to be written
+#   to disk.
+#
+# Entry:
+#   $_[0] - hashref of dependency data, keyed by phase name:
+#               'runtime', 'configure', 'build', 'test', 'develop'
+#           Each value is a hashref of Module::Name => version_string,
+#           where version_string may be 0 or '' to indicate no minimum.
+#   $_[1] - optional scalar containing the minimum Perl version string
+#           (e.g. '5.010'), or undef if none was declared.
+#
+# Exit:
+#   Returns a scalar string containing the complete cpanfile content,
+#   always terminated with a single newline. Never returns undef.
+#
+# Side effects:
+#   None.
+#
+# Notes:
+#   - Dependencies with a version of 0 or '' are emitted without a version
+#     constraint, as cpanfile treats an absent version as "any version".
+#   - The 'runtime' block is emitted without an enclosing 'on' block, per
+#     cpanfile convention.
+#   - Phase blocks (configure, build, test, develop) are separated by a
+#     blank line; no trailing blank line is emitted after the final block.
+#   - Modules within each phase are sorted alphabetically for reproducibility.
 sub _emit {
 	my ($deps, $min_perl) = @_;
 
@@ -192,18 +218,23 @@ sub _emit {
 		$out .= "\n";
 	}
 
+	my @blocks;
+
 	for my $phase (qw(configure build test develop)) {
 		my $h = $deps->{$phase} or next;
 		next unless %$h;
 
-		$out .= "on '$phase' => sub {\n";
+		my $block = "on '$phase' => sub {\n";
 		for my $m (sort keys %$h) {
-			$out .= "	requires '$m'";
-			$out .= ", '$h->{$m}'" if defined $h->{$m} && $h->{$m} ne '' && $h->{$m} != 0;
-			$out .= ";\n";
+			$block .= "	requires '$m'";
+			$block .= ", '$h->{$m}'" if defined $h->{$m} && $h->{$m} ne '' && $h->{$m} != 0;
+			$block .= ";\n";
 		}
-		$out .= "};\n";
+		$block .= "};";
+		push @blocks, $block;
 	}
+
+	$out .= join("\n\n", @blocks) . "\n" if @blocks;
 
 	return $out;
 }

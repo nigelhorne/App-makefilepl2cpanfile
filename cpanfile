@@ -10,6 +10,7 @@ requires 'autodie';
 on 'configure' => sub {
 	requires 'ExtUtils::MakeMaker', '6.64';
 };
+
 on 'test' => sub {
 	requires 'File::Temp';
 	requires 'Test::Carp';
@@ -22,6 +23,7 @@ on 'test' => sub {
 	requires 'Test::Warn';
 	requires 'Test::Which';
 };
+
 on 'develop' => sub {
 	requires 'Devel::Cover';
 	requires 'Perl::Critic';
