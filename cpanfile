@@ -4,6 +4,7 @@ requires 'perl', '5.008';
 
 requires 'File::HomeDir';
 requires 'IPC::System::Simple';
+requires 'Path::Tiny';
 requires 'YAML::Tiny';
 requires 'autodie';
 
