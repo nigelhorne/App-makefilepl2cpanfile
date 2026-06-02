@@ -4,6 +4,9 @@ use strict;
 use warnings;
 use autodie qw(:all);
 
+# TODO: retain comments in the Makefile.PL, e.g.,
+#	'Mojolicious' => 0,           # provides Mojo::DOM used in bin/ scripts
+
 use Path::Tiny;
 use YAML::Tiny;
 use File::HomeDir;
