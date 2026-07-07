@@ -6,6 +6,10 @@ use autodie qw(:all);
 
 # TODO: retain comments in the Makefile.PL, e.g.,
 #	'Mojolicious' => 0,           # provides Mojo::DOM used in bin/ scripts
+# TODO: When to generate 
+#	on 'runtime' => sub {
+#	  recommends 'Future';   # required by Test::Mockingbird::Async (optional module)
+#	};
 
 use Path::Tiny;
 use YAML::Tiny;
