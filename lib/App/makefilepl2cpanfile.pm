@@ -10,6 +10,14 @@ use autodie qw(:all);
 #	on 'runtime' => sub {
 #	  recommends 'Future';   # required by Test::Mockingbird::Async (optional module)
 #	};
+# from this in Makefile.PL
+#	prereqs => {
+#		runtime => {
+#			recommends => {
+#				Future => '0',
+#			},
+#		},
+#	},
 
 use Path::Tiny;
 use YAML::Tiny;
