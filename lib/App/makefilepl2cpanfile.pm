@@ -8,13 +8,13 @@ use autodie qw(:all);
 #	'Mojolicious' => 0,           # provides Mojo::DOM used in bin/ scripts
 # TODO: When to generate 
 #	on 'runtime' => sub {
-#	  recommends 'Future';   # required by Test::Mockingbird::Async (optional module)
+#	  recommends 'Future', 0.33;   # required by Test::Mockingbird::Async (optional module)
 #	};
 # from this in Makefile.PL
 #	prereqs => {
 #		runtime => {
 #			recommends => {
-#				Future => '0',
+#				Future => '0.33',
 #			},
 #		},
 #	},
