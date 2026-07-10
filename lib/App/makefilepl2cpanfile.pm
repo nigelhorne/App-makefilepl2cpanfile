@@ -18,6 +18,14 @@ use autodie qw(:all);
 #			},
 #		},
 #	},
+# or this
+#	META_MERGE => {	# https://perldoc.perl.org/CPAN::Meta::Spec
+#		resources => {
+#			recommends => {
+#				'Log::Any' => 0,
+#			}
+#		}
+#	}
 
 use Path::Tiny;
 use YAML::Tiny;
