@@ -153,7 +153,7 @@
 
 <tbody>
 
-<tr class="high"><td><a href="blib-lib-App-makefilepl2cpanfile-pm.html" title="View coverage line by line" target="_blank">lib/App/makefilepl2cpanfile.pm</a> <a href="https://github.com/nigelhorne/App-makefilepl2cpanfile/blob/8f0435bbe1166c09d0b0306d6b331f52f9da89d4/lib/App/makefilepl2cpanfile.pm" class="icon-link" title="View source on GitHub">&#128269;</a><canvas class="sparkline" width="80" height="20" data-points="98.1,97.6,97.6,97.6"></canvas></td><td>100.0</td><td>96.0</td><td>96.2</td><td>100.0</td><td><span class="coverage-badge badge-good" title="Excellent coverage">98.6%</span></td><td class="neutral" title="Previous (sparkline): 97.6%">&#9679; 0.0%</td></tr>
+<tr class="high"><td><a href="blib-lib-App-makefilepl2cpanfile-pm.html" title="View coverage line by line" target="_blank">lib/App/makefilepl2cpanfile.pm</a> <a href="https://github.com/nigelhorne/App-makefilepl2cpanfile/blob/b21276bec39c8bd422771e1aeedda8d45e65d668/lib/App/makefilepl2cpanfile.pm" class="icon-link" title="View source on GitHub">&#128269;</a><canvas class="sparkline" width="80" height="20" data-points="98.1,97.6,97.6,97.6,98.6"></canvas></td><td>100.0</td><td>96.0</td><td>96.2</td><td>100.0</td><td><span class="coverage-badge badge-good" title="Excellent coverage">98.6%</span></td><td class="positive" title="Previous (sparkline): 97.6%">&#9650; 1.0%</td></tr>
 <tr class="summary-row nosort"><td colspan="2"><strong>Summary</strong></td><td colspan="2">1 files</td><td colspan="3">Avg: 98%, Low: 0</td></tr>
 <tr class="high nosort"><td><strong>Total</strong></td><td>100.0</td><td>96.0</td><td>96.2</td><td>100.0</td><td colspan="2"><strong>98.6</strong></td></tr>
 </tbody></table>
@@ -205,7 +205,8 @@ function linearRegression(data) {
 const dataPoints = [ { x: "2026-07-22T11:30:07-04:00", y: 97.5845410628019, delta: 0, url: "https://github.com/nigelhorne/App-makefilepl2cpanfile/commit/46a3949e701252e2e35e64896d447707beae0738", label: "2026-07-22T11:30:07-04:00", pointBackgroundColor: "gray", comment: "Fix CI" },
 { x: "2026-07-22T12:59:41-04:00", y: 97.5845410628019, delta: 0.0, url: "https://github.com/nigelhorne/App-makefilepl2cpanfile/commit/54e3e09a0f5f1a2d5a16f8e356ac7090c1779021", label: "2026-07-22T12:59:41-04:00", pointBackgroundColor: "gray", comment: "Added integration testing" },
 { x: "2026-07-22T13:15:57-04:00", y: 97.5845410628019, delta: 0.0, url: "https://github.com/nigelhorne/App-makefilepl2cpanfile/commit/30e95e866902f223c23a12c53371ef86f5313c70", label: "2026-07-22T13:15:57-04:00", pointBackgroundColor: "gray", comment: "Use Mockingbird" },
-{ x: "2026-07-22T13:50:32-04:00", y: 98.1220657276995, delta: 0.5, url: "https://github.com/nigelhorne/App-makefilepl2cpanfile/commit/0e8b4aef4d8535b70a78c5c91e035970c601ef2e", label: "2026-07-22T13:50:32-04:00", pointBackgroundColor: "green", comment: "Added edge_cases.t" } ];
+{ x: "2026-07-22T13:50:32-04:00", y: 98.1220657276995, delta: 0.5, url: "https://github.com/nigelhorne/App-makefilepl2cpanfile/commit/0e8b4aef4d8535b70a78c5c91e035970c601ef2e", label: "2026-07-22T13:50:32-04:00", pointBackgroundColor: "green", comment: "Added edge_cases.t" },
+{ x: "2026-07-22T14:52:43-04:00", y: 98.6175115207373, delta: 0.5, url: "https://github.com/nigelhorne/App-makefilepl2cpanfile/commit/8f0435bbe1166c09d0b0306d6b331f52f9da89d4", label: "2026-07-22T14:52:43-04:00", pointBackgroundColor: "green", comment: "Added more edge cast testing" } ];
 const regressionPoints = linearRegression(dataPoints);
 // Try to register the zoom plugin (handles different UMD builds)
 (function registerZoomPlugin(){
@@ -457,95 +458,7 @@ function refresh(){
 
 <p><center>Use mouse wheel or pinch to zoom; drag to pan</center></p>
 <p>No issues active on <a href="https://rt.cpan.org/Public/Dist/Display.html?Name=App-makefilepl2cpanfile">RT</a></p>
-<h2>CPAN Testers Failures for App-makefilepl2cpanfile 0.02</h2>
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-	const toggleFail = document.getElementById('toggleFail');
-	const toggleUnknown = document.getElementById('toggleUnknown');
-	const toggleNA = document.getElementById('toggleNA');
-	const toggleNew = document.getElementById('toggleNew');
-
-	function update() {
-		document.querySelectorAll('tr').forEach(row => {
-			// Skip header rows
-			if(row.querySelector('th')) return;
-
-			// Determine row status
-			const isFail = row.classList.contains('cpan-fail');
-			const isUnknown = row.classList.contains('cpan-unknown');
-			const isNA = row.classList.contains('cpan-na');
-			const isNew = !!row.querySelector('.new-failure');
-
-			// Decide whether to show the row
-			let show = true;
-
-			if(toggleFail && !toggleFail.checked && isFail) show = false;
-			if(toggleUnknown && !toggleUnknown.checked && isUnknown) show = false;
-			if(toggleNA && !toggleNA.checked && isNA) show = false;
-			if(toggleNew && toggleNew.checked && !isNew) show = false;
-
-			row.style.display = show ? '' : 'none';
-		});
-	}
-
-	[toggleFail, toggleUnknown, toggleNA, toggleNew].forEach(cb => {
-		if(cb) cb.addEventListener('change', update);
-	});
-
-	update();
-});
-document.addEventListener("DOMContentLoaded", () => {
-	const th = document.querySelector("table.sortable-table th");
-	if(th) sortTable(th, 0);
-});
-</script>
-
-<p><em>Showing one failure per OS/Perl combination.</em></p>
-<div style="margin-bottom: 0.5em;">
-	<label>
-		<input type="checkbox" id="toggleFail" checked>
-		FAIL
-	</label>
-	<label style="margin-left: 1em;">
-		<input type="checkbox" id="toggleUnknown">
-		UNKNOWN
-	</label>
-	<label style="margin-left: 1em;">
-		<input type="checkbox" id="toggleNA">
-		NA
-	</label>
-	<label style="margin-left: 1em;">
-		<input type="checkbox" id="toggleNew">
-		NEW only
-	</label>
-</div>
-
-<table class="sortable-table" data-sort-col="0" data-sort-order="asc">
-<thead>
-<tr>
-	<th class="sortable" onclick="sortTable(this, 0)">
-		<span class="label">Date</span> <span class="arrow">&#x25B2;</span>
-	</th>
-	<th class="sortable" onclick="sortTable(this, 1)">
-		<span class="label">OS</span> <span class="arrow">&#x25B2;</span>
-	</th>
-	<th class="sortable" onclick="sortTable(this, 2)">
-		<span class="label">Perl</span> <span class="arrow">&#x25B2;</span>
-	</th>
-	<th class="sortable" onclick="sortTable(this, 3)">
-		<span class="label">Reporter</span> <span class="arrow">&#x25B2;</span>
-	</th>
-	<th class="sortable" onclick="sortTable(this, 4)" title="Marks failures that did not occur in the previous release. The same OS, Perl version, architecture, and platform were passing before.">
-		<span class="label">New</span> <span class="arrow">&#x25B2;</span>
-	</th>
-	<th>Report</th>
-	<th>Repro</th>
-</tr>
-</thead>
-<tbody>
-
-<p><em>1 report(s) on Perl &leq; 5.8.9 omitted — expected failures, see version cliff notice above.</em></p>
-</tbody></table>
+<p>No <A HREF="https://fast2-matrix.cpantesters.org/?dist=App-makefilepl2cpanfile+0.02">CPAN Testers</A> failures reported for App-makefilepl2cpanfile 0.02</p>
 <h2>Mutation Report</h2>
 <h3>Mutation Summary</h3>
 <ul>
@@ -564,7 +477,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 <tr><th>File</th><th>Total</th><th>Killed</th><th>Survivors</th><th>Skipped</th><th>Score%</th><th>Complexity</th><th title="TER1=Statement, TER2=Branch, TER3=LCSAJ Path">TER1 / TER2 / TER3</th></tr>
 
-<tr class="high"><td><a href="mutation_html/lib/App/makefilepl2cpanfile.pm.html" title="View mutation line by line" target="_blank">lib/App/makefilepl2cpanfile.pm</a> <a href="https://github.com/nigelhorne/App-makefilepl2cpanfile/blob/8f0435bbe1166c09d0b0306d6b331f52f9da89d4/lib/App/makefilepl2cpanfile.pm" class="icon-link" title="View source on GitHub">&#128269;</a></td><td>25</td><td>25</td><td>0</td><td>0</td><td><span class="coverage-badge badge-good" title="Excellent">100.0%</span></td><td><span class="coverage-badge badge-good" title="Good">41</span></td><td><span class="coverage-badge badge-good" title="Excellent">100.0%</span> / <span class="coverage-badge badge-good" title="Excellent">96.0%</span> / <span class="coverage-badge badge-good" title="Excellent">100.0%</span></td></tr>
+<tr class="high"><td><a href="mutation_html/lib/App/makefilepl2cpanfile.pm.html" title="View mutation line by line" target="_blank">lib/App/makefilepl2cpanfile.pm</a> <a href="https://github.com/nigelhorne/App-makefilepl2cpanfile/blob/b21276bec39c8bd422771e1aeedda8d45e65d668/lib/App/makefilepl2cpanfile.pm" class="icon-link" title="View source on GitHub">&#128269;</a></td><td>25</td><td>25</td><td>0</td><td>0</td><td><span class="coverage-badge badge-good" title="Excellent">100.0%</span></td><td><span class="coverage-badge badge-good" title="Good">41</span></td><td><span class="coverage-badge badge-good" title="Excellent">100.0%</span> / <span class="coverage-badge badge-good" title="Excellent">96.0%</span> / <span class="coverage-badge badge-good" title="Excellent">100.0%</span></td></tr>
 </table>
 
 <h2>Structural Coverage (Approximate)</h2>
@@ -579,7 +492,7 @@ Tests execute 100.00% of the code and detect 100.00% of injected faults.
 </div>
 <footer>
 	<p>Project: <a href="https://github.com/nigelhorne/App-makefilepl2cpanfile">App-makefilepl2cpanfile</a></p>
-	<p><em>Last updated: 2026-07-22 18:54:11 - <a href="https://github.com/nigelhorne/App-makefilepl2cpanfile/commit/8f0435bbe1166c09d0b0306d6b331f52f9da89d4">commit <code>8f0435b</code></a></em></p>
+	<p><em>Last updated: 2026-07-22 19:22:08 - <a href="https://github.com/nigelhorne/App-makefilepl2cpanfile/commit/b21276bec39c8bd422771e1aeedda8d45e65d668">commit <code>b21276b</code></a></em></p>
 	<p style="float: right; font-size: 0.85em; color: #999;">Powered by <a href="https://metacpan.org/dist/App-Test-Generator">App::Test::Generator 0.43</a></p>
 </footer>
 </body>
