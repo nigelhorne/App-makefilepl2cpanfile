@@ -191,7 +191,10 @@ sub generate {
 
 	# Merge the develop block from a pre-existing cpanfile so that
 	# hand-curated entries (all relationship types) survive regeneration.
-	if ($existing =~ /on\s+["']develop["']\s*=>\s*sub\s*\{(.*?)\};/s) {
+	# The closing '}; ' is anchored to the start of a line (/m) so that
+	# an inline comment containing '}; ' does not terminate the match early,
+	# silently dropping any module entries that follow the comment.
+	if ($existing =~ /on\s+["']develop["']\s*=>\s*sub\s*\{(.*?)^};/ms) {
 		my $dev_block = $1;
 		for my $rel (@REL_ORDER) {
 			while ($dev_block =~ /\b$rel\s+['"]([^'"]+)['"](?:\s*,\s*['"]([^'"]+)['"])?/g) {
@@ -274,6 +277,12 @@ module entries are captured and preserved for round-trip fidelity.
 
 sub parse_prereqs {
 	my $content = $_[0];
+
+	# The POD contract is "no errors or warnings — unrecognised content is
+	# silently ignored."  Undef and references are not valid Str inputs; return
+	# {} immediately to avoid "uninitialized value" and "reference used as
+	# string" warnings from the pattern-match operators below.
+	return {} unless defined $content && !ref $content;
 
 	my %deps;
 
