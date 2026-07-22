@@ -31,6 +31,7 @@ WriteMakefile(
 		'Test::Carp' => 0,
 		'Test::Compile' => 0,
 		'Test::DescribeMe' => 0,
+		'Test::Memory::Cycle' => 0,
 		'Test::Most' => 0,
 		'File::Temp' => 0,
 		'Test::NoWarnings' => 0,

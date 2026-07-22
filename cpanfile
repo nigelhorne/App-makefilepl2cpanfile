@@ -18,6 +18,7 @@ on 'test' => sub {
 	requires 'Test::Carp';
 	requires 'Test::Compile';
 	requires 'Test::DescribeMe';
+	requires 'Test::Memory::Cycle';
 	requires 'Test::Most';
 	requires 'Test::NoWarnings';
 	requires 'Test::RequiresInternet';
