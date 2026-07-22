@@ -195,11 +195,21 @@ sub generate {
 	# The closing '}; ' is anchored to the start of a line (/m) so that
 	# an inline comment containing '}; ' does not terminate the match early,
 	# silently dropping any module entries that follow the comment.
-	if ($existing =~ /on\s+["']develop["']\s*=>\s*sub\s*\{(.*?)^};/ms) {
+	if ($existing =~ /on\s+["']develop["']\s*=>\s*sub\s*\{(.*?)^[ \t]*};/ms) {
 		my $dev_block = $1;
 		for my $rel (@REL_ORDER) {
-			while ($dev_block =~ /\b$rel\s+['"]([^'"]+)['"](?:\s*,\s*['"]([^'"]+)['"])?/g) {
-				$deps->{develop}{$rel}{$1} //= { version => $2 // 0, comment => undef };
+			# \Q$rel\E: quote metacharacters defensively (rel is a constant word,
+			# but interpolation without quoting is a static-analysis red flag).
+			# [^'"\n]++ possessive: never cross a line boundary when capturing a
+			# module name or version, and commit immediately — no backtracking into
+			# individual chars needed once the quote is closed.
+			while ($dev_block =~ /\b\Q$rel\E\s+['"]([^'"\n]++)['"](?:\s*,\s*['"]([^'"\n]*+)['"])?/g) {
+				# Save immediately: the inner validation regex below has no capturing
+				# groups, so running it directly against $1 would reset $1/$2 to
+				# undef — the classic "inner match clobbers outer capture vars" bug.
+				my ($mod, $ver) = ($1, $2);
+				next unless $mod =~ /\A[A-Za-z_]\w*+(?:::\w++)*+\z/;
+				$deps->{develop}{$rel}{$mod} //= { version => $ver // 0, comment => undef };
 			}
 		}
 	}
@@ -374,7 +384,11 @@ sub _extract_pairs {
 
 	for my $line (split /\n/, $block) {
 		# Capture any trailing inline comment before stripping it.
-		my ($comment) = ($line =~ /#\s*(.+?)\s*$/);
+		# (.*\S) is O(N): greedy .* scans to end, then gives back trailing
+		# spaces one by one until \S anchors on the last non-space char.
+		# Avoids the super-linear behaviour of (.+?)\s*$ which re-evaluates
+		# \s*$ at every expanded position of the lazy quantifier.
+		my ($comment) = ($line =~ /#\s*(.*\S)/);
 		$line =~ s/#.*$//;
 
 		next unless $line =~ /\S/;		# skip blank / formerly comment-only lines
@@ -385,7 +399,7 @@ sub _extract_pairs {
 			# it also matches \n.  A newline in a module name produces a
 			# multi-line string literal in the cpanfile.  Restrict to valid
 			# Perl identifier paths to make the output unambiguously well-formed.
-			next unless $mod =~ /\A[A-Za-z_]\w*(?:::\w+)*\z/;
+			next unless $mod =~ /\A[A-Za-z_]\w*+(?:::\w++)*+\z/;
 			# First occurrence wins — do not overwrite already-parsed entries.
 			$deps->{$phase}{$rel}{$mod} //= {
 				version => $ver // 0,
@@ -404,7 +418,7 @@ sub _extract_pairs {
 # Exit:     The version string (e.g. '5.010'), or undef if not declared.
 sub _parse_min_perl {
 	my $content = $_[0];
-	return ($content =~ /MIN_PERL_VERSION\s*=>\s*['"]?([\d._]+)['"]?/)
+	return ($content =~ /\bMIN_PERL_VERSION\b\s*=>\s*['"]?([\d._]++)['"]?/)
 		? $1
 		: undef;
 }
@@ -441,12 +455,12 @@ sub _load_develop_config {
 			my %clean;
 			for my $mod (keys %{ $yaml->[0]{develop} }) {
 				my $ver = $yaml->[0]{develop}{$mod};
-				unless ($mod =~ /\A[A-Za-z_]\w*(?:::\w+)*\z/) {
+				unless ($mod =~ /\A[A-Za-z_]\w*+(?:::\w++)*+\z/) {
 					carp "Skipping invalid module name in $cfg_path: '$mod'";
 					next;
 				}
 				my $v = defined $ver ? "$ver" : 0;
-				unless ($v eq '0' || $v eq '' || $v =~ /\Av?[\d._]+\z/) {
+				unless ($v eq '0' || $v eq '' || $v =~ /\Av?[\d._]++\z/) {
 					carp "Skipping invalid version for '$mod' in $cfg_path: '$v'";
 					$v = 0;
 				}
