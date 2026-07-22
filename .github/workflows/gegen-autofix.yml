@@ -1,0 +1,22 @@
+---
+name: Weekly Workflow Optimization
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Monday 9am UTC
+  workflow_dispatch:     # Manual trigger
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  optimize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: nigelhorne/App-GHGen@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-fix: true
+          create-pr: true
