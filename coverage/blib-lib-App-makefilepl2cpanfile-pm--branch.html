@@ -20,7 +20,7 @@ https://pjcj.net
 <h1>Branch Coverage</h1>
 <table>
 <tr><td class="h" align="right">File:</td><td align="left">blib/lib/App/makefilepl2cpanfile.pm</td></tr>
-<tr><td class="h" align="right">Coverage:</td><td align="left" class="c2">96.0%</td></tr>
+<tr><td class="h" align="right">Coverage:</td><td align="left" class="c2">94.8%</td></tr>
 </table>
 <div><br/></div>
 <table>
@@ -34,22 +34,26 @@ https://pjcj.net
 <tr><td class="h"><a id="L340">340</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless $VALID_REL{$rel}</td></tr>
 <tr><td class="h"><a id="L379">379</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless $line =~ /\S/</td></tr>
 <tr><td class="h"><a id="L381">381</a></td><td class="c0">50</td><td class="c3">T</td><td class="c0">F</td><td class="s">if ($line =~ /[&#39;&quot;]([^&#39;&quot;]+)[&#39;&quot;]\s*=&gt;\s*[&#39;&quot;]?([\d._]+)?[&#39;&quot;]?/)</td></tr>
-<tr><td class="h"><a id="L401">401</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">$content =~ /MIN_PERL_VERSION\s*=&gt;\s*[&#39;&quot;]?([\d._]+)[&#39;&quot;]?/ ? :</td></tr>
-<tr><td class="h"><a id="L420">420</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless defined $home</td></tr>
-<tr><td class="h"><a id="L425">425</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if ($cfg_path-&gt;is_file)</td></tr>
-<tr><td class="h"><a id="L426">426</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless my $yaml = &quot;YAML::Tiny&quot;-&gt;read(&quot;$cfg_path&quot;)</td></tr>
-<tr><td class="h"><a id="L429">429</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if (ref $yaml-&gt;[0]{&#39;develop&#39;} eq &quot;HASH&quot;)</td></tr>
-<tr><td class="h"><a id="L463">463</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if $min_perl</td></tr>
-<tr><td class="h"><a id="L466">466</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if (my $rt = $deps-&gt;{&#39;runtime&#39;})</td></tr>
-<tr><td class="h"><a id="L469">469</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless my $h = $rt-&gt;{$rel}</td></tr>
-<tr><td class="h"><a id="L475">475</a></td><td class="c0">50</td><td class="c3">T</td><td class="c0">F</td><td class="s">if @lines</td></tr>
-<tr><td class="h"><a id="L480">480</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless my $p = $deps-&gt;{$phase}</td></tr>
-<tr><td class="h"><a id="L484">484</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless my $h = $p-&gt;{$rel}</td></tr>
-<tr><td class="h"><a id="L489">489</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless @lines</td></tr>
-<tr><td class="h"><a id="L513">513</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if _has_version($entry-&gt;{&#39;version&#39;})</td></tr>
-<tr><td class="h"><a id="L515">515</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if (defined $entry-&gt;{&#39;comment&#39;} and $entry-&gt;{&#39;comment&#39;} ne &#39;&#39;) { }</td></tr>
-<tr><td class="h"><a id="L533">533</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless defined $ver and $ver ne &quot;&quot;</td></tr>
-<tr><td class="h"><a id="L537">537</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">&amp;looks_like_number($ver) ? :</td></tr>
+<tr><td class="h"><a id="L387">387</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless $mod =~ /\A[A-Za-z_]\w*(?:::\w+)*\z/</td></tr>
+<tr><td class="h"><a id="L406">406</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">$content =~ /MIN_PERL_VERSION\s*=&gt;\s*[&#39;&quot;]?([\d._]+)[&#39;&quot;]?/ ? :</td></tr>
+<tr><td class="h"><a id="L425">425</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless defined $home</td></tr>
+<tr><td class="h"><a id="L430">430</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if ($cfg_path-&gt;is_file)</td></tr>
+<tr><td class="h"><a id="L431">431</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless my $yaml = &quot;YAML::Tiny&quot;-&gt;read(&quot;$cfg_path&quot;)</td></tr>
+<tr><td class="h"><a id="L434">434</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if (ref $yaml-&gt;[0]{&#39;develop&#39;} eq &quot;HASH&quot;)</td></tr>
+<tr><td class="h"><a id="L442">442</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless ($mod =~ /\A[A-Za-z_]\w*(?:::\w+)*\z/)</td></tr>
+<tr><td class="h"><a id="L446">446</a></td><td class="c0">50</td><td class="c3">T</td><td class="c0">F</td><td class="s">defined $ver ? :</td></tr>
+<tr><td class="h"><a id="L447">447</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless ($v eq 0 or $v eq &quot;&quot; or $v =~ /\Av?[\d._]+\z/)</td></tr>
+<tr><td class="h"><a id="L486">486</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if $min_perl</td></tr>
+<tr><td class="h"><a id="L489">489</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if (my $rt = $deps-&gt;{&#39;runtime&#39;})</td></tr>
+<tr><td class="h"><a id="L492">492</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless my $h = $rt-&gt;{$rel}</td></tr>
+<tr><td class="h"><a id="L498">498</a></td><td class="c0">50</td><td class="c3">T</td><td class="c0">F</td><td class="s">if @lines</td></tr>
+<tr><td class="h"><a id="L503">503</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless my $p = $deps-&gt;{$phase}</td></tr>
+<tr><td class="h"><a id="L507">507</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless my $h = $p-&gt;{$rel}</td></tr>
+<tr><td class="h"><a id="L512">512</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless @lines</td></tr>
+<tr><td class="h"><a id="L536">536</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if _has_version($entry-&gt;{&#39;version&#39;})</td></tr>
+<tr><td class="h"><a id="L538">538</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if (defined $entry-&gt;{&#39;comment&#39;} and $entry-&gt;{&#39;comment&#39;} ne &#39;&#39;) { }</td></tr>
+<tr><td class="h"><a id="L556">556</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless defined $ver and $ver ne &quot;&quot;</td></tr>
+<tr><td class="h"><a id="L560">560</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">&amp;looks_like_number($ver) ? :</td></tr>
 </table>
 </body>
 </html>
