@@ -5,7 +5,8 @@ use warnings;
 use autodie qw(:all);
 use Carp qw(croak carp);
 use Readonly;
-use Scalar::Util qw(looks_like_number);
+use List::Util    qw(any);
+use Scalar::Util  qw(looks_like_number);
 use Path::Tiny;
 use Params::Get;
 use YAML::Tiny;
@@ -208,7 +209,7 @@ sub generate {
 
 		# Only inject tools not already listed under any relationship.
 		for my $mod (keys %{$config}) {
-			my $already_present = grep {
+			my $already_present = any {
 				exists $deps->{develop}{$_}{$mod}
 			} @REL_ORDER;
 
@@ -296,8 +297,8 @@ sub parse_prereqs {
 		# block match prematurely.
 		while ($content =~ /
 			\b $mf_key \s*=>\s* \{
-				( (?: [^{}]
-				    | \{ (?: [^{}] | \{ (?: [^{}] | \{ [^}]* \} )* \} )* \}
+				( (?: [^{}]++
+				    | \{ (?: [^{}]++ | \{ (?: [^{}]++ | \{ [^}]*+ \} )* \} )* \}
 				  )*
 				)
 			\}
@@ -311,9 +312,9 @@ sub parse_prereqs {
 	# META_MERGE; both are covered by searching the full content for 'prereqs'.
 	while ($content =~ /
 		\b prereqs \s*=>\s* \{
-			( (?: [^{}]
-			    | \{ (?: [^{}]
-			         | \{ (?: [^{}] | \{ (?: [^{}] | \{ [^}]* \} )* \} )* \}
+			( (?: [^{}]++
+			    | \{ (?: [^{}]++
+			         | \{ (?: [^{}]++ | \{ (?: [^{}]++ | \{ [^}]*+ \} )* \} )* \}
 			      )* \}
 			  )*
 			)
@@ -324,7 +325,7 @@ sub parse_prereqs {
 		# Each direct child is a phase name mapping to a relationship hash.
 		while ($prereqs_block =~ /
 			\b (\w+) \s*=>\s* \{
-				( (?: [^{}] | \{ (?: [^{}] | \{ [^}]* \} )* \} )* )
+				( (?: [^{}]++ | \{ (?: [^{}]++ | \{ [^}]*+ \} )* \} )* )
 			\}
 		/gsx) {
 			my ($phase_name, $phase_block) = ($1, $2);
@@ -333,7 +334,7 @@ sub parse_prereqs {
 			# Each child of the phase block is a relationship name.
 			while ($phase_block =~ /
 				\b (\w+) \s*=>\s* \{
-					( (?: [^{}] | \{ [^}]* \} )* )
+					( (?: [^{}]++ | \{ [^}]*+ \} )* )
 				\}
 			/gsx) {
 				my ($rel, $rel_block) = ($1, $2);
@@ -438,7 +439,8 @@ sub _load_develop_config {
 			# closes the single-quoted literal in _fmt_dep and injects
 			# executable Perl into the generated cpanfile, which cpanm eval's.
 			my %clean;
-			while (my ($mod, $ver) = each %{ $yaml->[0]{develop} }) {
+			for my $mod (keys %{ $yaml->[0]{develop} }) {
+				my $ver = $yaml->[0]{develop}{$mod};
 				unless ($mod =~ /\A[A-Za-z_]\w*(?:::\w+)*\z/) {
 					carp "Skipping invalid module name in $cfg_path: '$mod'";
 					next;
@@ -546,14 +548,15 @@ sub _fmt_dep {
 
 # _has_version
 #
-# Purpose:  Decide whether a version value represents a real minimum version
-#           constraint that should be written into the cpanfile output.
+# Decide whether a version value represents a real minimum version
+#	constraint that should be written into the cpanfile output.
 # Entry:    $_[0] — version value (scalar, possibly undef or numeric '0').
 # Exit:     Boolean: true if the version should be emitted; false if it
 #           means "any version" (undef, empty string, or numeric zero).
 sub _has_version {
-	my ($ver) = @_;
-	return 0 unless defined $ver && $ver ne '';
+	my $ver = $_[0];
+
+	return 0 unless defined $ver && $ver ne '' && $ver ne '0';
 
 	# Use looks_like_number to avoid spurious non-numeric warnings when
 	# comparing against 0 — version strings are always numeric, but be safe.
