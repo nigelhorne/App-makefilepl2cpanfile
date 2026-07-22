@@ -19,6 +19,7 @@ on 'test' => sub {
 	requires 'Test::Compile';
 	requires 'Test::DescribeMe';
 	requires 'Test::Memory::Cycle';
+	requires 'Test::MockModule';
 	requires 'Test::Most';
 	requires 'Test::NoWarnings';
 	requires 'Test::RequiresInternet';

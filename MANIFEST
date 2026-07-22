@@ -16,4 +16,5 @@ t/function.t
 t/locales.t
 t/parse_prereqs.t
 t/preserve.t
+t/unit.t
 t/verify_prereqs.t
