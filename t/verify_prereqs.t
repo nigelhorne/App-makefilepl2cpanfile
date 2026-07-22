@@ -33,18 +33,20 @@ my $out = App::makefilepl2cpanfile::generate(
 	with_develop => 0,
 );
 
-# Use parse_prereqs() — the public API — to enumerate expected modules.
-# This avoids duplicating the extraction regex in the test.
+# Use parse_prereqs() to enumerate expected modules — avoids duplicating
+# the extraction regex in the test.
 my $content  = path('Makefile.PL')->slurp_utf8;
 my $expected = App::makefilepl2cpanfile::parse_prereqs($content);
 
 for my $phase (sort keys %{$expected}) {
-	for my $mod (sort keys %{ $expected->{$phase} }) {
-		like $out, qr/\b\Q$mod\E\b/, "module '$mod' ($phase) appears in output";
+	for my $rel (sort keys %{ $expected->{$phase} }) {
+		for my $mod (sort keys %{ $expected->{$phase}{$rel} }) {
+			like $out, qr/\b\Q$mod\E\b/,
+				"module '$mod' ($phase/$rel) appears in output";
+		}
 	}
 }
 
-# Versioned dep must carry its constraint.
 like $out, qr/requires 'Baz::Qux', '1\.23'/, 'Baz::Qux version constraint emitted';
 like $out, qr/'perl', '5\.008'/,              'MIN_PERL_VERSION emitted';
 

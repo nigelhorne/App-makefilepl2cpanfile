@@ -9,7 +9,7 @@ use App::makefilepl2cpanfile;
 eval { App::makefilepl2cpanfile::generate(makefile => '/nonexistent/path/Makefile.PL') };
 like $@, qr/Cannot read/, 'generate() croaks with "Cannot read" for missing makefile';
 
-# generate() must croak when the path exists but is a directory.
+# generate() must croak when the path exists but is a directory, not a file.
 {
 	my $dir = tempdir(CLEANUP => 1);
 	eval { App::makefilepl2cpanfile::generate(makefile => $dir) };
@@ -34,7 +34,7 @@ like $@, qr/Cannot read/, 'generate() croaks with "Cannot read" for missing make
 	like $out, qr/requires 'Scalar::Util'/, 'output contains the expected module';
 }
 
-# generate() with with_develop => 0 must not emit a develop block.
+# generate() with with_develop => 0 must not emit a develop block at all.
 {
 	my $dir = tempdir(CLEANUP => 1);
 	path($dir)->child('Makefile.PL')->spew_utf8(

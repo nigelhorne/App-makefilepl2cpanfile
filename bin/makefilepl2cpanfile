@@ -70,8 +70,10 @@ if ($check) {
 
 	my @missing;
 	for my $phase (keys %{$expected}) {
-		for my $mod (sort keys %{ $expected->{$phase} }) {
-			push @missing, $mod unless $out =~ /\b\Q$mod\E\b/;
+		for my $rel (keys %{ $expected->{$phase} }) {
+			for my $mod (sort keys %{ $expected->{$phase}{$rel} }) {
+				push @missing, $mod unless $out =~ /\b\Q$mod\E\b/;
+			}
 		}
 	}
 

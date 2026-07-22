@@ -21,7 +21,7 @@ my $out = App::makefilepl2cpanfile::generate(
 	with_develop => 1,
 );
 
-# Verify all four built-in develop tools appear.
+# All four built-in develop tools must appear somewhere in the output.
 for my $mod (qw(Perl::Critic Devel::Cover Test::Pod Test::Pod::Coverage)) {
 	like $out, qr/\b\Q$mod\E\b/, "default develop module '$mod' is present";
 }

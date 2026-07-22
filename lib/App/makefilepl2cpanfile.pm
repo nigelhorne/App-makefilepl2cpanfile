@@ -33,7 +33,8 @@ Readonly my %DEFAULT_DEVELOP => (
 	'Test::Pod::Coverage' => 0,
 );
 
-# Maps each Makefile.PL dependency key to its cpanfile phase name.
+# Maps each Makefile.PL simple-dependency key to its cpanfile phase name.
+# All of these are treated as 'requires' relationships.
 Readonly my %PHASE_MAP => (
 	BUILD_REQUIRES     => 'build',
 	CONFIGURE_REQUIRES => 'configure',
@@ -41,9 +42,20 @@ Readonly my %PHASE_MAP => (
 	TEST_REQUIRES      => 'test',
 );
 
+# Valid cpanfile phase names recognised inside 'prereqs => { ... }' blocks.
+Readonly my %VALID_PHASE => map { $_ => 1 }
+	qw(runtime configure build test develop);
+
+# Valid cpanfile relationship keywords inside each phase block.
+Readonly my %VALID_REL => map { $_ => 1 }
+	qw(requires recommends suggests);
+
 # Canonical emit order for non-runtime phases (runtime is special-cased at
 # the top level per cpanfile convention).
 Readonly my @PHASE_ORDER => qw(configure build test develop);
+
+# Within each phase block, emit relationships in this order.
+Readonly my @REL_ORDER => qw(requires recommends suggests);
 
 =head1 SYNOPSIS
 
@@ -57,6 +69,8 @@ Readonly my @PHASE_ORDER => qw(configure build test develop);
 
 	path('cpanfile')->spew_utf8($cpanfile_text);
 
+=encoding utf-8
+
 =head1 DESCRIPTION
 
 Parses a C<Makefile.PL> file B<without evaluating it> and produces a
@@ -68,6 +82,12 @@ C<cpanfile> string containing:
 
 =item * Build, test, and configure requirements (C<BUILD_REQUIRES>,
 C<TEST_REQUIRES>, C<CONFIGURE_REQUIRES>)
+
+=item * Structured C<prereqs =E<gt> { phase =E<gt> { rel =E<gt> { ... } } }>
+blocks (CPAN Meta Spec format), including C<recommends> and C<suggests>
+relationships
+
+=item * Inline comments attached to dependency entries
 
 =item * Optional author/development dependencies in a C<develop> block
 
@@ -83,6 +103,23 @@ the default develop-phase tools:
 	  Devel::Cover: 0
 	  My::Extra::Tool: '1.00'
 
+=head1 DATA STRUCTURE
+
+C<parse_prereqs()> and the internal pipeline use a three-level hashref:
+
+	{
+	  phase_name => {
+	    relationship => {
+	      'Module::Name' => { version => '1.0', comment => 'why it is needed' },
+	    },
+	  },
+	}
+
+C<phase_name> ∈ { runtime, configure, build, test, develop }.
+C<relationship> ∈ { requires, recommends, suggests }.
+C<version> is C<0> when no minimum is declared.
+C<comment> is C<undef> when no inline comment was present.
+
 =head1 METHODS
 
 =head2 generate(%args)
@@ -93,11 +130,11 @@ Parses a C<Makefile.PL> and returns a complete C<cpanfile> string.
 
 	1. Validate and normalise arguments; croak if makefile is unreadable.
 	2. Slurp makefile content; extract MIN_PERL_VERSION.
-	3. Call parse_prereqs() to extract phase->module->version from content.
+	3. Call parse_prereqs() to build the phase/rel/module/entry structure.
 	4. If an existing cpanfile string was supplied, merge its 'develop'
-	   block into deps without overwriting freshly-parsed entries.
+	   block (all relationships) without overwriting freshly-parsed entries.
 	5. If with_develop: load user config (or built-in defaults) and inject
-	   missing develop tools — never overwrite already-set entries.
+	   missing 'requires' develop tools — never overwrite explicit entries.
 	6. Delegate to _emit() and return the formatted string.
 
 =head3 API SPECIFICATION
@@ -124,7 +161,7 @@ Parses a C<Makefile.PL> and returns a complete C<cpanfile> string.
 =head3 MESSAGES
 
 	"Cannot read '$makefile'"
-	    The supplied path does not exist or is not readable.
+	    The supplied path does not exist, is a directory, or is not readable.
 	    Resolution: verify the path and filesystem permissions.
 
 	"Failed to parse $cfg_file: ..."
@@ -134,25 +171,6 @@ Parses a C<Makefile.PL> and returns a complete C<cpanfile> string.
 	"No 'develop' key found in $cfg_file; using defaults"
 	    The config file exists but lacks a 'develop' section.
 	    Resolution: add a develop: block, or delete the file to use defaults.
-
-=head3 FORMAL SPECIFICATION
-
-	-- generate maps named arguments to a cpanfile string
-	generate : Args → Str
-	where
-	  Args ≙ [makefile : Path; existing : Str; with_develop : 𝔹]
-
-	generate(a) ≙
-	  let content ≙ slurp(a.makefile)
-	      deps    ≙ parse_prereqs(content)
-	      merged  ≙ deps ⊕ {develop ↦
-	                   deps.develop ∪ extract_develop(a.existing)}
-	      final   ≙ if a.with_develop
-	                then merged ⊕ {develop ↦
-	                       load_config() ▷ merged.develop}
-	                else merged
-	  in _emit(final, min_perl(content))
-	-- (▷) right-biases toward the right operand: existing entries win.
 
 =cut
 
@@ -170,22 +188,32 @@ sub generate {
 	my $min_perl = _parse_min_perl($content);
 	my $deps     = parse_prereqs($content);
 
-	# Merge the develop block from a pre-existing cpanfile string so that
-	# hand-curated entries survive regeneration.
+	# Merge the develop block from a pre-existing cpanfile so that
+	# hand-curated entries (all relationship types) survive regeneration.
 	if ($existing =~ /on\s+["']develop["']\s*=>\s*sub\s*\{(.*?)\};/s) {
 		my $dev_block = $1;
-		while ($dev_block =~ /requires\s+['"]([^'"]+)['"](?:\s*,\s*['"]([^'"]+)['"])?/g) {
-			$deps->{develop}{$1} //= $2 // 0;
+		for my $rel (@REL_ORDER) {
+			while ($dev_block =~ /\b$rel\s+['"]([^'"]+)['"](?:\s*,\s*['"]([^'"]+)['"])?/g) {
+				$deps->{develop}{$rel}{$1} //= { version => $2 // 0, comment => undef };
+			}
 		}
 	}
 
 	if ($with_dev) {
-		$deps->{develop} //= {};
 		my $config = _load_develop_config();
 
-		# Only inject tools not already present — explicit entries always win.
+		# Only inject tools not already listed under any relationship.
 		for my $mod (keys %{$config}) {
-			$deps->{develop}{$mod} //= $config->{$mod};
+			my $already_present = grep {
+				exists $deps->{develop}{$_}{$mod}
+			} @REL_ORDER;
+
+			unless ($already_present) {
+				$deps->{develop}{requires}{$mod} = {
+					version => $config->{$mod},
+					comment => undef,
+				};
+			}
 		}
 	}
 
@@ -195,50 +223,51 @@ sub generate {
 =head2 parse_prereqs($content)
 
 Extracts all dependency declarations from a C<Makefile.PL> string and
-returns them structured by cpanfile phase.  This is exposed as a public
-function so callers (e.g. C<bin/makefilepl2cpanfile --check>) can reuse
-the parsing logic without duplicating the regex.
+returns them structured by cpanfile phase and relationship type.  Exposed
+as a public function so callers (e.g. C<bin/makefilepl2cpanfile --check>)
+can reuse the parsing logic without duplicating regexes.
+
+Both the simple C<PREREQ_PM =E<gt> { ... }> form and the structured
+C<prereqs =E<gt> { phase =E<gt> { rel =E<gt> { ... } } }> form (including
+those nested under C<META_MERGE>) are parsed.  Inline comments attached to
+module entries are captured and preserved for round-trip fidelity.
 
 =head3 API SPECIFICATION
 
 	Arguments:
 	  $content   Str   Raw text of a Makefile.PL
 
-	Returns: HashRef
+	Returns: HashRef (see L</DATA STRUCTURE>)
 	  {
-	    runtime   => { 'Module::Name' => version_str, ... },
-	    build     => { ... },
-	    test      => { ... },
-	    configure => { ... },
+	    phase => {
+	      rel => {
+	        'Module::Name' => { version => version_str, comment => str_or_undef },
+	      },
+	    },
 	  }
-	  Absent phases are not present in the hashref.
-	  version_str is 0 when no minimum version is declared.
+	  Absent phases/relationships are not present in the hashref.
+	  version is 0 when no minimum is declared.
+	  comment is undef when no inline comment was present.
 
 =head3 EXAMPLE
 
 	my $deps = App::makefilepl2cpanfile::parse_prereqs(
 	    path('Makefile.PL')->slurp_utf8
 	);
-	for my $mod (sort keys %{ $deps->{runtime} }) {
-	    printf "%s => %s\n", $mod, $deps->{runtime}{$mod};
+
+	# Iterate over all phases and relationships
+	for my $phase (sort keys %{$deps}) {
+	    for my $rel (sort keys %{ $deps->{$phase} }) {
+	        for my $mod (sort keys %{ $deps->{$phase}{$rel} }) {
+	            my $e = $deps->{$phase}{$rel}{$mod};
+	            printf "%s %s %s => %s\n", $phase, $rel, $mod, $e->{version};
+	        }
+	    }
 	}
 
 =head3 MESSAGES
 
 	No errors or warnings — unrecognised content is silently ignored.
-
-=head3 FORMAL SPECIFICATION
-
-	parse_prereqs : Str → DepMap
-	where
-	  DepMap ≙ Phase ↦ (ModName ↦ VersionStr)
-	  Phase  ∈ {runtime, build, test, configure}
-
-	parse_prereqs(s) ≙
-	  ⋃ { extract_block(k, s) | k ∈ dom(PHASE_MAP) }
-	where
-	  extract_block(k, s) ≙
-	    PHASE_MAP(k) ↦ { m ↦ v | (m, v) ∈ pairs_in(hash_value_of(k, s)) }
 
 =cut
 
@@ -247,25 +276,60 @@ sub parse_prereqs {
 
 	my %deps;
 
+	# ---- Simple dependency keys (PREREQ_PM, BUILD_REQUIRES, etc.) ----
+	# These always map to the 'requires' relationship in their phase.
 	for my $mf_key (keys %PHASE_MAP) {
 		my $phase = $PHASE_MAP{$mf_key};
 
-		# Match the value hash for this key; allow one level of nesting so
-		# version strings with dots aren't mistaken for sub-hashes.
+		# The regex allows up to four levels of brace nesting so that unusual
+		# Makefile.PL constructs (e.g. version objects) don't terminate the
+		# block match prematurely.
 		while ($content =~ /
 			\b $mf_key \s*=>\s* \{
-				( (?: [^{}] | \{ [^}]* \} )*? )
+				( (?: [^{}]
+				    | \{ (?: [^{}] | \{ (?: [^{}] | \{ [^}]* \} )* \} )* \}
+				  )*
+				)
 			\}
 		/gsx) {
-			my $block = $1;
-			$block =~ s/#[^\n]*//g;		# strip end-of-line comments
+			_extract_pairs($1, \%deps, $phase, 'requires');
+		}
+	}
 
-			while ($block =~ /
-				['"] ([^'"]+) ['"]
-				\s*=>\s*
-				['"]? ([\d._]+)? ['"]?
-			/gx) {
-				$deps{$phase}{$1} = $2 // 0;
+	# ---- Structured 'prereqs' blocks (CPAN Meta Spec style) ----
+	# These can appear at the top level of WriteMakefile() or nested inside
+	# META_MERGE; both are covered by searching the full content for 'prereqs'.
+	while ($content =~ /
+		\b prereqs \s*=>\s* \{
+			( (?: [^{}]
+			    | \{ (?: [^{}]
+			         | \{ (?: [^{}] | \{ (?: [^{}] | \{ [^}]* \} )* \} )* \}
+			      )* \}
+			  )*
+			)
+		\}
+	/gsx) {
+		my $prereqs_block = $1;
+
+		# Each direct child is a phase name mapping to a relationship hash.
+		while ($prereqs_block =~ /
+			\b (\w+) \s*=>\s* \{
+				( (?: [^{}] | \{ (?: [^{}] | \{ [^}]* \} )* \} )* )
+			\}
+		/gsx) {
+			my ($phase_name, $phase_block) = ($1, $2);
+			next unless $VALID_PHASE{$phase_name};
+
+			# Each child of the phase block is a relationship name.
+			while ($phase_block =~ /
+				\b (\w+) \s*=>\s* \{
+					( (?: [^{}] | \{ [^}]* \} )* )
+				\}
+			/gsx) {
+				my ($rel, $rel_block) = ($1, $2);
+				next unless $VALID_REL{$rel};
+
+				_extract_pairs($rel_block, \%deps, $phase_name, $rel);
 			}
 		}
 	}
@@ -276,6 +340,46 @@ sub parse_prereqs {
 # -----------------------------------------------------------------------
 # Private helpers
 # -----------------------------------------------------------------------
+
+# _extract_pairs
+#
+# Purpose:  Parse a raw block of text (the content between the outermost
+#           braces of a dependency hash) into module/version/comment triples
+#           and store them in the deps structure.  Processes line-by-line
+#           so that trailing inline comments can be captured before the
+#           comment text is discarded.
+# Entry:    $_[0] — raw block text (between the outer braces).
+#           $_[1] — hashref to populate (the top-level %deps).
+#           $_[2] — phase name string (e.g. 'runtime').
+#           $_[3] — relationship string (e.g. 'requires').
+# Exit:     Returns nothing — mutates $_[1] in place.
+# Effects:  Modifies the deps hashref; no I/O.
+#
+# First-occurrence-wins: if the same module appears multiple times (e.g.
+# once in PREREQ_PM and once in a prereqs block), the first parsed entry
+# is kept.
+sub _extract_pairs {
+	my ($block, $deps, $phase, $rel) = @_;
+
+	for my $line (split /\n/, $block) {
+		# Capture any trailing inline comment before stripping it.
+		my ($comment) = ($line =~ /#\s*(.+?)\s*$/);
+		$line =~ s/#.*$//;
+
+		next unless $line =~ /\S/;		# skip blank / formerly comment-only lines
+
+		if ($line =~ /['"]([^'"]+)['"]\s*=>\s*['"]?([\d._]+)?['"]?/) {
+			my ($mod, $ver) = ($1, $2);
+			# First occurrence wins — do not overwrite already-parsed entries.
+			$deps->{$phase}{$rel}{$mod} //= {
+				version => $ver // 0,
+				comment => $comment,
+			};
+		}
+	}
+
+	return;
+}
 
 # _parse_min_perl
 #
@@ -320,51 +424,84 @@ sub _load_develop_config {
 #
 # Purpose:  Pure formatter — converts the structured dependency hash and an
 #           optional minimum Perl version into a valid cpanfile string.
-# Entry:    $_[0] — HashRef { phase => { Module => version_str } }
+# Entry:    $_[0] — HashRef (see DATA STRUCTURE section in POD)
 #           $_[1] — optional Str minimum Perl version (e.g. '5.010')
 # Exit:     Scalar string; always terminated with exactly one newline.
 #           Never returns undef.
 # Effects:  None — no I/O, no mutation of arguments.
 #
-# Notes:
-#   Runtime deps are emitted at the top level (no 'on' block) per cpanfile
-#   convention. All other phases get explicit 'on phase => sub { ... }' blocks.
-#   Modules within each phase are sorted alphabetically for reproducible output.
-#   A version of 0 or '' means "any version" and is not emitted.
+# Runtime deps are emitted at the top level (no 'on' block) per cpanfile
+# convention. All other phases get 'on phase => sub { ... }' blocks.
+# Within each phase, relationships are emitted in @REL_ORDER order;
+# modules within each relationship are sorted alphabetically.
+# Inline comments are re-emitted after the semicolon on the same line.
+# A version of 0 or '' means "any version" and is omitted.
 sub _emit {
 	my ($deps, $min_perl) = @_;
 
 	my $out = "# Generated from Makefile.PL using makefilepl2cpanfile\n\n";
 	$out .= "requires 'perl', '$min_perl';\n\n" if $min_perl;
 
-	# Runtime dependencies sit at the top level, outside any 'on' block.
+	# Runtime: emitted at the top level, not inside an 'on' block.
 	if (my $rt = $deps->{runtime}) {
-		for my $m (sort keys %{$rt}) {
-			$out .= "requires '$m'";
-			$out .= ", '$rt->{$m}'" if _has_version($rt->{$m});
-			$out .= ";\n";
+		my $had_content = 0;
+		for my $rel (@REL_ORDER) {
+			my $h = $rt->{$rel} or next;
+			for my $m (sort keys %{$h}) {
+				$out .= _fmt_dep($rel, $m, $h->{$m}, '');
+				$had_content = 1;
+			}
 		}
-		$out .= "\n";
+		$out .= "\n" if $had_content;
 	}
 
-	# Remaining phases each get their own named block, in canonical order.
+	# All other phases each get a named 'on' block.
 	my @blocks;
 	for my $phase (@PHASE_ORDER) {
-		my $h = $deps->{$phase} or next;
-		next unless %{$h};
+		my $p = $deps->{$phase} or next;
+
+		my @lines;
+		for my $rel (@REL_ORDER) {
+			my $h = $p->{$rel} or next;
+			for my $m (sort keys %{$h}) {
+				push @lines, _fmt_dep($rel, $m, $h->{$m}, "\t");
+			}
+		}
+		next unless @lines;
 
 		my $block = "on '$phase' => sub {\n";
-		for my $m (sort keys %{$h}) {
-			$block .= "\trequires '$m'";
-			$block .= ", '$h->{$m}'" if _has_version($h->{$m});
-			$block .= ";\n";
-		}
+		$block .= $_ for @lines;
 		$block .= "};";
 		push @blocks, $block;
 	}
 
 	$out .= join("\n\n", @blocks) . "\n" if @blocks;
 	return $out;
+}
+
+# _fmt_dep
+#
+# Purpose:  Format a single dependency line for cpanfile output, including
+#           the optional version constraint and inline comment.
+# Entry:    $_[0] — relationship keyword (e.g. 'requires', 'recommends').
+#           $_[1] — module name string.
+#           $_[2] — entry hashref { version => ..., comment => ... }.
+#           $_[3] — indentation prefix ('' for runtime, "\t" for phase blocks).
+# Exit:     A complete formatted line, including trailing newline.
+# Effects:  None.
+sub _fmt_dep {
+	my ($rel, $mod, $entry, $indent) = @_;
+
+	my $line = "${indent}$rel '$mod'";
+	$line .= ", '$entry->{version}'" if _has_version($entry->{version});
+
+	if (defined $entry->{comment} && $entry->{comment} ne '') {
+		$line .= ";   # $entry->{comment}\n";
+	} else {
+		$line .= ";\n";
+	}
+
+	return $line;
 }
 
 # _has_version
@@ -392,18 +529,6 @@ __END__
 
 =over 4
 
-=item * Inline comments attached to dependency entries are not preserved.
-For example, C<'Mojolicious' =E<gt> 0, # used in bin/> is emitted without
-the comment.
-
-=item * The C<recommends> and C<suggests> relationship types from the CPAN
-Meta Spec are not extracted.  Neither the structured C<prereqs =E<gt> {
-runtime =E<gt> { recommends =E<gt> { ... } } }> form nor C<META_MERGE>
-resources-level recommends are currently handled.
-
-=item * Nested dependency blocks deeper than one level of braces are not
-parsed.
-
 =item * Because parsing is regex-based and the C<Makefile.PL> is never
 C<eval>'d, dynamically generated dependency lists (e.g. those produced by
 C<if>/C<unless> branches or subroutine calls) cannot be detected.
@@ -416,6 +541,8 @@ add C<Sub::Private> once its C<enforce>-mode API is verified.
 
 =head1 SUPPORT
 
+This module is provided as-is without any warranty.
+
 Bugs and feature requests:
 L<https://github.com/nigelhorne/App-makefilepl2cpanfile/issues>
 
@@ -423,11 +550,48 @@ L<https://github.com/nigelhorne/App-makefilepl2cpanfile/issues>
 
 Nigel Horne E<lt>njh@nigelhorne.comE<gt>
 
+=head1 FORMAL SPECIFICATION
+
+=head2 generate
+
+	-- generate maps named arguments to a cpanfile string
+	generate : Args → Str
+	where
+	  Args ≙ [makefile : Path; existing : Str; with_develop : 𝔹]
+
+	generate(a) ≙
+	  let content ≙ slurp(a.makefile)
+	      deps    ≙ parse_prereqs(content)
+	      merged  ≙ deps ⊕ {develop ↦
+	                   deps.develop ∪ extract_develop(a.existing)}
+	      final   ≙ if a.with_develop
+	                then merged ⊕ {develop ↦
+	                       {requires ↦ load_config() ▷ merged.develop.requires}}
+	                else merged
+	  in _emit(final, min_perl(content))
+	-- (▷) right-biases toward the right operand: existing entries win.
+
+=head2 parse_prereqs
+
+	parse_prereqs : Str → DepMap
+	where
+	  DepMap    ≙ Phase ↦ (Rel ↦ (ModName ↦ Entry))
+	  Entry     ≙ [version : VersionStr; comment : Str ∪ {⊥}]
+	  Phase     ∈ {runtime, configure, build, test, develop}
+	  Rel       ∈ {requires, recommends, suggests}
+
+	parse_prereqs(s) ≙
+	  simple_deps(s) ⊕ structured_deps(s)
+	where
+	  simple_deps(s)     ≙ ⋃ { extract_simple(k, s) | k ∈ dom(PHASE_MAP) }
+	  structured_deps(s) ≙ ⋃ { extract_prereqs_block(b) | b ∈ prereqs_blocks(s) }
+
 =head1 LICENCE AND COPYRIGHT
 
 Copyright 2025-2026 Nigel Horne.
 
-Personal single user, single computer use: GPL2.
-All other users must apply in writing for a licence.
+Usage is subject to the GPL2 licence terms.
+If you use it,
+please let me know.
 
 =cut
