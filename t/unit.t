@@ -3,12 +3,9 @@ use warnings;
 
 # Black-box tests for the two public functions: generate() and parse_prereqs().
 # Tests are derived strictly from the POD API contracts, not the implementation.
-#
-# Test::Mockingbird is the preferred mock library per project conventions;
-# Test::MockModule is used as a direct substitute with the same interface intent.
 
 use Test::Most;
-use Test::MockModule;
+use Test::Mockingbird;
 use File::Temp qw(tempdir);
 use Path::Tiny;
 use Readonly;
@@ -73,25 +70,24 @@ sub covered {
 # -----------------------------------------------------------------------
 
 # Set up a redirected home directory so _load_develop_config never touches
-# the developer's real ~/.config during testing.
-my $homedir_mock = Test::MockModule->new('File::HomeDir');
+# the developer's real ~/.config during testing.  Each helper returns a
+# mock_scoped guard; callers must hold it (my $g = empty_home()) so the
+# mock stays active for the lifetime of the enclosing subtest block.
 
 # A fresh tempdir representing a home dir with NO config file.
 sub empty_home {
 	my $h = tempdir( CLEANUP => 1 );
-	$homedir_mock->mock( 'my_home', sub { $h } );
-	return $h;
+	return mock_scoped 'File::HomeDir::my_home' => sub { $h };
 }
 
-# Write a YAML config to a fake home dir and return the home path.
+# Write a YAML config to a fake home dir and return the scoped guard.
 sub home_with_config {
 	my ($data) = @_;
 	my $h = tempdir( CLEANUP => 1 );
-	$homedir_mock->mock( 'my_home', sub { $h } );
 	path($h)->child('.config')->mkpath;
 	YAML::Tiny->new($data)
 		->write( path($h)->child('.config', 'makefilepl2cpanfile.yml')->stringify );
-	return $h;
+	return mock_scoped 'File::HomeDir::my_home' => sub { $h };
 }
 
 # Write a Makefile.PL into a tempdir and return its path object.
@@ -114,7 +110,7 @@ Readonly my $MF_VERSIONED =>
 # -----------------------------------------------------------------------
 
 subtest 'generate() — croak on unreadable makefile' => sub {
-	empty_home();
+	my $g = empty_home();
 
 	# Missing file: the path does not exist at all.
 	my $missing = '/no/such/path/Makefile.PL';
@@ -135,11 +131,14 @@ subtest 'generate() — croak on unreadable makefile' => sub {
 
 subtest 'generate() — croak on malformed YAML config' => sub {
 	# Config file must exist so _load_develop_config proceeds to YAML::Tiny->read.
-	home_with_config( {} );    # creates the file; content irrelevant — we mock read
+	my $g_home = home_with_config( {} );    # creates the file; content irrelevant
 
-	my $yaml_mock = Test::MockModule->new('YAML::Tiny');
-	$yaml_mock->mock( 'read',   sub { return undef } );
-	$yaml_mock->mock( 'errstr', sub { 'synthetic YAML failure' } );
+	# mock_scoped with multiple pairs restores both methods when $g_yaml goes out
+	# of scope at the end of this subtest block.
+	my $g_yaml = mock_scoped(
+		'YAML::Tiny::read'   => sub { undef },
+		'YAML::Tiny::errstr' => sub { 'synthetic YAML failure' },
+	);
 
 	my $mf = make_mf($MF_SIMPLE);
 	throws_ok {
@@ -156,7 +155,7 @@ subtest 'generate() — croak on malformed YAML config' => sub {
 
 subtest 'generate() — carp when config has no develop key' => sub {
 	# Config file exists but its 'develop' key is absent.
-	home_with_config( { other_section => { tool => 1 } } );
+	my $g = home_with_config( { other_section => { tool => 1 } } );
 
 	my $mf = make_mf($MF_SIMPLE);
 
@@ -181,7 +180,7 @@ subtest 'generate() — carp when config has no develop key' => sub {
 # -----------------------------------------------------------------------
 
 subtest 'generate() — return value is Str terminated with a single newline' => sub {
-	empty_home();
+	my $g = empty_home();
 
 	my $mf  = make_mf($MF_SIMPLE);
 	my $out = App::makefilepl2cpanfile::generate(
@@ -203,7 +202,7 @@ subtest 'generate() — return value is Str terminated with a single newline' =>
 # -----------------------------------------------------------------------
 
 subtest 'generate() — default argument: makefile is "Makefile.PL"' => sub {
-	empty_home();
+	my $g = empty_home();
 
 	# The POD says: default makefile is 'Makefile.PL'.  We test this by
 	# chdir-ing to a tempdir that contains a Makefile.PL and calling generate()
@@ -225,7 +224,7 @@ subtest 'generate() — default argument: makefile is "Makefile.PL"' => sub {
 };
 
 subtest 'generate() — default argument: existing is empty string' => sub {
-	empty_home();
+	my $g = empty_home();
 
 	# When 'existing' is omitted, no pre-existing develop entries should be
 	# merged (there are none to merge from an empty string).
@@ -246,7 +245,7 @@ subtest 'generate() — default argument: existing is empty string' => sub {
 };
 
 subtest 'generate() — default argument: with_develop is 1 (true)' => sub {
-	empty_home();    # no config file -> uses DEFAULT_DEVELOP
+	my $g = empty_home();    # no config file -> uses DEFAULT_DEVELOP
 
 	my $mf  = make_mf($MF_SIMPLE);
 	my $out = App::makefilepl2cpanfile::generate( makefile => "$mf" );
@@ -262,7 +261,7 @@ subtest 'generate() — default argument: with_develop is 1 (true)' => sub {
 # -----------------------------------------------------------------------
 
 subtest 'generate() — flat hash calling style' => sub {
-	empty_home();
+	my $g = empty_home();
 	my $mf  = make_mf($MF_SIMPLE);
 	my $out = App::makefilepl2cpanfile::generate( makefile => "$mf", with_develop => 0 );
 	like $out, qr/Try::Tiny/, 'flat hash calling style works';
@@ -270,7 +269,7 @@ subtest 'generate() — flat hash calling style' => sub {
 };
 
 subtest 'generate() — hashref calling style' => sub {
-	empty_home();
+	my $g = empty_home();
 	my $mf  = make_mf($MF_SIMPLE);
 	my $out = App::makefilepl2cpanfile::generate(
 		{ makefile => "$mf", with_develop => 0 }
@@ -285,7 +284,7 @@ subtest 'generate() — hashref calling style' => sub {
 
 subtest 'generate() — develop block injected when with_develop => 1' => sub {
 	# Use an empty home so default tools (Perl::Critic etc.) are injected.
-	empty_home();
+	my $g = empty_home();
 
 	my $mf  = make_mf($MF_SIMPLE);
 	my $out = App::makefilepl2cpanfile::generate(
@@ -300,7 +299,7 @@ subtest 'generate() — develop block injected when with_develop => 1' => sub {
 };
 
 subtest 'generate() — develop block suppressed when with_develop => 0' => sub {
-	empty_home();
+	my $g = empty_home();
 	my $mf  = make_mf($MF_SIMPLE);
 	my $out = App::makefilepl2cpanfile::generate(
 		makefile     => "$mf",
@@ -315,7 +314,7 @@ subtest 'generate() — develop block suppressed when with_develop => 0' => sub 
 # -----------------------------------------------------------------------
 
 subtest 'generate() — merge existing develop requires' => sub {
-	empty_home();
+	my $g = empty_home();
 	my $mf       = make_mf($MF_SIMPLE);
 	my $existing = "on 'develop' => sub {\n  requires 'My::Linter';\n};\n";
 	my $out = App::makefilepl2cpanfile::generate(
@@ -328,7 +327,7 @@ subtest 'generate() — merge existing develop requires' => sub {
 };
 
 subtest 'generate() — merge existing develop recommends' => sub {
-	empty_home();
+	my $g = empty_home();
 	my $mf       = make_mf($MF_SIMPLE);
 	my $existing = "on 'develop' => sub {\n  recommends 'My::NiceGUI';\n};\n";
 	my $out = App::makefilepl2cpanfile::generate(
@@ -341,7 +340,7 @@ subtest 'generate() — merge existing develop recommends' => sub {
 };
 
 subtest 'generate() — merge existing develop suggests' => sub {
-	empty_home();
+	my $g = empty_home();
 	my $mf       = make_mf($MF_SIMPLE);
 	my $existing = "on 'develop' => sub {\n  suggests 'My::OptionalTool';\n};\n";
 	my $out = App::makefilepl2cpanfile::generate(
@@ -356,7 +355,7 @@ subtest 'generate() — merge existing develop suggests' => sub {
 subtest 'generate() — hand-curated develop entries not overwritten' => sub {
 	# If Perl::Critic with a specific version is already in the existing cpanfile,
 	# the default-injection step must not clobber it or duplicate it.
-	empty_home();
+	my $g = empty_home();
 	my $mf       = make_mf($MF_SIMPLE);
 	my $existing = "on 'develop' => sub {\n  requires 'Perl::Critic', '1.140';\n};\n";
 	my $out = App::makefilepl2cpanfile::generate(
@@ -567,7 +566,7 @@ subtest 'parse_prereqs() — unrecognised content silently ignored' => sub {
 # -----------------------------------------------------------------------
 
 subtest 'generate() — does not set $@ on success' => sub {
-	empty_home();
+	my $g = empty_home();
 	my $mf = make_mf($MF_SIMPLE);
 
 	# Clear $@ to a known empty state, then assert it is still empty after a

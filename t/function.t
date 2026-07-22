@@ -1,11 +1,9 @@
 use strict;
 use warnings;
 
-# Test::Mockingbird is the preferred mock library per project conventions;
-# Test::MockModule is used here as a direct substitute — same interface intent.
 use Test::Most;
 use Test::Memory::Cycle;
-use Test::MockModule;
+use Test::Mockingbird;
 use File::Temp   qw(tempdir);
 use Path::Tiny;
 use Readonly;
@@ -397,12 +395,13 @@ subtest '_emit — cpanfile string formatter' => sub {
 # -----------------------------------------------------------------------
 subtest '_load_develop_config — YAML config loading' => sub {
 
-	my $homedir_mock = Test::MockModule->new('File::HomeDir');
+	# Each inner block holds its own mock_scoped guard; the mock is restored
+	# automatically when the block ends, giving clean isolation per test case.
 
 	# ---- No config file: must return a copy of DEFAULT_DEVELOP ----
 	{
 		my $tmp = tempdir( CLEANUP => 1 );
-		$homedir_mock->mock( 'my_home', sub { $tmp } );
+		my $g = mock_scoped 'File::HomeDir::my_home' => sub { $tmp };
 
 		my $result = App::makefilepl2cpanfile::_load_develop_config();
 		isa_ok $result, 'HASH', 'returns a hashref when no config file';
@@ -422,7 +421,7 @@ subtest '_load_develop_config — YAML config loading' => sub {
 	# ---- Valid config with a 'develop' key: must return that hash ----
 	{
 		my $tmp = tempdir( CLEANUP => 1 );
-		$homedir_mock->mock( 'my_home', sub { $tmp } );
+		my $g = mock_scoped 'File::HomeDir::my_home' => sub { $tmp };
 
 		path($tmp)->child('.config')->mkpath;
 		YAML::Tiny->new( { develop => { 'My::Extra::Tool' => '1.00' } } )
@@ -440,7 +439,7 @@ subtest '_load_develop_config — YAML config loading' => sub {
 	# ---- Config file exists but has no 'develop' key: must carp and use defaults ----
 	{
 		my $tmp = tempdir( CLEANUP => 1 );
-		$homedir_mock->mock( 'my_home', sub { $tmp } );
+		my $g = mock_scoped 'File::HomeDir::my_home' => sub { $tmp };
 
 		path($tmp)->child('.config')->mkpath;
 		YAML::Tiny->new( { other_key => 'value' } )
@@ -461,20 +460,22 @@ subtest '_load_develop_config — YAML config loading' => sub {
 	# is forgiving of some syntactically invalid input in the wild.
 	{
 		my $tmp = tempdir( CLEANUP => 1 );
-		$homedir_mock->mock( 'my_home', sub { $tmp } );
+		my $g_home = mock_scoped 'File::HomeDir::my_home' => sub { $tmp };
 
 		path($tmp)->child('.config')->mkpath;
 		# Create the file so is_file() returns true.
 		path($tmp)->child('.config', 'makefilepl2cpanfile.yml')
 			->spew_utf8("garbage: [\n");
 
-		my $yaml_mock = Test::MockModule->new('YAML::Tiny');
-		$yaml_mock->mock( 'read',   sub { return undef } );
-		$yaml_mock->mock( 'errstr', sub { 'simulated parse error' } );
+		my $g_yaml = mock_scoped(
+			'YAML::Tiny::read'   => sub { undef },
+			'YAML::Tiny::errstr' => sub { 'simulated parse error' },
+		);
 
 		throws_ok { App::makefilepl2cpanfile::_load_develop_config() }
 			qr/Failed to parse .+ simulated parse error/,
 			'malformed YAML causes croak with expected message';
+		# $g_yaml and $g_home go out of scope here, restoring both mocks
 	}
 
 	diag 'all _load_develop_config cases pass' if $ENV{TEST_VERBOSE};
@@ -640,10 +641,10 @@ END_MF
 subtest 'generate — integration: parse, merge, format' => sub {
 
 	# Redirect config loading to an empty home so default develop tools are
-	# injected whenever with_develop => 1 is in effect.
-	my $empty_home   = tempdir( CLEANUP => 1 );
-	my $homedir_mock = Test::MockModule->new('File::HomeDir');
-	$homedir_mock->mock( 'my_home', sub { $empty_home } );
+	# injected whenever with_develop => 1 is in effect.  The guard is held for
+	# the entire subtest; it restores File::HomeDir when the sub returns.
+	my $empty_home = tempdir( CLEANUP => 1 );
+	my $g = mock_scoped 'File::HomeDir::my_home' => sub { $empty_home };
 
 	my $dir = tempdir( CLEANUP => 1 );
 	my $mf  = path($dir)->child('Makefile.PL');

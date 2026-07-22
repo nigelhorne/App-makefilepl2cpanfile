@@ -16,7 +16,7 @@ use warnings;
 # exercised in dedicated subtests below.
 
 use Test::Most;
-use Test::MockModule;
+use Test::Mockingbird;
 use File::Temp qw(tempdir);
 use Path::Tiny;
 use Readonly;
@@ -132,25 +132,23 @@ END
 
 # -----------------------------------------------------------------------
 # Shared infrastructure: mock File::HomeDir so _load_develop_config
-# never touches the developer's real home directory.
+# never touches the developer's real home directory.  Each helper returns
+# a mock_scoped guard; callers store it (my $g = empty_home()) so the
+# mock stays active for the enclosing subtest block, then is auto-restored.
 # -----------------------------------------------------------------------
-
-my $homedir_mock = Test::MockModule->new('File::HomeDir');
 
 sub empty_home {
 	my $h = tempdir( CLEANUP => 1 );
-	$homedir_mock->mock( 'my_home', sub { $h } );
-	return $h;
+	return mock_scoped 'File::HomeDir::my_home' => sub { $h };
 }
 
 sub home_with_config {
 	my ($data) = @_;
 	my $h = tempdir( CLEANUP => 1 );
-	$homedir_mock->mock( 'my_home', sub { $h } );
 	path($h)->child('.config')->mkpath;
 	YAML::Tiny->new($data)
 		->write( path($h)->child('.config', 'makefilepl2cpanfile.yml')->stringify );
-	return $h;
+	return mock_scoped 'File::HomeDir::my_home' => sub { $h };
 }
 
 sub make_mf {
@@ -171,7 +169,7 @@ sub make_mf {
 # -----------------------------------------------------------------------
 
 subtest 'pipeline: parse_prereqs output consistent with generate output' => sub {
-	empty_home();
+	my $g = empty_home();
 	my $mf = make_mf($MF_ALL_PHASES);
 
 	my $content = $mf->slurp_utf8;
@@ -215,7 +213,7 @@ subtest 'pipeline: parse_prereqs output consistent with generate output' => sub 
 # -----------------------------------------------------------------------
 
 subtest "pipeline: MIN_PERL_VERSION flows through to cpanfile" => sub {
-	empty_home();
+	my $g = empty_home();
 
 	# With MIN_PERL_VERSION declared.
 	my $mf_with  = make_mf($MF_MIN_PERL);
@@ -248,7 +246,7 @@ subtest "pipeline: MIN_PERL_VERSION flows through to cpanfile" => sub {
 # -----------------------------------------------------------------------
 
 subtest 'pipeline: inline comments round-trip' => sub {
-	empty_home();
+	my $g = empty_home();
 	my $mf = make_mf($MF_COMMENTS);
 
 	# parse_prereqs must capture the comment in the data structure.
@@ -284,7 +282,7 @@ subtest 'pipeline: inline comments round-trip' => sub {
 # -----------------------------------------------------------------------
 
 subtest 'pipeline: structured prereqs block -> recommends/suggests in output' => sub {
-	empty_home();
+	my $g = empty_home();
 	my $mf = make_mf($MF_STRUCTURED);
 
 	# Verify parse_prereqs extracts all three relationship types.
@@ -321,7 +319,7 @@ subtest 'pipeline: structured prereqs block -> recommends/suggests in output' =>
 # -----------------------------------------------------------------------
 
 subtest 'pipeline: META_MERGE nested prereqs consistent across parse and generate' => sub {
-	empty_home();
+	my $g = empty_home();
 	my $mf = make_mf($MF_META_MERGE);
 
 	my $content = $mf->slurp_utf8;
@@ -353,7 +351,7 @@ subtest 'pipeline: META_MERGE nested prereqs consistent across parse and generat
 # -----------------------------------------------------------------------
 
 subtest 'pipeline: first-occurrence-wins for duplicate module declarations' => sub {
-	empty_home();
+	my $g = empty_home();
 	my $mf = make_mf($MF_DUPLICATE);
 
 	my $content = $mf->slurp_utf8;
@@ -390,7 +388,7 @@ subtest 'pipeline: first-occurrence-wins for duplicate module declarations' => s
 # -----------------------------------------------------------------------
 
 subtest 'pipeline: generate() is idempotent when output fed back as existing' => sub {
-	empty_home();
+	my $g = empty_home();
 	my $mf = make_mf($MF_ALL_PHASES);
 
 	my $first = App::makefilepl2cpanfile::generate(
@@ -420,7 +418,7 @@ subtest 'pipeline: generate() is idempotent when output fed back as existing' =>
 # -----------------------------------------------------------------------
 
 subtest 'optional config: absent config -> default develop tools injected' => sub {
-	empty_home();    # no config file in fake home
+	my $g = empty_home();    # no config file in fake home
 	my $mf  = make_mf($MF_SIMPLE);
 	my $out = App::makefilepl2cpanfile::generate(
 		makefile     => "$mf",
@@ -445,7 +443,7 @@ subtest 'optional config: absent config -> default develop tools injected' => su
 # -----------------------------------------------------------------------
 
 subtest 'optional config: present config -> custom tools replace defaults' => sub {
-	home_with_config( {
+	my $g = home_with_config( {
 		develop => {
 			'My::CustomTool' => 0,
 			'Another::Dev'   => '2.00',
@@ -477,7 +475,7 @@ subtest 'optional config: present config -> custom tools replace defaults' => su
 # -----------------------------------------------------------------------
 
 subtest 'develop merge: existing entries preserved, defaults added (with_develop=1)' => sub {
-	empty_home();    # default tools injected (unless already present)
+	my $g = empty_home();    # default tools injected (unless already present)
 	my $mf  = make_mf($MF_SIMPLE);
 	my $out = App::makefilepl2cpanfile::generate(
 		makefile     => "$mf",
@@ -508,7 +506,7 @@ subtest 'develop merge: existing entries preserved, defaults added (with_develop
 # -----------------------------------------------------------------------
 
 subtest 'develop merge: existing entries preserved, no defaults (with_develop=0)' => sub {
-	empty_home();
+	my $g = empty_home();
 	my $mf  = make_mf($MF_SIMPLE);
 	my $out = App::makefilepl2cpanfile::generate(
 		makefile     => "$mf",
@@ -534,7 +532,7 @@ subtest 'develop merge: existing entries preserved, no defaults (with_develop=0)
 # -----------------------------------------------------------------------
 
 subtest 'develop merge: hand-curated version-pinned entry not overwritten by default' => sub {
-	empty_home();
+	my $g = empty_home();
 	my $mf = make_mf($MF_SIMPLE);
 
 	Readonly my $EXISTING_PINNED => <<'END';
@@ -574,7 +572,7 @@ END
 # -----------------------------------------------------------------------
 
 subtest 'output format: invariants across all Makefile.PL variants' => sub {
-	empty_home();
+	my $g = empty_home();
 
 	my @fixtures = (
 		[ 'simple',      $MF_SIMPLE      ],
@@ -623,7 +621,7 @@ subtest 'output format: invariants across all Makefile.PL variants' => sub {
 # -----------------------------------------------------------------------
 
 subtest 'output format: modules sorted alphabetically within each phase' => sub {
-	empty_home();
+	my $g = empty_home();
 
 	# Declare modules in reverse alphabetical order in the Makefile.PL.
 	my $mf = make_mf(<<'END');
@@ -663,7 +661,7 @@ END
 # -----------------------------------------------------------------------
 
 subtest 'statelessness: independent generate() calls do not interfere' => sub {
-	empty_home();
+	my $g = empty_home();
 
 	my $mf_a = make_mf($MF_SIMPLE);       # Moo + Try::Tiny
 	my $mf_b = make_mf($MF_ALL_PHASES);   # completely different modules
@@ -716,7 +714,7 @@ subtest 'statelessness: interleaved parse_prereqs() calls' => sub {
 # -----------------------------------------------------------------------
 
 subtest 'pipeline: versioned and unversioned deps emitted correctly' => sub {
-	empty_home();
+	my $g = empty_home();
 
 	my $mf = make_mf(<<'END');
 WriteMakefile(

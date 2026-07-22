@@ -34,7 +34,7 @@ WriteMakefile(
 		'Test::Memory::Cycle' => 0,
 		'Test::Most' => 0,
 		'File::Temp' => 0,
-		'Test::MockModule' => 0,
+		'Test::Mockingbird' => 0,
 		'Test::NoWarnings' => 0,
 		'Test::RequiresInternet' => 0,
 		'Test::Which' => 0,
