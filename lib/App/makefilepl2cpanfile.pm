@@ -412,7 +412,14 @@ sub _parse_min_perl {
 # Effects:  Reads from disk. Croaks on YAML parse failure. Carps when the
 #           config file lacks a 'develop' key.
 sub _load_develop_config {
-	my $cfg_path = path(File::HomeDir->my_home)
+	my $home = File::HomeDir->my_home;
+
+	# Guard against environments with no home directory (containers, chroots,
+	# or CI systems where getpwuid returns no directory).  path(undef) would
+	# croak from Path::Tiny with a confusing message; return defaults instead.
+	return {%DEFAULT_DEVELOP} unless defined $home;
+
+	my $cfg_path = path($home)
 		->child('.config', 'makefilepl2cpanfile.yml');
 
 	if ($cfg_path->is_file) {
