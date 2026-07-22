@@ -439,24 +439,28 @@ sub _load_develop_config {
 sub _emit {
 	my ($deps, $min_perl) = @_;
 
-	my $out = "# Generated from Makefile.PL using makefilepl2cpanfile\n\n";
-	$out .= "requires 'perl', '$min_perl';\n\n" if $min_perl;
+	# Build the output as a list of sections joined by blank lines.  This
+	# avoids the trailing-double-newline bug that arises when a runtime-only
+	# output adds a separator newline with no following phase blocks.
+	my @sections;
+
+	push @sections, '# Generated from Makefile.PL using makefilepl2cpanfile';
+	push @sections, "requires 'perl', '$min_perl';" if $min_perl;
 
 	# Runtime: emitted at the top level, not inside an 'on' block.
 	if (my $rt = $deps->{runtime}) {
-		my $had_content = 0;
+		my @lines;
 		for my $rel (@REL_ORDER) {
 			my $h = $rt->{$rel} or next;
 			for my $m (sort keys %{$h}) {
-				$out .= _fmt_dep($rel, $m, $h->{$m}, '');
-				$had_content = 1;
+				push @lines, _fmt_dep($rel, $m, $h->{$m}, '');
 			}
 		}
-		$out .= "\n" if $had_content;
+		# join without an extra newline; _fmt_dep already appends \n per line.
+		push @sections, join('', @lines) if @lines;
 	}
 
 	# All other phases each get a named 'on' block.
-	my @blocks;
 	for my $phase (@PHASE_ORDER) {
 		my $p = $deps->{$phase} or next;
 
@@ -469,14 +473,13 @@ sub _emit {
 		}
 		next unless @lines;
 
-		my $block = "on '$phase' => sub {\n";
-		$block .= $_ for @lines;
-		$block .= "};";
-		push @blocks, $block;
+		push @sections, "on '$phase' => sub {\n" . join('', @lines) . "};";
 	}
 
-	$out .= join("\n\n", @blocks) . "\n" if @blocks;
-	return $out;
+	# _fmt_dep appends \n to each line, so strip trailing newlines from
+	# sections before joining so the blank-line separator is exactly one \n\n.
+	s/\n+$// for @sections;
+	return join("\n\n", @sections) . "\n";
 }
 
 # _fmt_dep
