@@ -3,7 +3,7 @@ package App::makefilepl2cpanfile;
 use strict;
 use warnings;
 use autodie qw(:all);
-use Carp        qw(croak carp);
+use Carp qw(croak carp);
 use Readonly;
 use Scalar::Util qw(looks_like_number);
 use Path::Tiny;

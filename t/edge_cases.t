@@ -24,8 +24,9 @@ use File::Temp qw(tempdir);
 use Path::Tiny;
 use Readonly;
 use YAML::Tiny;
+use POSIX qw(EIO ENOSPC EINTR ENOENT ENOMEM);
 
-use App::makefilepl2cpanfile;
+use_ok('App::makefilepl2cpanfile');
 
 # -----------------------------------------------------------------------
 # Shared constants and helpers
@@ -995,4 +996,259 @@ subtest 'upstream: Path::Tiny::is_file dies (simulated stat() failure) — propa
 		'Path::Tiny::is_file failure propagates from _load_develop_config';
 };
 
-done_testing;
+# -----------------------------------------------------------------------
+# SECTION 8: Mid-flight Hardware/OS Failure Simulation
+#
+# Injects POSIX errno-flavoured failures into the I/O wrapper layer
+# (Path::Tiny, YAML::Tiny) AFTER the readability guards have already
+# passed.  This simulates hardware faults, TOCTOU races, interrupted
+# syscalls, and truncated reads that cannot be detected by file-test
+# operators before the call.
+#
+# Three invariants are verified throughout:
+#   1. The error propagates unmasked from generate().
+#   2. No global Perl state ($@, Readonly constants) is corrupted.
+#   3. A subsequent call with working I/O produces correct output.
+# -----------------------------------------------------------------------
+
+# OS-canonical errno strings derived from Perl's $! layer rather than
+# POSIX::strerror() to stay locale-consistent (see locales.t guidance).
+Readonly my $MSG_EIO    => do { local $! = EIO;    "$!" };
+Readonly my $MSG_ENOSPC => do { local $! = ENOSPC; "$!" };
+Readonly my $MSG_EINTR  => do { local $! = EINTR;  "$!" };
+Readonly my $MSG_ENOENT => do { local $! = ENOENT; "$!" };
+Readonly my $MSG_ENOMEM => do { local $! = ENOMEM; "$!" };
+
+subtest 'io-failure-read: EIO (hardware fault) mid-slurp — propagates with POSIX errno string' => sub {
+	# A hardware read error (disk controller failure, bit-rot) that occurs
+	# AFTER the -f / -r guard has already confirmed the file's existence.
+	# Strategy: file is real (passes guard); slurp_utf8 is mocked to die
+	# with local $! = EIO, matching what the kernel would set.
+	my $g_home  = empty_home();
+	my $mf      = make_mf($MF_SIMPLE);
+	my $g_slurp = mock_scoped 'Path::Tiny::slurp_utf8' => sub {
+		local $! = EIO;
+		die "read: $!\n";
+	};
+
+	throws_ok {
+		App::makefilepl2cpanfile::generate(makefile => "$mf", with_develop => 0)
+	} qr/\Q$MSG_EIO\E/,
+		"EIO mid-slurp propagates with canonical '$MSG_EIO' string";
+};
+
+subtest 'io-failure-read: EINTR (interrupted syscall) mid-slurp — propagates' => sub {
+	# An async signal (SIGALRM, SIGTERM) arrived while sysread() was blocked.
+	# The kernel set errno = EINTR.  Path::Tiny does not automatically retry;
+	# the exception propagates to generate()'s caller.
+	my $g_home  = empty_home();
+	my $mf      = make_mf($MF_SIMPLE);
+	my $g_slurp = mock_scoped 'Path::Tiny::slurp_utf8' => sub {
+		local $! = EINTR;
+		die "sysread: $!\n";
+	};
+
+	throws_ok {
+		App::makefilepl2cpanfile::generate(makefile => "$mf", with_develop => 0)
+	} qr/\Q$MSG_EINTR\E/,
+		"EINTR mid-slurp propagates with canonical '$MSG_EINTR' string";
+};
+
+subtest 'io-failure-read: ENOENT (TOCTOU race) — file removed between guard and slurp' => sub {
+	# Race window: another process deletes Makefile.PL after the -f/-r check
+	# passes (TOCTOU).  slurp_utf8 then fails with ENOENT.  The error must
+	# propagate clearly and not be confused with the Cannot-read guard croak.
+	my $g_home  = empty_home();
+	my $mf      = make_mf($MF_SIMPLE);
+	my $g_slurp = mock_scoped 'Path::Tiny::slurp_utf8' => sub {
+		local $! = ENOENT;
+		die "open: $!\n";
+	};
+
+	throws_ok {
+		App::makefilepl2cpanfile::generate(makefile => "$mf", with_develop => 0)
+	} qr/\Q$MSG_ENOENT\E/,
+		"ENOENT from TOCTOU race propagates with canonical '$MSG_ENOENT' string";
+};
+
+subtest 'io-failure-read: ENOMEM (OOM) during Makefile.PL buffer allocation — propagates' => sub {
+	# The kernel cannot allocate the page-cache buffer for the file content.
+	# Possible under strict cgroup memory limits in containers.
+	my $g_home  = empty_home();
+	my $mf      = make_mf($MF_SIMPLE);
+	my $g_slurp = mock_scoped 'Path::Tiny::slurp_utf8' => sub {
+		local $! = ENOMEM;
+		die "mmap: $!\n";
+	};
+
+	throws_ok {
+		App::makefilepl2cpanfile::generate(makefile => "$mf", with_develop => 0)
+	} qr/\Q$MSG_ENOMEM\E/,
+		"ENOMEM during buffer alloc propagates with canonical '$MSG_ENOMEM' string";
+};
+
+subtest 'io-failure-read: unexpected EOF — slurp_utf8 returns truncated Makefile.PL' => sub {
+	# Simulate a file whose size shrank between stat() and read() (a log
+	# rotator truncated the wrong file, or a network FS returned a stale
+	# inode size).  The truncated string ends mid-PREREQ_PM (no closing
+	# brace), so generate() must return a valid header-only cpanfile, not
+	# a partial or malformed entry.
+	my $g_home  = empty_home();
+	my $mf      = make_mf($MF_SIMPLE);
+	my $g_slurp = mock_scoped 'Path::Tiny::slurp_utf8' => sub {
+		return "WriteMakefile(PREREQ_PM => { \x27Carp\x27 =>";    # truncated mid-value
+	};
+
+	my $out;
+	lives_ok {
+		$out = App::makefilepl2cpanfile::generate(
+			makefile     => "$mf",
+			with_develop => 0,
+		)
+	} 'truncated Makefile.PL (unexpected EOF) does not crash generate()';
+
+	like   $out, qr/# Generated from/, 'header present in output for truncated input';
+	unlike $out, qr/requires 'Carp'/,  'unclosed PREREQ_PM block produces no partial dep entry';
+
+	diag "Output (truncated input):\n$out" if $ENV{TEST_VERBOSE};
+};
+
+subtest 'io-failure-config: ENOSPC during YAML config read — croak includes path and errno' => sub {
+	# On copy-on-write (ZFS, BTRFS) and journaling (ext4) filesystems,
+	# even read operations can fail with ENOSPC when the FS needs to
+	# allocate metadata blocks.  The croak must include the config file
+	# path so operators can identify the failing mount.
+	my $dir = tempdir(CLEANUP => 1);
+	path($dir)->child('.config')->mkpath;
+	path($dir)->child('.config', 'makefilepl2cpanfile.yml')
+		->spew_utf8("develop:\n  Perl::Critic: 0\n");
+
+	my $g_home = mock_scoped 'File::HomeDir::my_home' => sub { $dir };
+	my $g_yaml = mock_scoped(
+		'YAML::Tiny::read'   => sub { return undef },
+		'YAML::Tiny::errstr' => sub { "No space left on device (ENOSPC)" },
+	);
+	my $mf = make_mf($MF_SIMPLE);
+
+	throws_ok {
+		App::makefilepl2cpanfile::generate(makefile => "$mf", with_develop => 1)
+	} qr/Failed to parse .+ No space left on device/,
+		'ENOSPC on config FS propagates with file path and errno description';
+};
+
+subtest 'io-failure-config: EIO during YAML config read — croak includes file path' => sub {
+	# Simulates a hardware error on the filesystem holding the user config
+	# (e.g., USB drive physically removed while the config was being read).
+	my $dir = tempdir(CLEANUP => 1);
+	path($dir)->child('.config')->mkpath;
+	path($dir)->child('.config', 'makefilepl2cpanfile.yml')
+		->spew_utf8("develop:\n  Perl::Critic: 0\n");
+
+	my $g_home = mock_scoped 'File::HomeDir::my_home' => sub { $dir };
+	my $g_yaml = mock_scoped(
+		'YAML::Tiny::read'   => sub { return undef },
+		'YAML::Tiny::errstr' => sub { "Input/output error (EIO)" },
+	);
+	my $mf = make_mf($MF_SIMPLE);
+
+	throws_ok {
+		App::makefilepl2cpanfile::generate(makefile => "$mf", with_develop => 1)
+	} qr/Failed to parse .+ Input\/output error/,
+		'EIO on config filesystem propagates with file path in croak';
+};
+
+subtest 'io-failure-config: truncated YAML (partial config write) — carp and use defaults' => sub {
+	# Simulates a config file left in a partial state after a crash mid-write:
+	# YAML syntax is valid but the expected 'develop' key is absent because
+	# the write was killed before that section was flushed to disk.
+	# Expected: carp (not croak) naming the missing key; generate() falls
+	# back to %DEFAULT_DEVELOP and produces correct output.
+	my $dir = tempdir(CLEANUP => 1);
+	path($dir)->child('.config')->mkpath;
+	path($dir)->child('.config', 'makefilepl2cpanfile.yml')
+		->spew_utf8("develop:\n  Perl::Critic: 0\n");
+
+	my $g_home = mock_scoped 'File::HomeDir::my_home' => sub { $dir };
+	my $g_yaml = mock_scoped 'YAML::Tiny::read' => sub {
+		# Return a valid YAML::Tiny object whose first document has metadata
+		# keys but no 'develop' key — simulating a file truncated before the
+		# developer-tools section was written.
+		return YAML::Tiny->new( { name => 'my-project', version => '0.01' } );
+	};
+	my $mf = make_mf($MF_SIMPLE);
+
+	my @warnings;
+	local $SIG{__WARN__} = sub { push @warnings, @_ };
+
+	my $out;
+	lives_ok {
+		$out = App::makefilepl2cpanfile::generate(
+			makefile     => "$mf",
+			with_develop => 1,
+		)
+	} "truncated YAML (no 'develop' key) does not croak — falls back to defaults";
+
+	ok scalar @warnings > 0,   "carp emitted when 'develop' key is absent from config";
+	like $warnings[0], qr/No 'develop' key/, "carp message identifies the missing 'develop' key";
+	like $out, qr/Perl::Critic/, '%DEFAULT_DEVELOP tools present in output — fallback succeeded';
+
+	diag "Warnings: @warnings\nOutput:\n$out" if $ENV{TEST_VERBOSE};
+};
+
+subtest 'io-failure-integrity: successful call after EIO failure — no state corruption' => sub {
+	# After generate() throws due to a mid-slurp EIO, all module-level
+	# Readonly constants must be intact and a subsequent call with working
+	# I/O must produce output identical to a call never preceded by failure.
+	my $g   = empty_home();
+	my $mf  = make_mf($MF_SIMPLE);
+	my $mf2 = make_mf($MF_SIMPLE);    # identical content, separate temp file
+
+	# First call: inject EIO failure.
+	{
+		my $g_slurp = mock_scoped 'Path::Tiny::slurp_utf8' => sub {
+			local $! = EIO;
+			die "disk: $!\n";
+		};
+		eval { App::makefilepl2cpanfile::generate(makefile => "$mf", with_develop => 0) };
+		like $@, qr/disk/, 'first call failed as expected (EIO)';
+	}    # $g_slurp destroyed here — real slurp_utf8 is restored
+
+	# Second call: no mock active — real I/O must succeed.
+	my $out_after = App::makefilepl2cpanfile::generate(
+		makefile     => "$mf",
+		with_develop => 0,
+	);
+
+	# Reference: a fresh call never preceded by any failure.
+	my $out_ref = App::makefilepl2cpanfile::generate(
+		makefile     => "$mf2",
+		with_develop => 0,
+	);
+
+	is $out_after, $out_ref,
+		'output after EIO failure matches fresh reference call — no state corruption';
+};
+
+subtest 'io-failure-integrity: $! and $@ contract after successful generate()' => sub {
+	# Pre-poisoning $! with ENOSPC must not prevent generate() from completing
+	# (Perl code treats $! as write-only; only syscalls write to the kernel
+	# errno slot).  After a successful call, $@ must be empty — no leaked
+	# eval artefacts from YAML::Tiny or other internal eval blocks.
+	my $g  = empty_home();
+	my $mf = make_mf($MF_SIMPLE);
+
+	local $! = ENOSPC;    # pre-set errno to "disk full" as a hostile pre-condition
+
+	my $out;
+	lives_ok {
+		$out = App::makefilepl2cpanfile::generate(
+			makefile     => "$mf",
+			with_develop => 0,
+		)
+	} "generate() succeeds even with pre-existing \$! = ENOSPC ($MSG_ENOSPC)";
+
+	like $out, qr/Carp/, 'correct dependency output produced';
+	is $@, '', '$@ is empty after successful generate() — no leaked eval artefacts';
+};
+
+done_testing();
