@@ -380,6 +380,11 @@ sub _extract_pairs {
 
 		if ($line =~ /['"]([^'"]+)['"]\s*=>\s*['"]?([\d._]+)?['"]?/) {
 			my ($mod, $ver) = ($1, $2);
+			# Defense-in-depth: [^'"]+ already excludes quote characters, but
+			# it also matches \n.  A newline in a module name produces a
+			# multi-line string literal in the cpanfile.  Restrict to valid
+			# Perl identifier paths to make the output unambiguously well-formed.
+			next unless $mod =~ /\A[A-Za-z_]\w*(?:::\w+)*\z/;
 			# First occurrence wins — do not overwrite already-parsed entries.
 			$deps->{$phase}{$rel}{$mod} //= {
 				version => $ver // 0,
@@ -427,7 +432,25 @@ sub _load_develop_config {
 			or croak "Failed to parse $cfg_path: " . YAML::Tiny->errstr();
 
 		if (ref $yaml->[0]{develop} eq 'HASH') {
-			return $yaml->[0]{develop};
+			# SECURITY: validate every key (module name) and value (version)
+			# before use.  YAML config keys are arbitrary strings; without
+			# this guard a key such as "Safe'; system('evil'); requires 'X"
+			# closes the single-quoted literal in _fmt_dep and injects
+			# executable Perl into the generated cpanfile, which cpanm eval's.
+			my %clean;
+			while (my ($mod, $ver) = each %{ $yaml->[0]{develop} }) {
+				unless ($mod =~ /\A[A-Za-z_]\w*(?:::\w+)*\z/) {
+					carp "Skipping invalid module name in $cfg_path: '$mod'";
+					next;
+				}
+				my $v = defined $ver ? "$ver" : 0;
+				unless ($v eq '0' || $v eq '' || $v =~ /\Av?[\d._]+\z/) {
+					carp "Skipping invalid version for '$mod' in $cfg_path: '$v'";
+					$v = 0;
+				}
+				$clean{$mod} = $v;
+			}
+			return \%clean;
 		}
 		carp "No 'develop' key found in $cfg_path; using defaults";
 	}

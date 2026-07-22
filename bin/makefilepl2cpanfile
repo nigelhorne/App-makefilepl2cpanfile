@@ -2,6 +2,7 @@
 
 use strict;
 use warnings;
+use autodie qw(:all);
 
 use Carp        qw(croak);
 use Getopt::Long qw(GetOptions);

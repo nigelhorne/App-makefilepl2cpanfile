@@ -472,14 +472,20 @@ subtest 'generate: list context returns exactly one Str element' => sub {
 # SECTION 3: Security — module name content via YAML config
 # -----------------------------------------------------------------------
 
-subtest 'security: YAML config module name with single quote' => sub {
-	# A module name containing a single quote causes _fmt_dep to embed an
-	# unmatched quote in the output line:  requires 'Bad'Quote';
-	# This documents the behaviour for user-controlled config; it is NOT
-	# a remote-code-execution vector since the user controls their own
-	# ~/.config file.
+subtest 'security: YAML config module name with single quote is rejected (injection guard)' => sub {
+	# VULN-1 regression: a YAML config key such as
+	#   Safe'; system('evil'); requires 'Safe2
+	# used to reach _fmt_dep and produce a syntactically valid cpanfile line
+	# that cpanm eval's, executing the injected command.
+	#
+	# After the fix, _load_develop_config validates every key against a strict
+	# Perl module-name pattern and skips (with carp) anything that does not
+	# match.  A key containing "'" can never be a valid module name.
 	my $g  = home_with_config( { develop => { "Bad'Quote" => 0 } } );
 	my $mf = make_mf($MF_SIMPLE);
+
+	my @warnings;
+	local $SIG{__WARN__} = sub { push @warnings, @_ };
 
 	my $out;
 	lives_ok {
@@ -487,11 +493,102 @@ subtest 'security: YAML config module name with single quote' => sub {
 			makefile     => "$mf",
 			with_develop => 1,
 		);
-	} 'single-quote module name does not crash generate()';
+	} 'invalid module name in config does not crash generate()';
 
-	like $out, qr/Bad/, 'partial module name appears in output';
+	unlike $out, qr/Bad/,
+		"module name containing \"'\" is rejected — does not reach output";
+	ok scalar @warnings > 0,
+		'carp emitted for rejected module name';
+	like $warnings[0], qr/invalid module name/i,
+		'carp message identifies the problem';
 
-	diag "Output with bad module name:\n$out" if $ENV{TEST_VERBOSE};
+	diag "Output:\n$out\nWarnings: @warnings" if $ENV{TEST_VERBOSE};
+};
+
+subtest 'security: YAML config crafted name that would inject code is rejected' => sub {
+	# Confirm the most dangerous payload — a name that closes the single-quoted
+	# string and inserts a system() call — is blocked before it can reach
+	# _fmt_dep and appear in the cpanfile.
+	Readonly my $PAYLOAD => "Safe'; warn q(INJECTED); requires 'Safe2";
+
+	my $g  = home_with_config( { develop => { $PAYLOAD => 0 } } );
+	my $mf = make_mf($MF_SIMPLE);
+
+	my $out = App::makefilepl2cpanfile::generate(
+		makefile     => "$mf",
+		with_develop => 1,
+	);
+
+	unlike $out, qr/INJECTED/,
+		'injection payload does not appear in generated cpanfile';
+	unlike $out, qr/warn/,
+		'warn() call is not present in generated cpanfile';
+
+	# Verify the output is safe to eval (no injection triggered).
+	my $eval_warned = 0;
+	local $SIG{__WARN__} = sub { $eval_warned = 1 };
+	eval q{ sub requires {} sub on { my ($p, $cb) = @_; $cb->() } } . $out;
+	ok !$eval_warned && !$@,
+		'generated cpanfile evals cleanly with no injected side-effects';
+};
+
+subtest 'security: YAML config poisoned version string is rejected (VULN-2)' => sub {
+	# VULN-2 regression: a YAML version value such as
+	#   "1'; warn q(VERSION_INJECTED); '1"
+	# used to pass _has_version (non-numeric → truthy) and be embedded as
+	# ", '$ver'" in _fmt_dep, injecting executable Perl into the cpanfile.
+	Readonly my $POISON_VER => "1'; warn q(VERSION_INJECTED); '1";
+
+	my $g  = home_with_config( { develop => { 'Safe::Mod' => $POISON_VER } } );
+	my $mf = make_mf($MF_SIMPLE);
+
+	my @warnings;
+	local $SIG{__WARN__} = sub { push @warnings, @_ };
+
+	my $out = App::makefilepl2cpanfile::generate(
+		makefile     => "$mf",
+		with_develop => 1,
+	);
+
+	unlike $out, qr/VERSION_INJECTED/,
+		'poisoned version string does not appear in generated cpanfile';
+
+	# The module itself must still be present (version falls back to 0).
+	like $out, qr/Safe::Mod/,
+		'module with invalid version is still emitted (version defaults to 0)';
+
+	ok scalar @warnings > 0,
+		'carp emitted for rejected version string';
+	like $warnings[0], qr/invalid version/i,
+		'carp message identifies the rejected version';
+};
+
+subtest 'security: valid YAML config module names and versions are accepted' => sub {
+	# Confirm the validation rejects only invalid entries, not valid ones.
+	my $g  = home_with_config( {
+		develop => {
+			'Perl::Critic'        => 0,
+			'Devel::Cover'        => '1.00',
+			'Test::Pod'           => 'v1.2.3',
+			'My_Tool::With_Under' => '0.001',
+		}
+	} );
+	my $mf = make_mf($MF_SIMPLE);
+
+	my @warnings;
+	local $SIG{__WARN__} = sub { push @warnings, @_ };
+
+	my $out = App::makefilepl2cpanfile::generate(
+		makefile     => "$mf",
+		with_develop => 1,
+	);
+
+	like $out, qr/Perl::Critic/,    'Perl::Critic accepted';
+	like $out, qr/Devel::Cover/,    'Devel::Cover accepted';
+	like $out, qr/Test::Pod/,       'Test::Pod accepted';
+	like $out, qr/My_Tool::With_Under/, 'underscore-containing name accepted';
+	is scalar(grep { /invalid/i } @warnings), 0,
+		'no warnings for well-formed module names and versions';
 };
 
 subtest 'security: Makefile.PL module names cannot carry quote characters (injection safe)' => sub {
