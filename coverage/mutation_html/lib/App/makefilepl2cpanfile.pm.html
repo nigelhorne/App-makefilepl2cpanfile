@@ -245,9 +245,9 @@ pre details.mutant-details ul {
 </div><div class='summary'>
 <strong>Structural Coverage (Approximate)</strong><p>
 TER1 (Statement): 100.00%<br>
-TER2 (Branch): 100.00%<br>
+TER2 (Branch): 98.33%<br>
 TER3 (LCSAJ): 100.0% (9/9)<br>
-Approximate LCSAJ segments: 59<br>
+Approximate LCSAJ segments: 61<br>
 </div>
 
     <div class="legend">
@@ -470,7 +470,7 @@ Approximate LCSAJ segments: 59<br>
 </span><span class="">  178: 
 </span><span class="">  179: sub generate {
 </span><span class="">  180: 	# Accept both flat hash and single-hashref calling styles.
-</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">181 → 198 → 207</span></span>  181: 	my $args = Params::Get::get_params(undef, \@_);
+</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">181 → 198 → 217</span></span>  181: 	my $args = Params::Get::get_params(undef, \@_);
 </span><span class="">  182: 
 </span><span class="">  183: 	my $makefile = $args-&gt;{makefile}     // &#39;Makefile.PL&#39;;
 </span><span class="">  184: 	my $existing = $args-&gt;{existing}     // &#39;&#39;;
@@ -487,448 +487,462 @@ Approximate LCSAJ segments: 59<br>
 </span><span class="">  195: 	# The closing &#39;}; &#39; is anchored to the start of a line (/m) so that
 </span><span class="">  196: 	# an inline comment containing &#39;}; &#39; does not terminate the match early,
 </span><span class="">  197: 	# silently dropping any module entries that follow the comment.
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  198: 	if ($existing =~ /on\s+[&quot;&#39;]develop[&quot;&#39;]\s*=&gt;\s*sub\s*\{(.*?)^};/ms) {
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  198: 	if ($existing =~ /on\s+[&quot;&#39;]develop[&quot;&#39;]\s*=&gt;\s*sub\s*\{(.*?)^[ \t]*};/ms) {
 </span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  199: 		my $dev_block = $1;
 </span><span class="">  200: 		for my $rel (@REL_ORDER) {
-</span><span class="">  201: 			while ($dev_block =~ /\b$rel\s+[&#39;&quot;]([^&#39;&quot;]+)[&#39;&quot;](?:\s*,\s*[&#39;&quot;]([^&#39;&quot;]+)[&#39;&quot;])?/g) {
-</span><span class="">  202: 				$deps-&gt;{develop}{$rel}{$1} //= { version =&gt; $2 // 0, comment =&gt; undef };
-</span><span class="">  203: 			}
-</span><span class="">  204: 		}
-</span><span class="">  205: 	}
-</span><span class="">  206: 
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">207 → 207 → 225</span></span>  207: 	if ($with_dev) {
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  208: 		my $config = _load_develop_config();
-</span><span class="">  209: 
-</span><span class="">  210: 		# Only inject tools not already listed under any relationship.
-</span><span class="">  211: 		for my $mod (keys %{$config}) {
-</span><span class="">  212: 			my $already_present = any {
-</span><span class="">  213: 				exists $deps-&gt;{develop}{$_}{$mod}
-</span><span class="">  214: 			} @REL_ORDER;
-</span><span class="">  215: 
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  216: 			unless ($already_present) {
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  217: 				$deps-&gt;{develop}{requires}{$mod} = {
-</span><span class="">  218: 					version =&gt; $config-&gt;{$mod},
-</span><span class="">  219: 					comment =&gt; undef,
-</span><span class="">  220: 				};
-</span><span class="">  221: 			}
-</span><span class="">  222: 		}
-</span><span class="">  223: 	}
-</span><span class="">  224: 
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  225: 	return _emit($deps, $min_perl);
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  226: }
-</span><span class="">  227: 
-</span><span class="">  228: =head2 parse_prereqs($content)
-</span><span class="">  229: 
-</span><span class="">  230: Extracts all dependency declarations from a C&lt;Makefile.PL&gt; string and
-</span><span class="">  231: returns them structured by cpanfile phase and relationship type.  Exposed
-</span><span class="">  232: as a public function so callers (e.g. C&lt;bin/makefilepl2cpanfile --check&gt;)
-</span><span class="">  233: can reuse the parsing logic without duplicating regexes.
+</span><span class="">  201: 			# \Q$rel\E: quote metacharacters defensively (rel is a constant word,
+</span><span class="">  202: 			# but interpolation without quoting is a static-analysis red flag).
+</span><span class="">  203: 			# [^&#39;&quot;\n]++ possessive: never cross a line boundary when capturing a
+</span><span class="">  204: 			# module name or version, and commit immediately &acirc;&#128;&#148; no backtracking into
+</span><span class="">  205: 			# individual chars needed once the quote is closed.
+</span><span class="">  206: 			while ($dev_block =~ /\b\Q$rel\E\s+[&#39;&quot;]([^&#39;&quot;\n]++)[&#39;&quot;](?:\s*,\s*[&#39;&quot;]([^&#39;&quot;\n]*+)[&#39;&quot;])?/g) {
+</span><span class="">  207: 				# Save immediately: the inner validation regex below has no capturing
+</span><span class="">  208: 				# groups, so running it directly against $1 would reset $1/$2 to
+</span><span class="">  209: 				# undef &acirc;&#128;&#148; the classic &quot;inner match clobbers outer capture vars&quot; bug.
+</span><span class="">  210: 				my ($mod, $ver) = ($1, $2);
+</span><span class="">  211: 				next unless $mod =~ /\A[A-Za-z_]\w*+(?:::\w++)*+\z/;
+</span><span class="">  212: 				$deps-&gt;{develop}{$rel}{$mod} //= { version =&gt; $ver // 0, comment =&gt; undef };
+</span><span class="">  213: 			}
+</span><span class="">  214: 		}
+</span><span class="">  215: 	}
+</span><span class="">  216: 
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">217 → 217 → 235</span></span>  217: 	if ($with_dev) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  218: 		my $config = _load_develop_config();
+</span><span class="">  219: 
+</span><span class="">  220: 		# Only inject tools not already listed under any relationship.
+</span><span class="">  221: 		for my $mod (keys %{$config}) {
+</span><span class="">  222: 			my $already_present = any {
+</span><span class="">  223: 				exists $deps-&gt;{develop}{$_}{$mod}
+</span><span class="">  224: 			} @REL_ORDER;
+</span><span class="">  225: 
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  226: 			unless ($already_present) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  227: 				$deps-&gt;{develop}{requires}{$mod} = {
+</span><span class="">  228: 					version =&gt; $config-&gt;{$mod},
+</span><span class="">  229: 					comment =&gt; undef,
+</span><span class="">  230: 				};
+</span><span class="">  231: 			}
+</span><span class="">  232: 		}
+</span><span class="">  233: 	}
 </span><span class="">  234: 
-</span><span class="">  235: Both the simple C&lt;PREREQ_PM =E&lt;gt&gt; { ... }&gt; form and the structured
-</span><span class="">  236: C&lt;prereqs =E&lt;gt&gt; { phase =E&lt;gt&gt; { rel =E&lt;gt&gt; { ... } } }&gt; form (including
-</span><span class="">  237: those nested under C&lt;META_MERGE&gt;) are parsed.  Inline comments attached to
-</span><span class="">  238: module entries are captured and preserved for round-trip fidelity.
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  235: 	return _emit($deps, $min_perl);
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  236: }
+</span><span class="">  237: 
+</span><span class="">  238: =head2 parse_prereqs($content)
 </span><span class="">  239: 
-</span><span class="">  240: =head3 API SPECIFICATION
-</span><span class="">  241: 
-</span><span class="">  242: 	Arguments:
-</span><span class="">  243: 	  $content   Str   Raw text of a Makefile.PL
+</span><span class="">  240: Extracts all dependency declarations from a C&lt;Makefile.PL&gt; string and
+</span><span class="">  241: returns them structured by cpanfile phase and relationship type.  Exposed
+</span><span class="">  242: as a public function so callers (e.g. C&lt;bin/makefilepl2cpanfile --check&gt;)
+</span><span class="">  243: can reuse the parsing logic without duplicating regexes.
 </span><span class="">  244: 
-</span><span class="">  245: 	Returns: HashRef (see L&lt;/DATA STRUCTURE&gt;)
-</span><span class="">  246: 	  {
-</span><span class="">  247: 	    phase =&gt; {
-</span><span class="">  248: 	      rel =&gt; {
-</span><span class="">  249: 	        &#39;Module::Name&#39; =&gt; { version =&gt; version_str, comment =&gt; str_or_undef },
-</span><span class="">  250: 	      },
-</span><span class="">  251: 	    },
-</span><span class="">  252: 	  }
-</span><span class="">  253: 	  Absent phases/relationships are not present in the hashref.
-</span><span class="">  254: 	  version is 0 when no minimum is declared.
-</span><span class="">  255: 	  comment is undef when no inline comment was present.
-</span><span class="">  256: 
-</span><span class="">  257: =head3 EXAMPLE
-</span><span class="">  258: 
-</span><span class="">  259: 	my $deps = App::makefilepl2cpanfile::parse_prereqs(
-</span><span class="">  260: 	    path(&#39;Makefile.PL&#39;)-&gt;slurp_utf8
-</span><span class="">  261: 	);
-</span><span class="">  262: 
-</span><span class="">  263: 	# Iterate over all phases and relationships
-</span><span class="">  264: 	for my $phase (sort keys %{$deps}) {
-</span><span class="">  265: 	    for my $rel (sort keys %{ $deps-&gt;{$phase} }) {
-</span><span class="">  266: 	        for my $mod (sort keys %{ $deps-&gt;{$phase}{$rel} }) {
-</span><span class="">  267: 	            my $e = $deps-&gt;{$phase}{$rel}{$mod};
-</span><span class="">  268: 	            printf &quot;%s %s %s =&gt; %s\n&quot;, $phase, $rel, $mod, $e-&gt;{version};
-</span><span class="">  269: 	        }
-</span><span class="">  270: 	    }
-</span><span class="">  271: 	}
+</span><span class="">  245: Both the simple C&lt;PREREQ_PM =E&lt;gt&gt; { ... }&gt; form and the structured
+</span><span class="">  246: C&lt;prereqs =E&lt;gt&gt; { phase =E&lt;gt&gt; { rel =E&lt;gt&gt; { ... } } }&gt; form (including
+</span><span class="">  247: those nested under C&lt;META_MERGE&gt;) are parsed.  Inline comments attached to
+</span><span class="">  248: module entries are captured and preserved for round-trip fidelity.
+</span><span class="">  249: 
+</span><span class="">  250: =head3 API SPECIFICATION
+</span><span class="">  251: 
+</span><span class="">  252: 	Arguments:
+</span><span class="">  253: 	  $content   Str   Raw text of a Makefile.PL
+</span><span class="">  254: 
+</span><span class="">  255: 	Returns: HashRef (see L&lt;/DATA STRUCTURE&gt;)
+</span><span class="">  256: 	  {
+</span><span class="">  257: 	    phase =&gt; {
+</span><span class="">  258: 	      rel =&gt; {
+</span><span class="">  259: 	        &#39;Module::Name&#39; =&gt; { version =&gt; version_str, comment =&gt; str_or_undef },
+</span><span class="">  260: 	      },
+</span><span class="">  261: 	    },
+</span><span class="">  262: 	  }
+</span><span class="">  263: 	  Absent phases/relationships are not present in the hashref.
+</span><span class="">  264: 	  version is 0 when no minimum is declared.
+</span><span class="">  265: 	  comment is undef when no inline comment was present.
+</span><span class="">  266: 
+</span><span class="">  267: =head3 EXAMPLE
+</span><span class="">  268: 
+</span><span class="">  269: 	my $deps = App::makefilepl2cpanfile::parse_prereqs(
+</span><span class="">  270: 	    path(&#39;Makefile.PL&#39;)-&gt;slurp_utf8
+</span><span class="">  271: 	);
 </span><span class="">  272: 
-</span><span class="">  273: =head3 MESSAGES
-</span><span class="">  274: 
-</span><span class="">  275: 	No errors or warnings &acirc;&#128;&#148; unrecognised content is silently ignored.
-</span><span class="">  276: 
-</span><span class="">  277: =cut
-</span><span class="">  278: 
-</span><span class="">  279: sub parse_prereqs {
-</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">280 → 292 → 313</span></span>  280: 	my $content = $_[0];
-</span><span class="">  281: 
-</span><span class="">  282: 	# The POD contract is &quot;no errors or warnings &acirc;&#128;&#148; unrecognised content is
-</span><span class="">  283: 	# silently ignored.&quot;  Undef and references are not valid Str inputs; return
-</span><span class="">  284: 	# {} immediately to avoid &quot;uninitialized value&quot; and &quot;reference used as
-</span><span class="">  285: 	# string&quot; warnings from the pattern-match operators below.
-</span><span class="">  286: 	return {} unless defined $content &amp;&amp; !ref $content;
-</span><span class="">  287: 
-</span><span class="">  288: 	my %deps;
-</span><span class="">  289: 
-</span><span class="">  290: 	# ---- Simple dependency keys (PREREQ_PM, BUILD_REQUIRES, etc.) ----
-</span><span class="">  291: 	# These always map to the &#39;requires&#39; relationship in their phase.
-</span><span class="">  292: 	for my $mf_key (keys %PHASE_MAP) {
-</span><span class="">  293: 		my $phase = $PHASE_MAP{$mf_key};
-</span><span class="">  294: 
-</span><span class="">  295: 		# The regex allows up to four levels of brace nesting so that unusual
-</span><span class="">  296: 		# Makefile.PL constructs (e.g. version objects) don&#39;t terminate the
-</span><span class="">  297: 		# block match prematurely.
-</span><span class="">  298: 		while ($content =~ /
-</span><span class="">  299: 			\b $mf_key \s*=&gt;\s* \{
-</span><span class="">  300: 				( (?: [^{}]++
-</span><span class="">  301: 				    | \{ (?: [^{}]++ | \{ (?: [^{}]++ | \{ [^}]*+ \} )* \} )* \}
-</span><span class="">  302: 				  )*
-</span><span class="">  303: 				)
-</span><span class="">  304: 			\}
-</span><span class="">  305: 		/gsx) {
-</span><span class="">  306: 			_extract_pairs($1, \%deps, $phase, &#39;requires&#39;);
-</span><span class="">  307: 		}
-</span><span class="">  308: 	}
-</span><span class="">  309: 
-</span><span class="">  310: 	# ---- Structured &#39;prereqs&#39; blocks (CPAN Meta Spec style) ----
-</span><span class="">  311: 	# These can appear at the top level of WriteMakefile() or nested inside
-</span><span class="">  312: 	# META_MERGE; both are covered by searching the full content for &#39;prereqs&#39;.
-</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">313 → 313 → 348</span></span>  313: 	while ($content =~ /
-</span><span class="">  314: 		\b prereqs \s*=&gt;\s* \{
-</span><span class="">  315: 			( (?: [^{}]++
-</span><span class="">  316: 			    | \{ (?: [^{}]++
-</span><span class="">  317: 			         | \{ (?: [^{}]++ | \{ (?: [^{}]++ | \{ [^}]*+ \} )* \} )* \}
-</span><span class="">  318: 			      )* \}
-</span><span class="">  319: 			  )*
-</span><span class="">  320: 			)
-</span><span class="">  321: 		\}
-</span><span class="">  322: 	/gsx) {
-</span><span class="">  323: 		my $prereqs_block = $1;
-</span><span class="">  324: 
-</span><span class="">  325: 		# Each direct child is a phase name mapping to a relationship hash.
-</span><span class="">  326: 		while ($prereqs_block =~ /
-</span><span class="">  327: 			\b (\w+) \s*=&gt;\s* \{
-</span><span class="">  328: 				( (?: [^{}]++ | \{ (?: [^{}]++ | \{ [^}]*+ \} )* \} )* )
-</span><span class="">  329: 			\}
-</span><span class="">  330: 		/gsx) {
-</span><span class="">  331: 			my ($phase_name, $phase_block) = ($1, $2);
-</span><span class="">  332: 			next unless $VALID_PHASE{$phase_name};
-</span><span class="">  333: 
-</span><span class="">  334: 			# Each child of the phase block is a relationship name.
-</span><span class="">  335: 			while ($phase_block =~ /
-</span><span class="">  336: 				\b (\w+) \s*=&gt;\s* \{
-</span><span class="">  337: 					( (?: [^{}]++ | \{ [^}]*+ \} )* )
-</span><span class="">  338: 				\}
-</span><span class="">  339: 			/gsx) {
-</span><span class="">  340: 				my ($rel, $rel_block) = ($1, $2);
-</span><span class="">  341: 				next unless $VALID_REL{$rel};
-</span><span class="">  342: 
-</span><span class="">  343: 				_extract_pairs($rel_block, \%deps, $phase_name, $rel);
-</span><span class="">  344: 			}
-</span><span class="">  345: 		}
-</span><span class="">  346: 	}
-</span><span class="">  347: 
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  348: 	return \%deps;
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  349: }
-</span><span class="">  350: 
-</span><span class="">  351: # -----------------------------------------------------------------------
-</span><span class="">  352: # Private helpers
-</span><span class="">  353: # -----------------------------------------------------------------------
-</span><span class="">  354: 
-</span><span class="">  355: # _extract_pairs
-</span><span class="">  356: #
-</span><span class="">  357: # Purpose:  Parse a raw block of text (the content between the outermost
-</span><span class="">  358: #           braces of a dependency hash) into module/version/comment triples
-</span><span class="">  359: #           and store them in the deps structure.  Processes line-by-line
-</span><span class="">  360: #           so that trailing inline comments can be captured before the
-</span><span class="">  361: #           comment text is discarded.
-</span><span class="">  362: # Entry:    $_[0] &acirc;&#128;&#148; raw block text (between the outer braces).
-</span><span class="">  363: #           $_[1] &acirc;&#128;&#148; hashref to populate (the top-level %deps).
-</span><span class="">  364: #           $_[2] &acirc;&#128;&#148; phase name string (e.g. &#39;runtime&#39;).
-</span><span class="">  365: #           $_[3] &acirc;&#128;&#148; relationship string (e.g. &#39;requires&#39;).
-</span><span class="">  366: # Exit:     Returns nothing &acirc;&#128;&#148; mutates $_[1] in place.
-</span><span class="">  367: # Effects:  Modifies the deps hashref; no I/O.
-</span><span class="">  368: #
-</span><span class="">  369: # First-occurrence-wins: if the same module appears multiple times (e.g.
-</span><span class="">  370: # once in PREREQ_PM and once in a prereqs block), the first parsed entry
-</span><span class="">  371: # is kept.
-</span><span class="">  372: sub _extract_pairs {
-</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">373 → 375 → 397</span></span>  373: 	my ($block, $deps, $phase, $rel) = @_;
-</span><span class="">  374: 
-</span><span class="">  375: 	for my $line (split /\n/, $block) {
-</span><span class="">  376: 		# Capture any trailing inline comment before stripping it.
-</span><span class="">  377: 		my ($comment) = ($line =~ /#\s*(.+?)\s*$/);
-</span><span class="">  378: 		$line =~ s/#.*$//;
-</span><span class="">  379: 
-</span><span class="">  380: 		next unless $line =~ /\S/;		# skip blank / formerly comment-only lines
-</span><span class="">  381: 
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  382: 		if ($line =~ /[&#39;&quot;]([^&#39;&quot;]+)[&#39;&quot;]\s*=&gt;\s*[&#39;&quot;]?([\d._]+)?[&#39;&quot;]?/) {
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  383: 			my ($mod, $ver) = ($1, $2);
-</span><span class="">  384: 			# Defense-in-depth: [^&#39;&quot;]+ already excludes quote characters, but
-</span><span class="">  385: 			# it also matches \n.  A newline in a module name produces a
-</span><span class="">  386: 			# multi-line string literal in the cpanfile.  Restrict to valid
-</span><span class="">  387: 			# Perl identifier paths to make the output unambiguously well-formed.
-</span><span class="">  388: 			next unless $mod =~ /\A[A-Za-z_]\w*(?:::\w+)*\z/;
-</span><span class="">  389: 			# First occurrence wins &acirc;&#128;&#148; do not overwrite already-parsed entries.
-</span><span class="">  390: 			$deps-&gt;{$phase}{$rel}{$mod} //= {
-</span><span class="">  391: 				version =&gt; $ver // 0,
-</span><span class="">  392: 				comment =&gt; $comment,
-</span><span class="">  393: 			};
-</span><span class="">  394: 		}
-</span><span class="">  395: 	}
-</span><span class="">  396: 
-</span><span class="">  397: 	return;
-</span><span class="">  398: }
-</span><span class="">  399: 
-</span><span class="">  400: # _parse_min_perl
-</span><span class="">  401: #
-</span><span class="">  402: # Purpose:  Extract the MIN_PERL_VERSION value from Makefile.PL text.
-</span><span class="">  403: # Entry:    $_[0] &acirc;&#128;&#148; raw Makefile.PL content string.
-</span><span class="">  404: # Exit:     The version string (e.g. &#39;5.010&#39;), or undef if not declared.
-</span><span class="">  405: sub _parse_min_perl {
-</span><span class="">  406: 	my $content = $_[0];
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  407: 	return ($content =~ /MIN_PERL_VERSION\s*=&gt;\s*[&#39;&quot;]?([\d._]+)[&#39;&quot;]?/)
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  408: 		? $1
-</span><span class="">  409: 		: undef;
-</span><span class="">  410: }
-</span><span class="">  411: 
-</span><span class="">  412: # _load_develop_config
-</span><span class="">  413: #
-</span><span class="">  414: # Return the develop-tools hash from the user&#39;s YAML config file,
-</span><span class="">  415: #   or %DEFAULT_DEVELOP when no config file exists.
-</span><span class="">  416: # Entry:    None &acirc;&#128;&#148; reads from the filesystem at a well-known path.
-</span><span class="">  417: # Exit:     HashRef { Module::Name =&gt; minimum_version_or_0 }.
-</span><span class="">  418: # Effects:  Reads from disk. Croaks on YAML parse failure. Carps when the
-</span><span class="">  419: #           config file lacks a &#39;develop&#39; key.
-</span><span class="">  420: sub _load_develop_config {
-</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">421 → 431 → 461</span></span>  421: 	my $home = File::HomeDir-&gt;my_home;
-</span><span class="">  422: 
-</span><span class="">  423: 	# Guard against environments with no home directory (containers, chroots,
-</span><span class="">  424: 	# or CI systems where getpwuid returns no directory).  path(undef) would
-</span><span class="">  425: 	# croak from Path::Tiny with a confusing message; return defaults instead.
-</span><span class="">  426: 	return {%DEFAULT_DEVELOP} unless defined $home;
-</span><span class="">  427: 
-</span><span class="">  428: 	my $cfg_path = path($home)
-</span><span class="">  429: 		-&gt;child(&#39;.config&#39;, &#39;makefilepl2cpanfile.yml&#39;);
-</span><span class="">  430: 
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  431: 	if ($cfg_path-&gt;is_file) {
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  432: 		my $yaml = YAML::Tiny-&gt;read(&quot;$cfg_path&quot;)
-</span><span class="">  433: 			or croak &quot;Failed to parse $cfg_path: &quot; . YAML::Tiny-&gt;errstr();
-</span><span class="">  434: 
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  435: 		if (ref $yaml-&gt;[0]{develop} eq &#39;HASH&#39;) {
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  436: 			# SECURITY: validate every key (module name) and value (version)
-</span><span class="">  437: 			# before use.  YAML config keys are arbitrary strings; without
-</span><span class="">  438: 			# this guard a key such as &quot;Safe&#39;; system(&#39;evil&#39;); requires &#39;X&quot;
-</span><span class="">  439: 			# closes the single-quoted literal in _fmt_dep and injects
-</span><span class="">  440: 			# executable Perl into the generated cpanfile, which cpanm eval&#39;s.
-</span><span class="">  441: 			my %clean;
-</span><span class="">  442: 			for my $mod (keys %{ $yaml-&gt;[0]{develop} }) {
-</span><span class="">  443: 				my $ver = $yaml-&gt;[0]{develop}{$mod};
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  444: 				unless ($mod =~ /\A[A-Za-z_]\w*(?:::\w+)*\z/) {
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  445: 					carp &quot;Skipping invalid module name in $cfg_path: &#39;$mod&#39;&quot;;
-</span><span class="">  446: 					next;
-</span><span class="">  447: 				}
-</span><span class="">  448: 				my $v = defined $ver ? &quot;$ver&quot; : 0;
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  449: 				unless ($v eq &#39;0&#39; || $v eq &#39;&#39; || $v =~ /\Av?[\d._]+\z/) {
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  450: 					carp &quot;Skipping invalid version for &#39;$mod&#39; in $cfg_path: &#39;$v&#39;&quot;;
-</span><span class="">  451: 					$v = 0;
-</span><span class="">  452: 				}
-</span><span class="">  453: 				$clean{$mod} = $v;
-</span><span class="">  454: 			}
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  455: 			return \%clean;
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  456: 		}
-</span><span class="">  457: 		carp &quot;No &#39;develop&#39; key found in $cfg_path; using defaults&quot;;
-</span><span class="">  458: 	}
-</span><span class="">  459: 
-</span><span class="">  460: 	# Return a copy so callers cannot mutate the constant.
-</span><span class="">  461: 	return {%DEFAULT_DEVELOP};
-</span><span class="">  462: }
-</span><span class="">  463: 
-</span><span class="">  464: # _emit
-</span><span class="">  465: #
-</span><span class="">  466: # Purpose:  Pure formatter &acirc;&#128;&#148; converts the structured dependency hash and an
-</span><span class="">  467: #           optional minimum Perl version into a valid cpanfile string.
-</span><span class="">  468: # Entry:    $_[0] &acirc;&#128;&#148; HashRef (see DATA STRUCTURE section in POD)
-</span><span class="">  469: #           $_[1] &acirc;&#128;&#148; optional Str minimum Perl version (e.g. &#39;5.010&#39;)
-</span><span class="">  470: # Exit:     Scalar string; always terminated with exactly one newline.
-</span><span class="">  471: #           Never returns undef.
-</span><span class="">  472: #
-</span><span class="">  473: # Runtime deps are emitted at the top level (no &#39;on&#39; block) per cpanfile
-</span><span class="">  474: # convention. All other phases get &#39;on phase =&gt; sub { ... }&#39; blocks.
-</span><span class="">  475: # Within each phase, relationships are emitted in @REL_ORDER order;
-</span><span class="">  476: # modules within each relationship are sorted alphabetically.
-</span><span class="">  477: # Inline comments are re-emitted after the semicolon on the same line.
-</span><span class="">  478: # A version of 0 or &#39;&#39; means &quot;any version&quot; and is omitted.
-</span><span class="">  479: sub _emit {
-</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">480 → 491 → 504</span></span>  480: 	my ($deps, $min_perl) = @_;
-</span><span class="">  481: 
-</span><span class="">  482: 	# Build the output as a list of sections joined by blank lines.  This
-</span><span class="">  483: 	# avoids the trailing-double-newline bug that arises when a runtime-only
-</span><span class="">  484: 	# output adds a separator newline with no following phase blocks.
-</span><span class="">  485: 	my @sections;
-</span><span class="">  486: 
-</span><span class="">  487: 	push @sections, &#39;# Generated from Makefile.PL using makefilepl2cpanfile&#39;;
-</span><span class="">  488: 	push @sections, &quot;requires &#39;perl&#39;, &#39;$min_perl&#39;;&quot; if $min_perl;
-</span><span class="">  489: 
-</span><span class="">  490: 	# Runtime: emitted at the top level, not inside an &#39;on&#39; block.
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  491: 	if (my $rt = $deps-&gt;{runtime}) {
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  492: 		my @lines;
-</span><span class="">  493: 		for my $rel (@REL_ORDER) {
-</span><span class="">  494: 			my $h = $rt-&gt;{$rel} or next;
-</span><span class="">  495: 			for my $m (sort keys %{$h}) {
-</span><span class="">  496: 				push @lines, _fmt_dep($rel, $m, $h-&gt;{$m}, &#39;&#39;);
-</span><span class="">  497: 			}
-</span><span class="">  498: 		}
-</span><span class="">  499: 		# join without an extra newline; _fmt_dep already appends \n per line.
-</span><span class="">  500: 		push @sections, join(&#39;&#39;, @lines) if @lines;
-</span><span class="">  501: 	}
-</span><span class="">  502: 
-</span><span class="">  503: 	# All other phases each get a named &#39;on&#39; block.
-</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">504 → 504 → 521</span></span>  504: 	for my $phase (@PHASE_ORDER) {
-</span><span class="">  505: 		my $p = $deps-&gt;{$phase} or next;
-</span><span class="">  506: 
-</span><span class="">  507: 		my @lines;
-</span><span class="">  508: 		for my $rel (@REL_ORDER) {
-</span><span class="">  509: 			my $h = $p-&gt;{$rel} or next;
-</span><span class="">  510: 			for my $m (sort keys %{$h}) {
-</span><span class="">  511: 				push @lines, _fmt_dep($rel, $m, $h-&gt;{$m}, &quot;\t&quot;);
-</span><span class="">  512: 			}
-</span><span class="">  513: 		}
-</span><span class="">  514: 		next unless @lines;
-</span><span class="">  515: 
-</span><span class="">  516: 		push @sections, &quot;on &#39;$phase&#39; =&gt; sub {\n&quot; . join(&#39;&#39;, @lines) . &quot;};&quot;;
-</span><span class="">  517: 	}
-</span><span class="">  518: 
-</span><span class="">  519: 	# _fmt_dep appends \n to each line, so strip trailing newlines from
-</span><span class="">  520: 	# sections before joining so the blank-line separator is exactly one \n\n.
-</span><span class="">  521: 	s/\n+$// for @sections;
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  522: 	return join(&quot;\n\n&quot;, @sections) . &quot;\n&quot;;
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  523: }
-</span><span class="">  524: 
-</span><span class="">  525: # _fmt_dep
-</span><span class="">  526: #
-</span><span class="">  527: # Purpose:  Format a single dependency line for cpanfile output, including
-</span><span class="">  528: #           the optional version constraint and inline comment.
-</span><span class="">  529: # Entry:    $_[0] &acirc;&#128;&#148; relationship keyword (e.g. &#39;requires&#39;, &#39;recommends&#39;).
-</span><span class="">  530: #           $_[1] &acirc;&#128;&#148; module name string.
-</span><span class="">  531: #           $_[2] &acirc;&#128;&#148; entry hashref { version =&gt; ..., comment =&gt; ... }.
-</span><span class="">  532: #           $_[3] &acirc;&#128;&#148; indentation prefix (&#39;&#39; for runtime, &quot;\t&quot; for phase blocks).
-</span><span class="">  533: # Exit:     A complete formatted line, including trailing newline.
-</span><span class="">  534: sub _fmt_dep {
-</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">535 → 540 → 546</span></span>  535: 	my ($rel, $mod, $entry, $indent) = @_;
-</span><span class="">  536: 
-</span><span class="">  537: 	my $line = &quot;${indent}$rel &#39;$mod&#39;&quot;;
-</span><span class="">  538: 	$line .= &quot;, &#39;$entry-&gt;{version}&#39;&quot; if _has_version($entry-&gt;{version});
-</span><span class="">  539: 
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  540: 	if (defined $entry-&gt;{comment} &amp;&amp; $entry-&gt;{comment} ne &#39;&#39;) {
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  541: 		$line .= &quot;;   # $entry-&gt;{comment}\n&quot;;
-</span><span class="">  542: 	} else {
-</span><span class="">  543: 		$line .= &quot;;\n&quot;;
-</span><span class="">  544: 	}
-</span><span class="">  545: 
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  546: 	return $line;
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  547: }
-</span><span class="">  548: 
-</span><span class="">  549: # _has_version
-</span><span class="">  550: #
-</span><span class="">  551: # Decide whether a version value represents a real minimum version
-</span><span class="">  552: #	constraint that should be written into the cpanfile output.
-</span><span class="">  553: # Entry:    $_[0] &acirc;&#128;&#148; version value (scalar, possibly undef or numeric &#39;0&#39;).
-</span><span class="">  554: # Exit:     Boolean: true if the version should be emitted; false if it
-</span><span class="">  555: #           means &quot;any version&quot; (undef, empty string, or numeric zero).
-</span><span class="">  556: sub _has_version {
-</span><span class="">  557: 	my $ver = $_[0];
-</span><span class="">  558: 
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  559: 	return 0 unless defined $ver &amp;&amp; $ver ne &#39;&#39; &amp;&amp; $ver ne &#39;0&#39;;
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  560: 
-</span><span class="">  561: 	# Use looks_like_number to avoid spurious non-numeric warnings when
-</span><span class="">  562: 	# comparing against 0 &acirc;&#128;&#148; version strings are always numeric, but be safe.
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  563: 	return looks_like_number($ver) ? ($ver != 0) : 1;
-</span><p> <b> Mutants (Total: 3, Killed: 3, Survived: 0)</b><p><span class="">  564: }
-</span><span class="">  565: 
-</span><span class="">  566: 1;
-</span><span class="">  567: 
-</span><span class="">  568: __END__
-</span><span class="">  569: 
-</span><span class="">  570: =head1 LIMITATIONS
-</span><span class="">  571: 
-</span><span class="">  572: =over 4
-</span><span class="">  573: 
-</span><span class="">  574: =item * Because parsing is regex-based and the C&lt;Makefile.PL&gt; is never
-</span><span class="">  575: C&lt;eval&gt;&#39;d, dynamically generated dependency lists (e.g. those produced by
-</span><span class="">  576: C&lt;if&gt;/C&lt;unless&gt; branches or subroutine calls) cannot be detected.
-</span><span class="">  577: 
-</span><span class="">  578: =item * Encapsulation enforcement (C&lt;Sub::Private&gt; in C&lt;enforce&gt; mode) is not
-</span><span class="">  579: applied; the C&lt;_&gt; prefix convention is used instead.  A future release may
-</span><span class="">  580: add C&lt;Sub::Private&gt; once its C&lt;enforce&gt;-mode API is verified.
+</span><span class="">  273: 	# Iterate over all phases and relationships
+</span><span class="">  274: 	for my $phase (sort keys %{$deps}) {
+</span><span class="">  275: 	    for my $rel (sort keys %{ $deps-&gt;{$phase} }) {
+</span><span class="">  276: 	        for my $mod (sort keys %{ $deps-&gt;{$phase}{$rel} }) {
+</span><span class="">  277: 	            my $e = $deps-&gt;{$phase}{$rel}{$mod};
+</span><span class="">  278: 	            printf &quot;%s %s %s =&gt; %s\n&quot;, $phase, $rel, $mod, $e-&gt;{version};
+</span><span class="">  279: 	        }
+</span><span class="">  280: 	    }
+</span><span class="">  281: 	}
+</span><span class="">  282: 
+</span><span class="">  283: =head3 MESSAGES
+</span><span class="">  284: 
+</span><span class="">  285: 	No errors or warnings &acirc;&#128;&#148; unrecognised content is silently ignored.
+</span><span class="">  286: 
+</span><span class="">  287: =cut
+</span><span class="">  288: 
+</span><span class="">  289: sub parse_prereqs {
+</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">290 → 302 → 323</span></span>  290: 	my $content = $_[0];
+</span><span class="">  291: 
+</span><span class="">  292: 	# The POD contract is &quot;no errors or warnings &acirc;&#128;&#148; unrecognised content is
+</span><span class="">  293: 	# silently ignored.&quot;  Undef and references are not valid Str inputs; return
+</span><span class="">  294: 	# {} immediately to avoid &quot;uninitialized value&quot; and &quot;reference used as
+</span><span class="">  295: 	# string&quot; warnings from the pattern-match operators below.
+</span><span class="">  296: 	return {} unless defined $content &amp;&amp; !ref $content;
+</span><span class="">  297: 
+</span><span class="">  298: 	my %deps;
+</span><span class="">  299: 
+</span><span class="">  300: 	# ---- Simple dependency keys (PREREQ_PM, BUILD_REQUIRES, etc.) ----
+</span><span class="">  301: 	# These always map to the &#39;requires&#39; relationship in their phase.
+</span><span class="">  302: 	for my $mf_key (keys %PHASE_MAP) {
+</span><span class="">  303: 		my $phase = $PHASE_MAP{$mf_key};
+</span><span class="">  304: 
+</span><span class="">  305: 		# The regex allows up to four levels of brace nesting so that unusual
+</span><span class="">  306: 		# Makefile.PL constructs (e.g. version objects) don&#39;t terminate the
+</span><span class="">  307: 		# block match prematurely.
+</span><span class="">  308: 		while ($content =~ /
+</span><span class="">  309: 			\b $mf_key \s*=&gt;\s* \{
+</span><span class="">  310: 				( (?: [^{}]++
+</span><span class="">  311: 				    | \{ (?: [^{}]++ | \{ (?: [^{}]++ | \{ [^}]*+ \} )* \} )* \}
+</span><span class="">  312: 				  )*
+</span><span class="">  313: 				)
+</span><span class="">  314: 			\}
+</span><span class="">  315: 		/gsx) {
+</span><span class="">  316: 			_extract_pairs($1, \%deps, $phase, &#39;requires&#39;);
+</span><span class="">  317: 		}
+</span><span class="">  318: 	}
+</span><span class="">  319: 
+</span><span class="">  320: 	# ---- Structured &#39;prereqs&#39; blocks (CPAN Meta Spec style) ----
+</span><span class="">  321: 	# These can appear at the top level of WriteMakefile() or nested inside
+</span><span class="">  322: 	# META_MERGE; both are covered by searching the full content for &#39;prereqs&#39;.
+</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">323 → 323 → 358</span></span>  323: 	while ($content =~ /
+</span><span class="">  324: 		\b prereqs \s*=&gt;\s* \{
+</span><span class="">  325: 			( (?: [^{}]++
+</span><span class="">  326: 			    | \{ (?: [^{}]++
+</span><span class="">  327: 			         | \{ (?: [^{}]++ | \{ (?: [^{}]++ | \{ [^}]*+ \} )* \} )* \}
+</span><span class="">  328: 			      )* \}
+</span><span class="">  329: 			  )*
+</span><span class="">  330: 			)
+</span><span class="">  331: 		\}
+</span><span class="">  332: 	/gsx) {
+</span><span class="">  333: 		my $prereqs_block = $1;
+</span><span class="">  334: 
+</span><span class="">  335: 		# Each direct child is a phase name mapping to a relationship hash.
+</span><span class="">  336: 		while ($prereqs_block =~ /
+</span><span class="">  337: 			\b (\w+) \s*=&gt;\s* \{
+</span><span class="">  338: 				( (?: [^{}]++ | \{ (?: [^{}]++ | \{ [^}]*+ \} )* \} )* )
+</span><span class="">  339: 			\}
+</span><span class="">  340: 		/gsx) {
+</span><span class="">  341: 			my ($phase_name, $phase_block) = ($1, $2);
+</span><span class="">  342: 			next unless $VALID_PHASE{$phase_name};
+</span><span class="">  343: 
+</span><span class="">  344: 			# Each child of the phase block is a relationship name.
+</span><span class="">  345: 			while ($phase_block =~ /
+</span><span class="">  346: 				\b (\w+) \s*=&gt;\s* \{
+</span><span class="">  347: 					( (?: [^{}]++ | \{ [^}]*+ \} )* )
+</span><span class="">  348: 				\}
+</span><span class="">  349: 			/gsx) {
+</span><span class="">  350: 				my ($rel, $rel_block) = ($1, $2);
+</span><span class="">  351: 				next unless $VALID_REL{$rel};
+</span><span class="">  352: 
+</span><span class="">  353: 				_extract_pairs($rel_block, \%deps, $phase_name, $rel);
+</span><span class="">  354: 			}
+</span><span class="">  355: 		}
+</span><span class="">  356: 	}
+</span><span class="">  357: 
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  358: 	return \%deps;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  359: }
+</span><span class="">  360: 
+</span><span class="">  361: # -----------------------------------------------------------------------
+</span><span class="">  362: # Private helpers
+</span><span class="">  363: # -----------------------------------------------------------------------
+</span><span class="">  364: 
+</span><span class="">  365: # _extract_pairs
+</span><span class="">  366: #
+</span><span class="">  367: # Purpose:  Parse a raw block of text (the content between the outermost
+</span><span class="">  368: #           braces of a dependency hash) into module/version/comment triples
+</span><span class="">  369: #           and store them in the deps structure.  Processes line-by-line
+</span><span class="">  370: #           so that trailing inline comments can be captured before the
+</span><span class="">  371: #           comment text is discarded.
+</span><span class="">  372: # Entry:    $_[0] &acirc;&#128;&#148; raw block text (between the outer braces).
+</span><span class="">  373: #           $_[1] &acirc;&#128;&#148; hashref to populate (the top-level %deps).
+</span><span class="">  374: #           $_[2] &acirc;&#128;&#148; phase name string (e.g. &#39;runtime&#39;).
+</span><span class="">  375: #           $_[3] &acirc;&#128;&#148; relationship string (e.g. &#39;requires&#39;).
+</span><span class="">  376: # Exit:     Returns nothing &acirc;&#128;&#148; mutates $_[1] in place.
+</span><span class="">  377: # Effects:  Modifies the deps hashref; no I/O.
+</span><span class="">  378: #
+</span><span class="">  379: # First-occurrence-wins: if the same module appears multiple times (e.g.
+</span><span class="">  380: # once in PREREQ_PM and once in a prereqs block), the first parsed entry
+</span><span class="">  381: # is kept.
+</span><span class="">  382: sub _extract_pairs {
+</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">383 → 385 → 411</span></span>  383: 	my ($block, $deps, $phase, $rel) = @_;
+</span><span class="">  384: 
+</span><span class="">  385: 	for my $line (split /\n/, $block) {
+</span><span class="">  386: 		# Capture any trailing inline comment before stripping it.
+</span><span class="">  387: 		# (.*\S) is O(N): greedy .* scans to end, then gives back trailing
+</span><span class="">  388: 		# spaces one by one until \S anchors on the last non-space char.
+</span><span class="">  389: 		# Avoids the super-linear behaviour of (.+?)\s*$ which re-evaluates
+</span><span class="">  390: 		# \s*$ at every expanded position of the lazy quantifier.
+</span><span class="">  391: 		my ($comment) = ($line =~ /#\s*(.*\S)/);
+</span><span class="">  392: 		$line =~ s/#.*$//;
+</span><span class="">  393: 
+</span><span class="">  394: 		next unless $line =~ /\S/;		# skip blank / formerly comment-only lines
+</span><span class="">  395: 
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  396: 		if ($line =~ /[&#39;&quot;]([^&#39;&quot;]+)[&#39;&quot;]\s*=&gt;\s*[&#39;&quot;]?([\d._]+)?[&#39;&quot;]?/) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  397: 			my ($mod, $ver) = ($1, $2);
+</span><span class="">  398: 			# Defense-in-depth: [^&#39;&quot;]+ already excludes quote characters, but
+</span><span class="">  399: 			# it also matches \n.  A newline in a module name produces a
+</span><span class="">  400: 			# multi-line string literal in the cpanfile.  Restrict to valid
+</span><span class="">  401: 			# Perl identifier paths to make the output unambiguously well-formed.
+</span><span class="">  402: 			next unless $mod =~ /\A[A-Za-z_]\w*+(?:::\w++)*+\z/;
+</span><span class="">  403: 			# First occurrence wins &acirc;&#128;&#148; do not overwrite already-parsed entries.
+</span><span class="">  404: 			$deps-&gt;{$phase}{$rel}{$mod} //= {
+</span><span class="">  405: 				version =&gt; $ver // 0,
+</span><span class="">  406: 				comment =&gt; $comment,
+</span><span class="">  407: 			};
+</span><span class="">  408: 		}
+</span><span class="">  409: 	}
+</span><span class="">  410: 
+</span><span class="">  411: 	return;
+</span><span class="">  412: }
+</span><span class="">  413: 
+</span><span class="">  414: # _parse_min_perl
+</span><span class="">  415: #
+</span><span class="">  416: # Purpose:  Extract the MIN_PERL_VERSION value from Makefile.PL text.
+</span><span class="">  417: # Entry:    $_[0] &acirc;&#128;&#148; raw Makefile.PL content string.
+</span><span class="">  418: # Exit:     The version string (e.g. &#39;5.010&#39;), or undef if not declared.
+</span><span class="">  419: sub _parse_min_perl {
+</span><span class="">  420: 	my $content = $_[0];
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  421: 	return ($content =~ /\bMIN_PERL_VERSION\b\s*=&gt;\s*[&#39;&quot;]?([\d._]++)[&#39;&quot;]?/)
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  422: 		? $1
+</span><span class="">  423: 		: undef;
+</span><span class="">  424: }
+</span><span class="">  425: 
+</span><span class="">  426: # _load_develop_config
+</span><span class="">  427: #
+</span><span class="">  428: # Return the develop-tools hash from the user&#39;s YAML config file,
+</span><span class="">  429: #   or %DEFAULT_DEVELOP when no config file exists.
+</span><span class="">  430: # Entry:    None &acirc;&#128;&#148; reads from the filesystem at a well-known path.
+</span><span class="">  431: # Exit:     HashRef { Module::Name =&gt; minimum_version_or_0 }.
+</span><span class="">  432: # Effects:  Reads from disk. Croaks on YAML parse failure. Carps when the
+</span><span class="">  433: #           config file lacks a &#39;develop&#39; key.
+</span><span class="">  434: sub _load_develop_config {
+</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">435 → 445 → 475</span></span>  435: 	my $home = File::HomeDir-&gt;my_home;
+</span><span class="">  436: 
+</span><span class="">  437: 	# Guard against environments with no home directory (containers, chroots,
+</span><span class="">  438: 	# or CI systems where getpwuid returns no directory).  path(undef) would
+</span><span class="">  439: 	# croak from Path::Tiny with a confusing message; return defaults instead.
+</span><span class="">  440: 	return {%DEFAULT_DEVELOP} unless defined $home;
+</span><span class="">  441: 
+</span><span class="">  442: 	my $cfg_path = path($home)
+</span><span class="">  443: 		-&gt;child(&#39;.config&#39;, &#39;makefilepl2cpanfile.yml&#39;);
+</span><span class="">  444: 
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  445: 	if ($cfg_path-&gt;is_file) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  446: 		my $yaml = YAML::Tiny-&gt;read(&quot;$cfg_path&quot;)
+</span><span class="">  447: 			or croak &quot;Failed to parse $cfg_path: &quot; . YAML::Tiny-&gt;errstr();
+</span><span class="">  448: 
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  449: 		if (ref $yaml-&gt;[0]{develop} eq &#39;HASH&#39;) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  450: 			# SECURITY: validate every key (module name) and value (version)
+</span><span class="">  451: 			# before use.  YAML config keys are arbitrary strings; without
+</span><span class="">  452: 			# this guard a key such as &quot;Safe&#39;; system(&#39;evil&#39;); requires &#39;X&quot;
+</span><span class="">  453: 			# closes the single-quoted literal in _fmt_dep and injects
+</span><span class="">  454: 			# executable Perl into the generated cpanfile, which cpanm eval&#39;s.
+</span><span class="">  455: 			my %clean;
+</span><span class="">  456: 			for my $mod (keys %{ $yaml-&gt;[0]{develop} }) {
+</span><span class="">  457: 				my $ver = $yaml-&gt;[0]{develop}{$mod};
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  458: 				unless ($mod =~ /\A[A-Za-z_]\w*+(?:::\w++)*+\z/) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  459: 					carp &quot;Skipping invalid module name in $cfg_path: &#39;$mod&#39;&quot;;
+</span><span class="">  460: 					next;
+</span><span class="">  461: 				}
+</span><span class="">  462: 				my $v = defined $ver ? &quot;$ver&quot; : 0;
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  463: 				unless ($v eq &#39;0&#39; || $v eq &#39;&#39; || $v =~ /\Av?[\d._]++\z/) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  464: 					carp &quot;Skipping invalid version for &#39;$mod&#39; in $cfg_path: &#39;$v&#39;&quot;;
+</span><span class="">  465: 					$v = 0;
+</span><span class="">  466: 				}
+</span><span class="">  467: 				$clean{$mod} = $v;
+</span><span class="">  468: 			}
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  469: 			return \%clean;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  470: 		}
+</span><span class="">  471: 		carp &quot;No &#39;develop&#39; key found in $cfg_path; using defaults&quot;;
+</span><span class="">  472: 	}
+</span><span class="">  473: 
+</span><span class="">  474: 	# Return a copy so callers cannot mutate the constant.
+</span><span class="">  475: 	return {%DEFAULT_DEVELOP};
+</span><span class="">  476: }
+</span><span class="">  477: 
+</span><span class="">  478: # _emit
+</span><span class="">  479: #
+</span><span class="">  480: # Purpose:  Pure formatter &acirc;&#128;&#148; converts the structured dependency hash and an
+</span><span class="">  481: #           optional minimum Perl version into a valid cpanfile string.
+</span><span class="">  482: # Entry:    $_[0] &acirc;&#128;&#148; HashRef (see DATA STRUCTURE section in POD)
+</span><span class="">  483: #           $_[1] &acirc;&#128;&#148; optional Str minimum Perl version (e.g. &#39;5.010&#39;)
+</span><span class="">  484: # Exit:     Scalar string; always terminated with exactly one newline.
+</span><span class="">  485: #           Never returns undef.
+</span><span class="">  486: #
+</span><span class="">  487: # Runtime deps are emitted at the top level (no &#39;on&#39; block) per cpanfile
+</span><span class="">  488: # convention. All other phases get &#39;on phase =&gt; sub { ... }&#39; blocks.
+</span><span class="">  489: # Within each phase, relationships are emitted in @REL_ORDER order;
+</span><span class="">  490: # modules within each relationship are sorted alphabetically.
+</span><span class="">  491: # Inline comments are re-emitted after the semicolon on the same line.
+</span><span class="">  492: # A version of 0 or &#39;&#39; means &quot;any version&quot; and is omitted.
+</span><span class="">  493: sub _emit {
+</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">494 → 505 → 518</span></span>  494: 	my ($deps, $min_perl) = @_;
+</span><span class="">  495: 
+</span><span class="">  496: 	# Build the output as a list of sections joined by blank lines.  This
+</span><span class="">  497: 	# avoids the trailing-double-newline bug that arises when a runtime-only
+</span><span class="">  498: 	# output adds a separator newline with no following phase blocks.
+</span><span class="">  499: 	my @sections;
+</span><span class="">  500: 
+</span><span class="">  501: 	push @sections, &#39;# Generated from Makefile.PL using makefilepl2cpanfile&#39;;
+</span><span class="">  502: 	push @sections, &quot;requires &#39;perl&#39;, &#39;$min_perl&#39;;&quot; if $min_perl;
+</span><span class="">  503: 
+</span><span class="">  504: 	# Runtime: emitted at the top level, not inside an &#39;on&#39; block.
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  505: 	if (my $rt = $deps-&gt;{runtime}) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  506: 		my @lines;
+</span><span class="">  507: 		for my $rel (@REL_ORDER) {
+</span><span class="">  508: 			my $h = $rt-&gt;{$rel} or next;
+</span><span class="">  509: 			for my $m (sort keys %{$h}) {
+</span><span class="">  510: 				push @lines, _fmt_dep($rel, $m, $h-&gt;{$m}, &#39;&#39;);
+</span><span class="">  511: 			}
+</span><span class="">  512: 		}
+</span><span class="">  513: 		# join without an extra newline; _fmt_dep already appends \n per line.
+</span><span class="">  514: 		push @sections, join(&#39;&#39;, @lines) if @lines;
+</span><span class="">  515: 	}
+</span><span class="">  516: 
+</span><span class="">  517: 	# All other phases each get a named &#39;on&#39; block.
+</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">518 → 518 → 535</span></span>  518: 	for my $phase (@PHASE_ORDER) {
+</span><span class="">  519: 		my $p = $deps-&gt;{$phase} or next;
+</span><span class="">  520: 
+</span><span class="">  521: 		my @lines;
+</span><span class="">  522: 		for my $rel (@REL_ORDER) {
+</span><span class="">  523: 			my $h = $p-&gt;{$rel} or next;
+</span><span class="">  524: 			for my $m (sort keys %{$h}) {
+</span><span class="">  525: 				push @lines, _fmt_dep($rel, $m, $h-&gt;{$m}, &quot;\t&quot;);
+</span><span class="">  526: 			}
+</span><span class="">  527: 		}
+</span><span class="">  528: 		next unless @lines;
+</span><span class="">  529: 
+</span><span class="">  530: 		push @sections, &quot;on &#39;$phase&#39; =&gt; sub {\n&quot; . join(&#39;&#39;, @lines) . &quot;};&quot;;
+</span><span class="">  531: 	}
+</span><span class="">  532: 
+</span><span class="">  533: 	# _fmt_dep appends \n to each line, so strip trailing newlines from
+</span><span class="">  534: 	# sections before joining so the blank-line separator is exactly one \n\n.
+</span><span class="">  535: 	s/\n+$// for @sections;
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  536: 	return join(&quot;\n\n&quot;, @sections) . &quot;\n&quot;;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  537: }
+</span><span class="">  538: 
+</span><span class="">  539: # _fmt_dep
+</span><span class="">  540: #
+</span><span class="">  541: # Purpose:  Format a single dependency line for cpanfile output, including
+</span><span class="">  542: #           the optional version constraint and inline comment.
+</span><span class="">  543: # Entry:    $_[0] &acirc;&#128;&#148; relationship keyword (e.g. &#39;requires&#39;, &#39;recommends&#39;).
+</span><span class="">  544: #           $_[1] &acirc;&#128;&#148; module name string.
+</span><span class="">  545: #           $_[2] &acirc;&#128;&#148; entry hashref { version =&gt; ..., comment =&gt; ... }.
+</span><span class="">  546: #           $_[3] &acirc;&#128;&#148; indentation prefix (&#39;&#39; for runtime, &quot;\t&quot; for phase blocks).
+</span><span class="">  547: # Exit:     A complete formatted line, including trailing newline.
+</span><span class="">  548: sub _fmt_dep {
+</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">549 → 554 → 560</span></span>  549: 	my ($rel, $mod, $entry, $indent) = @_;
+</span><span class="">  550: 
+</span><span class="">  551: 	my $line = &quot;${indent}$rel &#39;$mod&#39;&quot;;
+</span><span class="">  552: 	$line .= &quot;, &#39;$entry-&gt;{version}&#39;&quot; if _has_version($entry-&gt;{version});
+</span><span class="">  553: 
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  554: 	if (defined $entry-&gt;{comment} &amp;&amp; $entry-&gt;{comment} ne &#39;&#39;) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  555: 		$line .= &quot;;   # $entry-&gt;{comment}\n&quot;;
+</span><span class="">  556: 	} else {
+</span><span class="">  557: 		$line .= &quot;;\n&quot;;
+</span><span class="">  558: 	}
+</span><span class="">  559: 
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  560: 	return $line;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  561: }
+</span><span class="">  562: 
+</span><span class="">  563: # _has_version
+</span><span class="">  564: #
+</span><span class="">  565: # Decide whether a version value represents a real minimum version
+</span><span class="">  566: #	constraint that should be written into the cpanfile output.
+</span><span class="">  567: # Entry:    $_[0] &acirc;&#128;&#148; version value (scalar, possibly undef or numeric &#39;0&#39;).
+</span><span class="">  568: # Exit:     Boolean: true if the version should be emitted; false if it
+</span><span class="">  569: #           means &quot;any version&quot; (undef, empty string, or numeric zero).
+</span><span class="">  570: sub _has_version {
+</span><span class="">  571: 	my $ver = $_[0];
+</span><span class="">  572: 
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  573: 	return 0 unless defined $ver &amp;&amp; $ver ne &#39;&#39; &amp;&amp; $ver ne &#39;0&#39;;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  574: 
+</span><span class="">  575: 	# Use looks_like_number to avoid spurious non-numeric warnings when
+</span><span class="">  576: 	# comparing against 0 &acirc;&#128;&#148; version strings are always numeric, but be safe.
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  577: 	return looks_like_number($ver) ? ($ver != 0) : 1;
+</span><p> <b> Mutants (Total: 3, Killed: 3, Survived: 0)</b><p><span class="">  578: }
+</span><span class="">  579: 
+</span><span class="">  580: 1;
 </span><span class="">  581: 
-</span><span class="">  582: =back
+</span><span class="">  582: __END__
 </span><span class="">  583: 
-</span><span class="">  584: =head1 SUPPORT
+</span><span class="">  584: =head1 LIMITATIONS
 </span><span class="">  585: 
-</span><span class="">  586: This module is provided as-is without any warranty.
+</span><span class="">  586: =over 4
 </span><span class="">  587: 
-</span><span class="">  588: Bugs and feature requests:
-</span><span class="">  589: L&lt;https://github.com/nigelhorne/App-makefilepl2cpanfile/issues&gt;
-</span><span class="">  590: 
-</span><span class="">  591: =head1 AUTHOR
-</span><span class="">  592: 
-</span><span class="">  593: Nigel Horne E&lt;lt&gt;njh@nigelhorne.comE&lt;gt&gt;
-</span><span class="">  594: 
-</span><span class="">  595: =head1 FORMAL SPECIFICATION
-</span><span class="">  596: 
-</span><span class="">  597: =head2 generate
-</span><span class="">  598: 
-</span><span class="">  599: 	-- generate maps named arguments to a cpanfile string
-</span><span class="">  600: 	generate : Args &acirc;&#134;&#146; Str
-</span><span class="">  601: 	where
-</span><span class="">  602: 	  Args &acirc;&#137;&#153; [makefile : Path; existing : Str; with_develop : &eth;&#157;&#148;&sup1;]
-</span><span class="">  603: 
-</span><span class="">  604: 	generate(a) &acirc;&#137;&#153;
-</span><span class="">  605: 	  let content &acirc;&#137;&#153; slurp(a.makefile)
-</span><span class="">  606: 	      deps    &acirc;&#137;&#153; parse_prereqs(content)
-</span><span class="">  607: 	      merged  &acirc;&#137;&#153; deps &acirc;&#138;&#149; {develop &acirc;&#134;&brvbar;
-</span><span class="">  608: 	                   deps.develop &acirc;&#136;&ordf; extract_develop(a.existing)}
-</span><span class="">  609: 	      final   &acirc;&#137;&#153; if a.with_develop
-</span><span class="">  610: 	                then merged &acirc;&#138;&#149; {develop &acirc;&#134;&brvbar;
-</span><span class="">  611: 	                       {requires &acirc;&#134;&brvbar; load_config() &acirc;&#150;&middot; merged.develop.requires}}
-</span><span class="">  612: 	                else merged
-</span><span class="">  613: 	  in _emit(final, min_perl(content))
-</span><span class="">  614: 	-- (&acirc;&#150;&middot;) right-biases toward the right operand: existing entries win.
-</span><span class="">  615: 
-</span><span class="">  616: =head2 parse_prereqs
+</span><span class="">  588: =item * Because parsing is regex-based and the C&lt;Makefile.PL&gt; is never
+</span><span class="">  589: C&lt;eval&gt;&#39;d, dynamically generated dependency lists (e.g. those produced by
+</span><span class="">  590: C&lt;if&gt;/C&lt;unless&gt; branches or subroutine calls) cannot be detected.
+</span><span class="">  591: 
+</span><span class="">  592: =item * Encapsulation enforcement (C&lt;Sub::Private&gt; in C&lt;enforce&gt; mode) is not
+</span><span class="">  593: applied; the C&lt;_&gt; prefix convention is used instead.  A future release may
+</span><span class="">  594: add C&lt;Sub::Private&gt; once its C&lt;enforce&gt;-mode API is verified.
+</span><span class="">  595: 
+</span><span class="">  596: =back
+</span><span class="">  597: 
+</span><span class="">  598: =head1 SUPPORT
+</span><span class="">  599: 
+</span><span class="">  600: This module is provided as-is without any warranty.
+</span><span class="">  601: 
+</span><span class="">  602: Bugs and feature requests:
+</span><span class="">  603: L&lt;https://github.com/nigelhorne/App-makefilepl2cpanfile/issues&gt;
+</span><span class="">  604: 
+</span><span class="">  605: =head1 AUTHOR
+</span><span class="">  606: 
+</span><span class="">  607: Nigel Horne E&lt;lt&gt;njh@nigelhorne.comE&lt;gt&gt;
+</span><span class="">  608: 
+</span><span class="">  609: =head1 FORMAL SPECIFICATION
+</span><span class="">  610: 
+</span><span class="">  611: =head2 generate
+</span><span class="">  612: 
+</span><span class="">  613: 	-- generate maps named arguments to a cpanfile string
+</span><span class="">  614: 	generate : Args &acirc;&#134;&#146; Str
+</span><span class="">  615: 	where
+</span><span class="">  616: 	  Args &acirc;&#137;&#153; [makefile : Path; existing : Str; with_develop : &eth;&#157;&#148;&sup1;]
 </span><span class="">  617: 
-</span><span class="">  618: 	parse_prereqs : Str &acirc;&#134;&#146; DepMap
-</span><span class="">  619: 	where
-</span><span class="">  620: 	  DepMap    &acirc;&#137;&#153; Phase &acirc;&#134;&brvbar; (Rel &acirc;&#134;&brvbar; (ModName &acirc;&#134;&brvbar; Entry))
-</span><span class="">  621: 	  Entry     &acirc;&#137;&#153; [version : VersionStr; comment : Str &acirc;&#136;&ordf; {&acirc;&#138;&yen;}]
-</span><span class="">  622: 	  Phase     &acirc;&#136;&#136; {runtime, configure, build, test, develop}
-</span><span class="">  623: 	  Rel       &acirc;&#136;&#136; {requires, recommends, suggests}
-</span><span class="">  624: 
-</span><span class="">  625: 	parse_prereqs(s) &acirc;&#137;&#153;
-</span><span class="">  626: 	  simple_deps(s) &acirc;&#138;&#149; structured_deps(s)
-</span><span class="">  627: 	where
-</span><span class="">  628: 	  simple_deps(s)     &acirc;&#137;&#153; &acirc;&#139;&#131; { extract_simple(k, s) | k &acirc;&#136;&#136; dom(PHASE_MAP) }
-</span><span class="">  629: 	  structured_deps(s) &acirc;&#137;&#153; &acirc;&#139;&#131; { extract_prereqs_block(b) | b &acirc;&#136;&#136; prereqs_blocks(s) }
-</span><span class="">  630: 
-</span><span class="">  631: =head1 LICENCE AND COPYRIGHT
-</span><span class="">  632: 
-</span><span class="">  633: Copyright 2025-2026 Nigel Horne.
-</span><span class="">  634: 
-</span><span class="">  635: Usage is subject to the GPL2 licence terms.
-</span><span class="">  636: If you use it,
-</span><span class="">  637: please let me know.
+</span><span class="">  618: 	generate(a) &acirc;&#137;&#153;
+</span><span class="">  619: 	  let content &acirc;&#137;&#153; slurp(a.makefile)
+</span><span class="">  620: 	      deps    &acirc;&#137;&#153; parse_prereqs(content)
+</span><span class="">  621: 	      merged  &acirc;&#137;&#153; deps &acirc;&#138;&#149; {develop &acirc;&#134;&brvbar;
+</span><span class="">  622: 	                   deps.develop &acirc;&#136;&ordf; extract_develop(a.existing)}
+</span><span class="">  623: 	      final   &acirc;&#137;&#153; if a.with_develop
+</span><span class="">  624: 	                then merged &acirc;&#138;&#149; {develop &acirc;&#134;&brvbar;
+</span><span class="">  625: 	                       {requires &acirc;&#134;&brvbar; load_config() &acirc;&#150;&middot; merged.develop.requires}}
+</span><span class="">  626: 	                else merged
+</span><span class="">  627: 	  in _emit(final, min_perl(content))
+</span><span class="">  628: 	-- (&acirc;&#150;&middot;) right-biases toward the right operand: existing entries win.
+</span><span class="">  629: 
+</span><span class="">  630: =head2 parse_prereqs
+</span><span class="">  631: 
+</span><span class="">  632: 	parse_prereqs : Str &acirc;&#134;&#146; DepMap
+</span><span class="">  633: 	where
+</span><span class="">  634: 	  DepMap    &acirc;&#137;&#153; Phase &acirc;&#134;&brvbar; (Rel &acirc;&#134;&brvbar; (ModName &acirc;&#134;&brvbar; Entry))
+</span><span class="">  635: 	  Entry     &acirc;&#137;&#153; [version : VersionStr; comment : Str &acirc;&#136;&ordf; {&acirc;&#138;&yen;}]
+</span><span class="">  636: 	  Phase     &acirc;&#136;&#136; {runtime, configure, build, test, develop}
+</span><span class="">  637: 	  Rel       &acirc;&#136;&#136; {requires, recommends, suggests}
 </span><span class="">  638: 
-</span><span class="">  639: =cut
+</span><span class="">  639: 	parse_prereqs(s) &acirc;&#137;&#153;
+</span><span class="">  640: 	  simple_deps(s) &acirc;&#138;&#149; structured_deps(s)
+</span><span class="">  641: 	where
+</span><span class="">  642: 	  simple_deps(s)     &acirc;&#137;&#153; &acirc;&#139;&#131; { extract_simple(k, s) | k &acirc;&#136;&#136; dom(PHASE_MAP) }
+</span><span class="">  643: 	  structured_deps(s) &acirc;&#137;&#153; &acirc;&#139;&#131; { extract_prereqs_block(b) | b &acirc;&#136;&#136; prereqs_blocks(s) }
+</span><span class="">  644: 
+</span><span class="">  645: =head1 LICENCE AND COPYRIGHT
+</span><span class="">  646: 
+</span><span class="">  647: Copyright 2025-2026 Nigel Horne.
+</span><span class="">  648: 
+</span><span class="">  649: Usage is subject to the GPL2 licence terms.
+</span><span class="">  650: If you use it,
+</span><span class="">  651: please let me know.
+</span><span class="">  652: 
+</span><span class="">  653: =cut
 </span></pre>
 
 <script>
