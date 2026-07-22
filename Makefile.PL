@@ -44,6 +44,7 @@ WriteMakefile(
 		'autodie' => 0,
 		'File::HomeDir' => 0,
 		'Path::Tiny' => 0,
+		'Params::Get' => 0,
 		'IPC::System::Simple' => 0,
 		'YAML::Tiny' => 0,
 	}, dist => $dist,

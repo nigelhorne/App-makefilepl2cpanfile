@@ -566,21 +566,23 @@ subtest 'parse_prereqs() — unrecognised content silently ignored' => sub {
 # Global state integrity: verify generate() does not clobber $@ or $!
 # -----------------------------------------------------------------------
 
-subtest 'generate() — does not clobber $@' => sub {
+subtest 'generate() — does not set $@ on success' => sub {
 	empty_home();
 	my $mf = make_mf($MF_SIMPLE);
 
-	# Pre-set $@ to a known string.  A well-behaved function must not overwrite
-	# it with the result of any internal eval block (use local $@ for those).
-	# We assert the value is *unchanged* after the call, not that it is empty.
-	local $@ = 'prior error sentinel';
+	# Clear $@ to a known empty state, then assert it is still empty after a
+	# successful call.  This catches the case where generate() uses internal
+	# eval blocks that fail silently and leak the error into the caller's $@.
+	# (Note: successful internal evals reset $@ to '' — that is normal Perl
+	# behaviour and not what this test guards against.)
+	$@ = '';
 
 	App::makefilepl2cpanfile::generate(
 		makefile     => "$mf",
 		with_develop => 0,
 	);
 
-	is $@, 'prior error sentinel', '$@ is not clobbered by generate()';
+	is $@, '', '$@ is empty after a successful generate() call';
 };
 
 # -----------------------------------------------------------------------

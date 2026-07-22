@@ -7,6 +7,7 @@ use Carp        qw(croak carp);
 use Readonly;
 use Scalar::Util qw(looks_like_number);
 use Path::Tiny;
+use Params::Get;
 use YAML::Tiny;
 use File::HomeDir;
 
@@ -176,11 +177,11 @@ Parses a C<Makefile.PL> and returns a complete C<cpanfile> string.
 
 sub generate {
 	# Accept both flat hash and single-hashref calling styles.
-	my %args = (ref $_[0] eq 'HASH') ? %{ $_[0] } : @_;
+	my $args = Params::Get::get_params(undef, \@_);
 
-	my $makefile = $args{makefile}     // 'Makefile.PL';
-	my $existing = $args{existing}     // '';
-	my $with_dev = $args{with_develop} // 1;
+	my $makefile = $args->{makefile}     // 'Makefile.PL';
+	my $existing = $args->{existing}     // '';
+	my $with_dev = $args->{with_develop} // 1;
 
 	croak "Cannot read '$makefile'" unless -f $makefile && -r _;
 
@@ -272,7 +273,7 @@ module entries are captured and preserved for round-trip fidelity.
 =cut
 
 sub parse_prereqs {
-	my ($content) = @_;
+	my $content = $_[0];
 
 	my %deps;
 
@@ -386,9 +387,8 @@ sub _extract_pairs {
 # Purpose:  Extract the MIN_PERL_VERSION value from Makefile.PL text.
 # Entry:    $_[0] — raw Makefile.PL content string.
 # Exit:     The version string (e.g. '5.010'), or undef if not declared.
-# Effects:  None.
 sub _parse_min_perl {
-	my ($content) = @_;
+	my $content = $_[0];
 	return ($content =~ /MIN_PERL_VERSION\s*=>\s*['"]?([\d._]+)['"]?/)
 		? $1
 		: undef;
@@ -396,8 +396,8 @@ sub _parse_min_perl {
 
 # _load_develop_config
 #
-# Purpose:  Return the develop-tools hash from the user's YAML config file,
-#           or %DEFAULT_DEVELOP when no config file exists.
+# Return the develop-tools hash from the user's YAML config file,
+#   or %DEFAULT_DEVELOP when no config file exists.
 # Entry:    None — reads from the filesystem at a well-known path.
 # Exit:     HashRef { Module::Name => minimum_version_or_0 }.
 # Effects:  Reads from disk. Croaks on YAML parse failure. Carps when the
@@ -428,7 +428,6 @@ sub _load_develop_config {
 #           $_[1] — optional Str minimum Perl version (e.g. '5.010')
 # Exit:     Scalar string; always terminated with exactly one newline.
 #           Never returns undef.
-# Effects:  None — no I/O, no mutation of arguments.
 #
 # Runtime deps are emitted at the top level (no 'on' block) per cpanfile
 # convention. All other phases get 'on phase => sub { ... }' blocks.
@@ -491,7 +490,6 @@ sub _emit {
 #           $_[2] — entry hashref { version => ..., comment => ... }.
 #           $_[3] — indentation prefix ('' for runtime, "\t" for phase blocks).
 # Exit:     A complete formatted line, including trailing newline.
-# Effects:  None.
 sub _fmt_dep {
 	my ($rel, $mod, $entry, $indent) = @_;
 
@@ -514,7 +512,6 @@ sub _fmt_dep {
 # Entry:    $_[0] — version value (scalar, possibly undef or numeric '0').
 # Exit:     Boolean: true if the version should be emitted; false if it
 #           means "any version" (undef, empty string, or numeric zero).
-# Effects:  None.
 sub _has_version {
 	my ($ver) = @_;
 	return 0 unless defined $ver && $ver ne '';
