@@ -1,0 +1,248 @@
+{
+   "runs" : [
+      {
+         "OS" : "linux",
+         "abstract" : "Convert Makefile.PL to a cpanfile automatically",
+         "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
+         "finish" : 1784766063.05858,
+         "name" : "App-makefilepl2cpanfile",
+         "perl" : "5.40.4",
+         "run" : "-e",
+         "start" : 1784766057.81221,
+         "version" : "0.03"
+      },
+      {
+         "OS" : "linux",
+         "abstract" : "Convert Makefile.PL to a cpanfile automatically",
+         "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
+         "finish" : 1784766057.94232,
+         "name" : "App-makefilepl2cpanfile",
+         "perl" : "5.40.4",
+         "run" : "-e",
+         "start" : 1784766057.94217,
+         "version" : "0.03"
+      },
+      {
+         "OS" : "linux",
+         "abstract" : "Convert Makefile.PL to a cpanfile automatically",
+         "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
+         "finish" : 1784766058.22045,
+         "name" : "App-makefilepl2cpanfile",
+         "perl" : "5.40.4",
+         "run" : "t/basics.t",
+         "start" : 1784766058.21337,
+         "version" : "0.03"
+      },
+      {
+         "OS" : "linux",
+         "abstract" : "Convert Makefile.PL to a cpanfile automatically",
+         "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
+         "finish" : 1784766058.54661,
+         "name" : "App-makefilepl2cpanfile",
+         "perl" : "5.40.4",
+         "run" : "t/develop_block.t",
+         "start" : 1784766058.5403,
+         "version" : "0.03"
+      },
+      {
+         "OS" : "linux",
+         "abstract" : "Convert Makefile.PL to a cpanfile automatically",
+         "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
+         "finish" : 1784766059.01886,
+         "name" : "App-makefilepl2cpanfile",
+         "perl" : "5.40.4",
+         "run" : "t/edge_cases.t",
+         "start" : 1784766058.84485,
+         "version" : "0.03"
+      },
+      {
+         "OS" : "linux",
+         "abstract" : "Convert Makefile.PL to a cpanfile automatically",
+         "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
+         "finish" : 1784766059.41336,
+         "name" : "App-makefilepl2cpanfile",
+         "perl" : "5.40.4",
+         "run" : "t/eof.t",
+         "start" : 1784766059.41307,
+         "version" : "0.03"
+      },
+      {
+         "OS" : "linux",
+         "abstract" : "Convert Makefile.PL to a cpanfile automatically",
+         "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
+         "finish" : 1784766059.61486,
+         "name" : "App-makefilepl2cpanfile",
+         "perl" : "5.40.4",
+         "run" : "t/eol.t",
+         "start" : 1784766059.61459,
+         "version" : "0.03"
+      },
+      {
+         "OS" : "linux",
+         "abstract" : "Convert Makefile.PL to a cpanfile automatically",
+         "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
+         "finish" : 1784766059.90422,
+         "name" : "App-makefilepl2cpanfile",
+         "perl" : "5.40.4",
+         "run" : "t/error_paths.t",
+         "start" : 1784766059.88264,
+         "version" : "0.03"
+      },
+      {
+         "OS" : "linux",
+         "abstract" : "Convert Makefile.PL to a cpanfile automatically",
+         "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
+         "finish" : 1784766060.28478,
+         "name" : "App-makefilepl2cpanfile",
+         "perl" : "5.40.4",
+         "run" : "t/extended_tests.t",
+         "start" : 1784766060.23252,
+         "version" : "0.03"
+      },
+      {
+         "OS" : "linux",
+         "abstract" : "Convert Makefile.PL to a cpanfile automatically",
+         "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
+         "finish" : 1784766060.6792,
+         "name" : "App-makefilepl2cpanfile",
+         "perl" : "5.40.4",
+         "run" : "t/function.t",
+         "start" : 1784766060.63393,
+         "version" : "0.03"
+      },
+      {
+         "OS" : "linux",
+         "abstract" : "Convert Makefile.PL to a cpanfile automatically",
+         "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
+         "finish" : 1784766061.25786,
+         "name" : "App-makefilepl2cpanfile",
+         "perl" : "5.40.4",
+         "run" : "t/integration.t",
+         "start" : 1784766061.03299,
+         "version" : "0.03"
+      },
+      {
+         "OS" : "linux",
+         "abstract" : "Convert Makefile.PL to a cpanfile automatically",
+         "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
+         "finish" : 1784766061.61781,
+         "name" : "App-makefilepl2cpanfile",
+         "perl" : "5.40.4",
+         "run" : "t/locales.t",
+         "start" : 1784766061.61321,
+         "version" : "0.03"
+      },
+      {
+         "OS" : "linux",
+         "abstract" : "Convert Makefile.PL to a cpanfile automatically",
+         "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
+         "finish" : 1784766061.93004,
+         "name" : "App-makefilepl2cpanfile",
+         "perl" : "5.40.4",
+         "run" : "t/parse_prereqs.t",
+         "start" : 1784766061.92546,
+         "version" : "0.03"
+      },
+      {
+         "OS" : "linux",
+         "abstract" : "Convert Makefile.PL to a cpanfile automatically",
+         "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
+         "finish" : 1784766062.2359,
+         "name" : "App-makefilepl2cpanfile",
+         "perl" : "5.40.4",
+         "run" : "t/preserve.t",
+         "start" : 1784766062.23203,
+         "version" : "0.03"
+      },
+      {
+         "OS" : "linux",
+         "abstract" : "Convert Makefile.PL to a cpanfile automatically",
+         "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
+         "finish" : 1784766062.61371,
+         "name" : "App-makefilepl2cpanfile",
+         "perl" : "5.40.4",
+         "run" : "t/unit.t",
+         "start" : 1784766062.54722,
+         "version" : "0.03"
+      },
+      {
+         "OS" : "linux",
+         "abstract" : "Convert Makefile.PL to a cpanfile automatically",
+         "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
+         "finish" : 1784766062.97677,
+         "name" : "App-makefilepl2cpanfile",
+         "perl" : "5.40.4",
+         "run" : "t/verify_prereqs.t",
+         "start" : 1784766062.9704,
+         "version" : "0.03"
+      }
+   ],
+   "summary" : {
+      "Total" : {
+         "branch" : {
+            "covered" : 59,
+            "error" : 1,
+            "percentage" : 98.3333333333333,
+            "total" : 60,
+            "uncoverable" : 0
+         },
+         "condition" : {
+            "covered" : 35,
+            "error" : 0,
+            "percentage" : 100,
+            "total" : 35,
+            "uncoverable" : 0
+         },
+         "statement" : {
+            "covered" : 141,
+            "percentage" : 100,
+            "total" : 141
+         },
+         "subroutine" : {
+            "covered" : 20,
+            "percentage" : 100,
+            "total" : 20
+         },
+         "total" : {
+            "covered" : 255,
+            "error" : 1,
+            "percentage" : 99.609375,
+            "total" : 256,
+            "uncoverable" : 0
+         }
+      },
+      "blib/lib/App/makefilepl2cpanfile.pm" : {
+         "branch" : {
+            "covered" : 59,
+            "error" : 1,
+            "percentage" : 98.3333333333333,
+            "total" : 60,
+            "uncoverable" : 0
+         },
+         "condition" : {
+            "covered" : 35,
+            "error" : 0,
+            "percentage" : 100,
+            "total" : 35,
+            "uncoverable" : 0
+         },
+         "statement" : {
+            "covered" : 141,
+            "percentage" : 100,
+            "total" : 141
+         },
+         "subroutine" : {
+            "covered" : 20,
+            "percentage" : 100,
+            "total" : 20
+         },
+         "total" : {
+            "covered" : 255,
+            "error" : 1,
+            "percentage" : 99.609375,
+            "total" : 256,
+            "uncoverable" : 0
+         }
+      }
+   }
+}
