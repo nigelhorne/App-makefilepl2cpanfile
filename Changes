@@ -14,8 +14,19 @@ Revision history for App-makefilepl2cpanfile
 	Add Readonly constants for phase map, phase order, and develop defaults
 	Guard against directories being passed as the makefile path
 
+	[ Security ]
+	Validate YAML config keys and values against strict patterns to prevent cpanfile code injection
+	Save $1/$2 before inner validation regex to prevent capture-variable clobber in develop-block merge
+	Add word-boundary anchors to MIN_PERL_VERSION extraction pattern
+	Use possessive quantifiers in all brace-extraction and module-name regexes to eliminate backtracking
+
+	[ Performance ]
+	Replace grep with List::Util::any (short-circuits) for develop-phase presence check
+	Replace each with keys in _load_develop_config to avoid stale iterator cursor
+	Add '0' short-circuit to _has_version to avoid looks_like_number call for zero versions
+
 	[ Tests ]
-	Add t/parse_prereqs.t, t/error_paths.t, t/locales.t
+	Add t/parse_prereqs.t, t/error_paths.t, t/locales.t, t/extended_tests.t
 
 0.02	Mon Mar 30 19:22:57 EDT 2026
 	Added which tool created it
