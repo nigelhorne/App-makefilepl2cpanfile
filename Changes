@@ -1,6 +1,6 @@
-Revision history for CGI-makefile2cpanfile
+Revision history for App-makefilepl2cpanfile
 
-0.03	{{NEXT}}
+0.03
 	[ Enhancements ]
 
 	Extract parse_prereqs() as a public API function

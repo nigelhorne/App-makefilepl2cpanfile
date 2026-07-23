@@ -38,7 +38,7 @@ use File::Temp  qw(tempdir);
 use Path::Tiny;
 use Readonly;
 use YAML::Tiny;
-use Test::Returns;
+use Data::Dumper qw(Dumper);
 
 use_ok('App::makefilepl2cpanfile');
 
@@ -259,7 +259,7 @@ subtest '_load_develop_config: YAML null value (~) treated as version 0' => sub 
 	is $result->{'Perl::Critic'}, 0,
 		'null YAML value coerced to 0 (line 446 FALSE branch)';
 
-	diag "config with null version: " . Data::Dumper::Dumper($result)
+	diag "config with null version: " . Dumper($result)
 		if $ENV{TEST_VERBOSE};
 };
 
@@ -304,7 +304,7 @@ subtest "_load_develop_config: YAML empty-string value ('') accepted as valid" =
 	is $result->{'Test::Pod'}, '',
 		"empty-string version preserved (line 447 \$v eq '' branch)";
 
-	diag "empty-string version result: " . Data::Dumper::Dumper($result)
+	diag "empty-string version result: " . Dumper($result)
 		if $ENV{TEST_VERBOSE};
 };
 
