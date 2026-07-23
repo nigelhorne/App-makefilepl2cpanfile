@@ -1,6 +1,6 @@
 Revision history for App-makefilepl2cpanfile
 
-0.03
+0.03	Wed Jul 22 20:12:54 EDT 2026
 	[ Enhancements ]
 
 	Extract parse_prereqs() as a public API function
