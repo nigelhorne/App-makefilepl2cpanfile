@@ -1,5 +1,11 @@
 Revision history for App-makefilepl2cpanfile
 
+0.04
+	[ Bug Fixes ]
+	Gracefully handle Makefile.PL files containing invalid UTF-8 bytes: fall back to
+	  raw-byte read and emit a carp warning rather than dying; true I/O errors
+	  (EIO, ENOENT, etc.) are still propagated to the caller
+
 0.03	Wed Jul 22 20:12:54 EDT 2026
 	[ Enhancements ]
 

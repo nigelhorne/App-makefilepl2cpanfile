@@ -14,8 +14,8 @@ jobs:
   optimize:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: nigelhorne/App-GHGen@v7
+      - uses: actions/checkout@v7
+      - uses: nigelhorne/App-GHGen@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-fix: true
