@@ -4,186 +4,186 @@
          "OS" : "linux",
          "abstract" : "Convert Makefile.PL to a cpanfile automatically",
          "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
-         "finish" : 1784766063.05858,
+         "finish" : 1785686005.75241,
          "name" : "App-makefilepl2cpanfile",
          "perl" : "5.40.4",
          "run" : "-e",
-         "start" : 1784766057.81221,
+         "start" : 1785685999.90109,
          "version" : "0.03"
       },
       {
          "OS" : "linux",
          "abstract" : "Convert Makefile.PL to a cpanfile automatically",
          "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
-         "finish" : 1784766057.94232,
+         "finish" : 1785686000.04688,
          "name" : "App-makefilepl2cpanfile",
          "perl" : "5.40.4",
          "run" : "-e",
-         "start" : 1784766057.94217,
+         "start" : 1785686000.04678,
          "version" : "0.03"
       },
       {
          "OS" : "linux",
          "abstract" : "Convert Makefile.PL to a cpanfile automatically",
          "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
-         "finish" : 1784766058.22045,
+         "finish" : 1785686000.3665,
          "name" : "App-makefilepl2cpanfile",
          "perl" : "5.40.4",
          "run" : "t/basics.t",
-         "start" : 1784766058.21337,
+         "start" : 1785686000.35912,
          "version" : "0.03"
       },
       {
          "OS" : "linux",
          "abstract" : "Convert Makefile.PL to a cpanfile automatically",
          "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
-         "finish" : 1784766058.54661,
+         "finish" : 1785686000.73884,
          "name" : "App-makefilepl2cpanfile",
          "perl" : "5.40.4",
          "run" : "t/develop_block.t",
-         "start" : 1784766058.5403,
+         "start" : 1785686000.73253,
          "version" : "0.03"
       },
       {
          "OS" : "linux",
          "abstract" : "Convert Makefile.PL to a cpanfile automatically",
          "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
-         "finish" : 1784766059.01886,
+         "finish" : 1785686001.26214,
          "name" : "App-makefilepl2cpanfile",
          "perl" : "5.40.4",
          "run" : "t/edge_cases.t",
-         "start" : 1784766058.84485,
+         "start" : 1785686001.07606,
          "version" : "0.03"
       },
       {
          "OS" : "linux",
          "abstract" : "Convert Makefile.PL to a cpanfile automatically",
          "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
-         "finish" : 1784766059.41336,
+         "finish" : 1785686001.73323,
          "name" : "App-makefilepl2cpanfile",
          "perl" : "5.40.4",
          "run" : "t/eof.t",
-         "start" : 1784766059.41307,
+         "start" : 1785686001.73303,
          "version" : "0.03"
       },
       {
          "OS" : "linux",
          "abstract" : "Convert Makefile.PL to a cpanfile automatically",
          "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
-         "finish" : 1784766059.61486,
+         "finish" : 1785686001.96443,
          "name" : "App-makefilepl2cpanfile",
          "perl" : "5.40.4",
          "run" : "t/eol.t",
-         "start" : 1784766059.61459,
+         "start" : 1785686001.96423,
          "version" : "0.03"
       },
       {
          "OS" : "linux",
          "abstract" : "Convert Makefile.PL to a cpanfile automatically",
          "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
-         "finish" : 1784766059.90422,
+         "finish" : 1785686002.27109,
          "name" : "App-makefilepl2cpanfile",
          "perl" : "5.40.4",
          "run" : "t/error_paths.t",
-         "start" : 1784766059.88264,
+         "start" : 1785686002.26383,
          "version" : "0.03"
       },
       {
          "OS" : "linux",
          "abstract" : "Convert Makefile.PL to a cpanfile automatically",
          "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
-         "finish" : 1784766060.28478,
+         "finish" : 1785686002.70206,
          "name" : "App-makefilepl2cpanfile",
          "perl" : "5.40.4",
          "run" : "t/extended_tests.t",
-         "start" : 1784766060.23252,
+         "start" : 1785686002.64239,
          "version" : "0.03"
       },
       {
          "OS" : "linux",
          "abstract" : "Convert Makefile.PL to a cpanfile automatically",
          "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
-         "finish" : 1784766060.6792,
+         "finish" : 1785686003.15907,
          "name" : "App-makefilepl2cpanfile",
          "perl" : "5.40.4",
          "run" : "t/function.t",
-         "start" : 1784766060.63393,
+         "start" : 1785686003.1048,
          "version" : "0.03"
       },
       {
          "OS" : "linux",
          "abstract" : "Convert Makefile.PL to a cpanfile automatically",
          "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
-         "finish" : 1784766061.25786,
+         "finish" : 1785686003.67248,
          "name" : "App-makefilepl2cpanfile",
          "perl" : "5.40.4",
          "run" : "t/integration.t",
-         "start" : 1784766061.03299,
+         "start" : 1785686003.56887,
          "version" : "0.03"
       },
       {
          "OS" : "linux",
          "abstract" : "Convert Makefile.PL to a cpanfile automatically",
          "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
-         "finish" : 1784766061.61781,
+         "finish" : 1785686004.09121,
          "name" : "App-makefilepl2cpanfile",
          "perl" : "5.40.4",
          "run" : "t/locales.t",
-         "start" : 1784766061.61321,
+         "start" : 1785686004.08594,
          "version" : "0.03"
       },
       {
          "OS" : "linux",
          "abstract" : "Convert Makefile.PL to a cpanfile automatically",
          "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
-         "finish" : 1784766061.93004,
+         "finish" : 1785686004.4491,
          "name" : "App-makefilepl2cpanfile",
          "perl" : "5.40.4",
          "run" : "t/parse_prereqs.t",
-         "start" : 1784766061.92546,
+         "start" : 1785686004.44354,
          "version" : "0.03"
       },
       {
          "OS" : "linux",
          "abstract" : "Convert Makefile.PL to a cpanfile automatically",
          "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
-         "finish" : 1784766062.2359,
+         "finish" : 1785686004.80448,
          "name" : "App-makefilepl2cpanfile",
          "perl" : "5.40.4",
          "run" : "t/preserve.t",
-         "start" : 1784766062.23203,
+         "start" : 1785686004.80065,
          "version" : "0.03"
       },
       {
          "OS" : "linux",
          "abstract" : "Convert Makefile.PL to a cpanfile automatically",
          "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
-         "finish" : 1784766062.61371,
+         "finish" : 1785686005.23701,
          "name" : "App-makefilepl2cpanfile",
          "perl" : "5.40.4",
          "run" : "t/unit.t",
-         "start" : 1784766062.54722,
+         "start" : 1785686005.16391,
          "version" : "0.03"
       },
       {
          "OS" : "linux",
          "abstract" : "Convert Makefile.PL to a cpanfile automatically",
          "dir" : "/home/runner/work/App-makefilepl2cpanfile/App-makefilepl2cpanfile",
-         "finish" : 1784766062.97677,
+         "finish" : 1785686005.65837,
          "name" : "App-makefilepl2cpanfile",
          "perl" : "5.40.4",
          "run" : "t/verify_prereqs.t",
-         "start" : 1784766062.9704,
+         "start" : 1785686005.65207,
          "version" : "0.03"
       }
    ],
    "summary" : {
       "Total" : {
          "branch" : {
-            "covered" : 59,
-            "error" : 1,
-            "percentage" : 98.3333333333333,
-            "total" : 60,
+            "covered" : 62,
+            "error" : 2,
+            "percentage" : 96.875,
+            "total" : 64,
             "uncoverable" : 0
          },
          "condition" : {
@@ -194,9 +194,10 @@
             "uncoverable" : 0
          },
          "statement" : {
-            "covered" : 141,
-            "percentage" : 100,
-            "total" : 141
+            "covered" : 147,
+            "error" : 2,
+            "percentage" : 98.6577181208054,
+            "total" : 149
          },
          "subroutine" : {
             "covered" : 20,
@@ -204,19 +205,19 @@
             "total" : 20
          },
          "total" : {
-            "covered" : 255,
-            "error" : 1,
-            "percentage" : 99.609375,
-            "total" : 256,
+            "covered" : 264,
+            "error" : 4,
+            "percentage" : 98.5074626865672,
+            "total" : 268,
             "uncoverable" : 0
          }
       },
       "blib/lib/App/makefilepl2cpanfile.pm" : {
          "branch" : {
-            "covered" : 59,
-            "error" : 1,
-            "percentage" : 98.3333333333333,
-            "total" : 60,
+            "covered" : 62,
+            "error" : 2,
+            "percentage" : 96.875,
+            "total" : 64,
             "uncoverable" : 0
          },
          "condition" : {
@@ -227,9 +228,10 @@
             "uncoverable" : 0
          },
          "statement" : {
-            "covered" : 141,
-            "percentage" : 100,
-            "total" : 141
+            "covered" : 147,
+            "error" : 2,
+            "percentage" : 98.6577181208054,
+            "total" : 149
          },
          "subroutine" : {
             "covered" : 20,
@@ -237,10 +239,10 @@
             "total" : 20
          },
          "total" : {
-            "covered" : 255,
-            "error" : 1,
-            "percentage" : 99.609375,
-            "total" : 256,
+            "covered" : 264,
+            "error" : 4,
+            "percentage" : 98.5074626865672,
+            "total" : 268,
             "uncoverable" : 0
          }
       }
