@@ -312,7 +312,7 @@ Approximate LCSAJ segments: 65<br>
 </span><span class="">   20: 
 </span><span class="">   21: =cut
 </span><span class="">   22: 
-</span><span class="">   23: our $VERSION = &#39;0.03&#39;;
+</span><span class="">   23: our $VERSION = &#39;0.04&#39;;
 </span><span class="">   24: 
 </span><span class="">   25: # -----------------------------------------------------------------------
 </span><span class="">   26: # Constants
@@ -482,13 +482,13 @@ Approximate LCSAJ segments: 65<br>
 </span><span class="">  190: 	{
 </span><span class="">  191: 		local $@;
 </span><span class="">  192: 		eval { $content = path($makefile)-&gt;slurp_utf8 };
-</span><span class="">  193: 		if ($@) {
-</span><span class="">  194: 			# Only degrade gracefully for encoding errors; re-throw true I/O failures
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  193: 		if ($@) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  194: 			# Only degrade gracefully for encoding errors; re-throw true I/O failures
 </span><span class="">  195: 			# so callers can distinguish a corrupt file from an unreadable one.
 </span><span class="">  196: 			die $@ unless $@ =~ /decode|ill-formed|utf/i;
 </span><span class="">  197: 			carp &quot;Warning: &#39;$makefile&#39; contains invalid UTF-8; reading as raw bytes: $@&quot;;
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  198: 			$content = path($makefile)-&gt;slurp_raw;
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  199: 		}
+</span><span class="">  198: 			$content = path($makefile)-&gt;slurp_raw;
+</span><span class="">  199: 		}
 </span><span class="">  200: 	}
 </span><span class="">  201: 	my $min_perl = _parse_min_perl($content);
 </span><span class="">  202: 	my $deps     = parse_prereqs($content);
@@ -498,16 +498,16 @@ Approximate LCSAJ segments: 65<br>
 </span><span class="">  206: 	# The closing &#39;}; &#39; is anchored to the start of a line (/m) so that
 </span><span class="">  207: 	# an inline comment containing &#39;}; &#39; does not terminate the match early,
 </span><span class="">  208: 	# silently dropping any module entries that follow the comment.
-</span><span class="">  209: 	if ($existing =~ /on\s+[&quot;&#39;]develop[&quot;&#39;]\s*=&gt;\s*sub\s*\{(.*?)^[ \t]*};/ms) {
-</span><span class="">  210: 		my $dev_block = $1;
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  209: 	if ($existing =~ /on\s+[&quot;&#39;]develop[&quot;&#39;]\s*=&gt;\s*sub\s*\{(.*?)^[ \t]*};/ms) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  210: 		my $dev_block = $1;
 </span><span class="">  211: 		for my $rel (@REL_ORDER) {
 </span><span class="">  212: 			# \Q$rel\E: quote metacharacters defensively (rel is a constant word,
 </span><span class="">  213: 			# but interpolation without quoting is a static-analysis red flag).
 </span><span class="">  214: 			# [^&#39;&quot;\n]++ possessive: never cross a line boundary when capturing a
 </span><span class="">  215: 			# module name or version, and commit immediately &acirc;&#128;&#148; no backtracking into
 </span><span class="">  216: 			# individual chars needed once the quote is closed.
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  217: 			while ($dev_block =~ /\b\Q$rel\E\s+[&#39;&quot;]([^&#39;&quot;\n]++)[&#39;&quot;](?:\s*,\s*[&#39;&quot;]([^&#39;&quot;\n]*+)[&#39;&quot;])?/g) {
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  218: 				# Save immediately: the inner validation regex below has no capturing
+</span><span class="">  217: 			while ($dev_block =~ /\b\Q$rel\E\s+[&#39;&quot;]([^&#39;&quot;\n]++)[&#39;&quot;](?:\s*,\s*[&#39;&quot;]([^&#39;&quot;\n]*+)[&#39;&quot;])?/g) {
+</span><span class="">  218: 				# Save immediately: the inner validation regex below has no capturing
 </span><span class="">  219: 				# groups, so running it directly against $1 would reset $1/$2 to
 </span><span class="">  220: 				# undef &acirc;&#128;&#148; the classic &quot;inner match clobbers outer capture vars&quot; bug.
 </span><span class="">  221: 				my ($mod, $ver) = ($1, $2);
@@ -515,19 +515,19 @@ Approximate LCSAJ segments: 65<br>
 </span><span class="">  223: 				$deps-&gt;{develop}{$rel}{$mod} //= { version =&gt; $ver // 0, comment =&gt; undef };
 </span><span class="">  224: 			}
 </span><span class="">  225: 		}
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  226: 	}
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  227: 
-</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">228 → 228 → 246</span></span>  228: 	if ($with_dev) {
-</span><span class="">  229: 		my $config = _load_develop_config();
+</span><span class="">  226: 	}
+</span><span class="">  227: 
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">228 → 228 → 246</span></span>  228: 	if ($with_dev) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  229: 		my $config = _load_develop_config();
 </span><span class="">  230: 
 </span><span class="">  231: 		# Only inject tools not already listed under any relationship.
 </span><span class="">  232: 		for my $mod (keys %{$config}) {
 </span><span class="">  233: 			my $already_present = any {
 </span><span class="">  234: 				exists $deps-&gt;{develop}{$_}{$mod}
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  235: 			} @REL_ORDER;
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  236: 
-</span><span class="">  237: 			unless ($already_present) {
-</span><span class="">  238: 				$deps-&gt;{develop}{requires}{$mod} = {
+</span><span class="">  235: 			} @REL_ORDER;
+</span><span class="">  236: 
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  237: 			unless ($already_present) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  238: 				$deps-&gt;{develop}{requires}{$mod} = {
 </span><span class="">  239: 					version =&gt; $config-&gt;{$mod},
 </span><span class="">  240: 					comment =&gt; undef,
 </span><span class="">  241: 				};
@@ -535,8 +535,8 @@ Approximate LCSAJ segments: 65<br>
 </span><span class="">  243: 		}
 </span><span class="">  244: 	}
 </span><span class="">  245: 
-</span><span class="">  246: 	return _emit($deps, $min_perl);
-</span><span class="">  247: }
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  246: 	return _emit($deps, $min_perl);
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  247: }
 </span><span class="">  248: 
 </span><span class="">  249: =head2 parse_prereqs($content)
 </span><span class="">  250: 
@@ -647,8 +647,8 @@ Approximate LCSAJ segments: 65<br>
 </span><span class="">  355: 			# Each child of the phase block is a relationship name.
 </span><span class="">  356: 			while ($phase_block =~ /
 </span><span class="">  357: 				\b (\w+) \s*=&gt;\s* \{
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  358: 					( (?: [^{}]++ | \{ [^}]*+ \} )* )
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  359: 				\}
+</span><span class="">  358: 					( (?: [^{}]++ | \{ [^}]*+ \} )* )
+</span><span class="">  359: 				\}
 </span><span class="">  360: 			/gsx) {
 </span><span class="">  361: 				my ($rel, $rel_block) = ($1, $2);
 </span><span class="">  362: 				next unless $VALID_REL{$rel};
@@ -658,8 +658,8 @@ Approximate LCSAJ segments: 65<br>
 </span><span class="">  366: 		}
 </span><span class="">  367: 	}
 </span><span class="">  368: 
-</span><span class="">  369: 	return \%deps;
-</span><span class="">  370: }
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  369: 	return \%deps;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  370: }
 </span><span class="">  371: 
 </span><span class="">  372: # -----------------------------------------------------------------------
 </span><span class="">  373: # Private helpers
@@ -685,8 +685,8 @@ Approximate LCSAJ segments: 65<br>
 </span><span class="">  393: sub _extract_pairs {
 </span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">394 → 396 → 422</span></span>  394: 	my ($block, $deps, $phase, $rel) = @_;
 </span><span class="">  395: 
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  396: 	for my $line (split /\n/, $block) {
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  397: 		# Capture any trailing inline comment before stripping it.
+</span><span class="">  396: 	for my $line (split /\n/, $block) {
+</span><span class="">  397: 		# Capture any trailing inline comment before stripping it.
 </span><span class="">  398: 		# (.*\S) is O(N): greedy .* scans to end, then gives back trailing
 </span><span class="">  399: 		# spaces one by one until \S anchors on the last non-space char.
 </span><span class="">  400: 		# Avoids the super-linear behaviour of (.+?)\s*$ which re-evaluates
@@ -696,8 +696,8 @@ Approximate LCSAJ segments: 65<br>
 </span><span class="">  404: 
 </span><span class="">  405: 		next unless $line =~ /\S/;		# skip blank / formerly comment-only lines
 </span><span class="">  406: 
-</span><span class="">  407: 		if ($line =~ /[&#39;&quot;]([^&#39;&quot;]+)[&#39;&quot;]\s*=&gt;\s*[&#39;&quot;]?([\d._]+)?[&#39;&quot;]?/) {
-</span><span class="">  408: 			my ($mod, $ver) = ($1, $2);
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  407: 		if ($line =~ /[&#39;&quot;]([^&#39;&quot;]+)[&#39;&quot;]\s*=&gt;\s*[&#39;&quot;]?([\d._]+)?[&#39;&quot;]?/) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  408: 			my ($mod, $ver) = ($1, $2);
 </span><span class="">  409: 			# Defense-in-depth: [^&#39;&quot;]+ already excludes quote characters, but
 </span><span class="">  410: 			# it also matches \n.  A newline in a module name produces a
 </span><span class="">  411: 			# multi-line string literal in the cpanfile.  Restrict to valid
@@ -710,8 +710,8 @@ Approximate LCSAJ segments: 65<br>
 </span><span class="">  418: 			};
 </span><span class="">  419: 		}
 </span><span class="">  420: 	}
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  421: 
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  422: 	return;
+</span><span class="">  421: 
+</span><span class="">  422: 	return;
 </span><span class="">  423: }
 </span><span class="">  424: 
 </span><span class="">  425: # _parse_min_perl
@@ -721,8 +721,8 @@ Approximate LCSAJ segments: 65<br>
 </span><span class="">  429: # Exit:     The version string (e.g. &#39;5.010&#39;), or undef if not declared.
 </span><span class="">  430: sub _parse_min_perl {
 </span><span class="">  431: 	my $content = $_[0];
-</span><span class="">  432: 	return ($content =~ /\bMIN_PERL_VERSION\b\s*=&gt;\s*[&#39;&quot;]?([\d._]++)[&#39;&quot;]?/)
-</span><span class="">  433: 		? $1
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  432: 	return ($content =~ /\bMIN_PERL_VERSION\b\s*=&gt;\s*[&#39;&quot;]?([\d._]++)[&#39;&quot;]?/)
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  433: 		? $1
 </span><span class="">  434: 		: undef;
 </span><span class="">  435: }
 </span><span class="">  436: 
@@ -734,43 +734,43 @@ Approximate LCSAJ segments: 65<br>
 </span><span class="">  442: # Exit:     HashRef { Module::Name =&gt; minimum_version_or_0 }.
 </span><span class="">  443: # Effects:  Reads from disk. Croaks on YAML parse failure. Carps when the
 </span><span class="">  444: #           config file lacks a &#39;develop&#39; key.
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  445: sub _load_develop_config {
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">446 → 456 → 486</span></span>  446: 	my $home = File::HomeDir-&gt;my_home;
+</span><span class="">  445: sub _load_develop_config {
+</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">446 → 456 → 486</span></span>  446: 	my $home = File::HomeDir-&gt;my_home;
 </span><span class="">  447: 
 </span><span class="">  448: 	# Guard against environments with no home directory (containers, chroots,
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  449: 	# or CI systems where getpwuid returns no directory).  path(undef) would
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  450: 	# croak from Path::Tiny with a confusing message; return defaults instead.
+</span><span class="">  449: 	# or CI systems where getpwuid returns no directory).  path(undef) would
+</span><span class="">  450: 	# croak from Path::Tiny with a confusing message; return defaults instead.
 </span><span class="">  451: 	return {%DEFAULT_DEVELOP} unless defined $home;
 </span><span class="">  452: 
 </span><span class="">  453: 	my $cfg_path = path($home)
 </span><span class="">  454: 		-&gt;child(&#39;.config&#39;, &#39;makefilepl2cpanfile.yml&#39;);
 </span><span class="">  455: 
-</span><span class="">  456: 	if ($cfg_path-&gt;is_file) {
-</span><span class="">  457: 		my $yaml = YAML::Tiny-&gt;read(&quot;$cfg_path&quot;)
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  458: 			or croak &quot;Failed to parse $cfg_path: &quot; . YAML::Tiny-&gt;errstr();
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  459: 
-</span><span class="">  460: 		if (ref $yaml-&gt;[0]{develop} eq &#39;HASH&#39;) {
-</span><span class="">  461: 			# SECURITY: validate every key (module name) and value (version)
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  456: 	if ($cfg_path-&gt;is_file) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  457: 		my $yaml = YAML::Tiny-&gt;read(&quot;$cfg_path&quot;)
+</span><span class="">  458: 			or croak &quot;Failed to parse $cfg_path: &quot; . YAML::Tiny-&gt;errstr();
+</span><span class="">  459: 
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  460: 		if (ref $yaml-&gt;[0]{develop} eq &#39;HASH&#39;) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  461: 			# SECURITY: validate every key (module name) and value (version)
 </span><span class="">  462: 			# before use.  YAML config keys are arbitrary strings; without
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  463: 			# this guard a key such as &quot;Safe&#39;; system(&#39;evil&#39;); requires &#39;X&quot;
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  464: 			# closes the single-quoted literal in _fmt_dep and injects
+</span><span class="">  463: 			# this guard a key such as &quot;Safe&#39;; system(&#39;evil&#39;); requires &#39;X&quot;
+</span><span class="">  464: 			# closes the single-quoted literal in _fmt_dep and injects
 </span><span class="">  465: 			# executable Perl into the generated cpanfile, which cpanm eval&#39;s.
 </span><span class="">  466: 			my %clean;
 </span><span class="">  467: 			for my $mod (keys %{ $yaml-&gt;[0]{develop} }) {
 </span><span class="">  468: 				my $ver = $yaml-&gt;[0]{develop}{$mod};
 </span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  469: 				unless ($mod =~ /\A[A-Za-z_]\w*+(?:::\w++)*+\z/) {
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  470: 					carp &quot;Skipping invalid module name in $cfg_path: &#39;$mod&#39;&quot;;
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  470: 					carp &quot;Skipping invalid module name in $cfg_path: &#39;$mod&#39;&quot;;
 </span><span class="">  471: 					next;
 </span><span class="">  472: 				}
 </span><span class="">  473: 				my $v = defined $ver ? &quot;$ver&quot; : 0;
-</span><span class="">  474: 				unless ($v eq &#39;0&#39; || $v eq &#39;&#39; || $v =~ /\Av?[\d._]++\z/) {
-</span><span class="">  475: 					carp &quot;Skipping invalid version for &#39;$mod&#39; in $cfg_path: &#39;$v&#39;&quot;;
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  474: 				unless ($v eq &#39;0&#39; || $v eq &#39;&#39; || $v =~ /\Av?[\d._]++\z/) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  475: 					carp &quot;Skipping invalid version for &#39;$mod&#39; in $cfg_path: &#39;$v&#39;&quot;;
 </span><span class="">  476: 					$v = 0;
 </span><span class="">  477: 				}
 </span><span class="">  478: 				$clean{$mod} = $v;
 </span><span class="">  479: 			}
-</span><span class="">  480: 			return \%clean;
-</span><span class="">  481: 		}
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  480: 			return \%clean;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  481: 		}
 </span><span class="">  482: 		carp &quot;No &#39;develop&#39; key found in $cfg_path; using defaults&quot;;
 </span><span class="">  483: 	}
 </span><span class="">  484: 
@@ -794,8 +794,8 @@ Approximate LCSAJ segments: 65<br>
 </span><span class="">  502: # Inline comments are re-emitted after the semicolon on the same line.
 </span><span class="">  503: # A version of 0 or &#39;&#39; means &quot;any version&quot; and is omitted.
 </span><span class="">  504: sub _emit {
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">505 → 516 → 529</span></span>  505: 	my ($deps, $min_perl) = @_;
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  506: 
+</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">505 → 516 → 529</span></span>  505: 	my ($deps, $min_perl) = @_;
+</span><span class="">  506: 
 </span><span class="">  507: 	# Build the output as a list of sections joined by blank lines.  This
 </span><span class="">  508: 	# avoids the trailing-double-newline bug that arises when a runtime-only
 </span><span class="">  509: 	# output adds a separator newline with no following phase blocks.
@@ -805,8 +805,8 @@ Approximate LCSAJ segments: 65<br>
 </span><span class="">  513: 	push @sections, &quot;requires &#39;perl&#39;, &#39;$min_perl&#39;;&quot; if $min_perl;
 </span><span class="">  514: 
 </span><span class="">  515: 	# Runtime: emitted at the top level, not inside an &#39;on&#39; block.
-</span><span class="">  516: 	if (my $rt = $deps-&gt;{runtime}) {
-</span><span class="">  517: 		my @lines;
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  516: 	if (my $rt = $deps-&gt;{runtime}) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  517: 		my @lines;
 </span><span class="">  518: 		for my $rel (@REL_ORDER) {
 </span><span class="">  519: 			my $h = $rt-&gt;{$rel} or next;
 </span><span class="">  520: 			for my $m (sort keys %{$h}) {
@@ -825,8 +825,8 @@ Approximate LCSAJ segments: 65<br>
 </span><span class="">  533: 		for my $rel (@REL_ORDER) {
 </span><span class="">  534: 			my $h = $p-&gt;{$rel} or next;
 </span><span class="">  535: 			for my $m (sort keys %{$h}) {
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  536: 				push @lines, _fmt_dep($rel, $m, $h-&gt;{$m}, &quot;\t&quot;);
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  537: 			}
+</span><span class="">  536: 				push @lines, _fmt_dep($rel, $m, $h-&gt;{$m}, &quot;\t&quot;);
+</span><span class="">  537: 			}
 </span><span class="">  538: 		}
 </span><span class="">  539: 		next unless @lines;
 </span><span class="">  540: 
@@ -836,49 +836,49 @@ Approximate LCSAJ segments: 65<br>
 </span><span class="">  544: 	# _fmt_dep appends \n to each line, so strip trailing newlines from
 </span><span class="">  545: 	# sections before joining so the blank-line separator is exactly one \n\n.
 </span><span class="">  546: 	s/\n+$// for @sections;
-</span><span class="">  547: 	return join(&quot;\n\n&quot;, @sections) . &quot;\n&quot;;
-</span><span class="">  548: }
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  547: 	return join(&quot;\n\n&quot;, @sections) . &quot;\n&quot;;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  548: }
 </span><span class="">  549: 
 </span><span class="">  550: # _fmt_dep
 </span><span class="">  551: #
 </span><span class="">  552: # Purpose:  Format a single dependency line for cpanfile output, including
 </span><span class="">  553: #           the optional version constraint and inline comment.
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  554: # Entry:    $_[0] &acirc;&#128;&#148; relationship keyword (e.g. &#39;requires&#39;, &#39;recommends&#39;).
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  555: #           $_[1] &acirc;&#128;&#148; module name string.
+</span><span class="">  554: # Entry:    $_[0] &acirc;&#128;&#148; relationship keyword (e.g. &#39;requires&#39;, &#39;recommends&#39;).
+</span><span class="">  555: #           $_[1] &acirc;&#128;&#148; module name string.
 </span><span class="">  556: #           $_[2] &acirc;&#128;&#148; entry hashref { version =&gt; ..., comment =&gt; ... }.
 </span><span class="">  557: #           $_[3] &acirc;&#128;&#148; indentation prefix (&#39;&#39; for runtime, &quot;\t&quot; for phase blocks).
 </span><span class="">  558: # Exit:     A complete formatted line, including trailing newline.
 </span><span class="">  559: sub _fmt_dep {
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">560 → 565 → 571</span></span>  560: 	my ($rel, $mod, $entry, $indent) = @_;
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  561: 
+</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">560 → 565 → 571</span></span>  560: 	my ($rel, $mod, $entry, $indent) = @_;
+</span><span class="">  561: 
 </span><span class="">  562: 	my $line = &quot;${indent}$rel &#39;$mod&#39;&quot;;
 </span><span class="">  563: 	$line .= &quot;, &#39;$entry-&gt;{version}&#39;&quot; if _has_version($entry-&gt;{version});
 </span><span class="">  564: 
-</span><span class="">  565: 	if (defined $entry-&gt;{comment} &amp;&amp; $entry-&gt;{comment} ne &#39;&#39;) {
-</span><span class="">  566: 		$line .= &quot;;   # $entry-&gt;{comment}\n&quot;;
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  565: 	if (defined $entry-&gt;{comment} &amp;&amp; $entry-&gt;{comment} ne &#39;&#39;) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  566: 		$line .= &quot;;   # $entry-&gt;{comment}\n&quot;;
 </span><span class="">  567: 	} else {
 </span><span class="">  568: 		$line .= &quot;;\n&quot;;
 </span><span class="">  569: 	}
 </span><span class="">  570: 
-</span><span class="">  571: 	return $line;
-</span><span class="">  572: }
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  573: 
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  574: # _has_version
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  571: 	return $line;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  572: }
+</span><span class="">  573: 
+</span><span class="">  574: # _has_version
 </span><span class="">  575: #
 </span><span class="">  576: # Decide whether a version value represents a real minimum version
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  577: #	constraint that should be written into the cpanfile output.
-</span><p> <b> Mutants (Total: 3, Killed: 3, Survived: 0)</b><p><span class="">  578: # Entry:    $_[0] &acirc;&#128;&#148; version value (scalar, possibly undef or numeric &#39;0&#39;).
+</span><span class="">  577: #	constraint that should be written into the cpanfile output.
+</span><span class="">  578: # Entry:    $_[0] &acirc;&#128;&#148; version value (scalar, possibly undef or numeric &#39;0&#39;).
 </span><span class="">  579: # Exit:     Boolean: true if the version should be emitted; false if it
 </span><span class="">  580: #           means &quot;any version&quot; (undef, empty string, or numeric zero).
 </span><span class="">  581: sub _has_version {
 </span><span class="">  582: 	my $ver = $_[0];
 </span><span class="">  583: 
-</span><span class="">  584: 	return 0 unless defined $ver &amp;&amp; $ver ne &#39;&#39; &amp;&amp; $ver ne &#39;0&#39;;
-</span><span class="">  585: 
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  584: 	return 0 unless defined $ver &amp;&amp; $ver ne &#39;&#39; &amp;&amp; $ver ne &#39;0&#39;;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  585: 
 </span><span class="">  586: 	# Use looks_like_number to avoid spurious non-numeric warnings when
 </span><span class="">  587: 	# comparing against 0 &acirc;&#128;&#148; version strings are always numeric, but be safe.
-</span><span class="">  588: 	return looks_like_number($ver) ? ($ver != 0) : 1;
-</span><span class="">  589: }
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  588: 	return looks_like_number($ver) ? ($ver != 0) : 1;
+</span><p> <b> Mutants (Total: 3, Killed: 3, Survived: 0)</b><p><span class="">  589: }
 </span><span class="">  590: 
 </span><span class="">  591: 1;
 </span><span class="">  592: 
