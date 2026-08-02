@@ -20,7 +20,7 @@ App::makefilepl2cpanfile - Convert Makefile.PL to a cpanfile automatically
 
 =cut
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 # -----------------------------------------------------------------------
 # Constants
