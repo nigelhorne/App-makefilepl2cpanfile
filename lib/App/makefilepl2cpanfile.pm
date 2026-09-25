@@ -2,13 +2,15 @@ package App::makefilepl2cpanfile;
 
 use strict;
 use warnings;
-use autodie qw(:all);
-use Carp qw(croak carp);
-use Readonly;
-use Path::Tiny;
-use Params::Get;
-use YAML::Tiny;
-use File::HomeDir;
+# Nothing is imported: every external function is called by its full name,
+# so the only subroutines in this package are its own.  (Importing put
+# Load, Dump, home, path, croak, carp and Readonly into the namespace.)
+use Carp ();
+use Readonly ();
+use Path::Tiny ();
+use Params::Get ();
+use YAML::Tiny ();
+use File::HomeDir ();
 use Fcntl ();
 
 =encoding utf-8
@@ -19,11 +21,11 @@ App::makefilepl2cpanfile - Convert Makefile.PL to a cpanfile automatically
 
 =head1 VERSION
 
-This document describes App::makefilepl2cpanfile version 0.04.
+This document describes App::makefilepl2cpanfile version 0.05.
 
 =cut
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 # -----------------------------------------------------------------------
 # Constants
@@ -31,7 +33,7 @@ our $VERSION = '0.04';
 
 # Default author/developer tools added to the 'develop' phase when
 # with_develop is true and no user config file overrides them.
-Readonly my %DEFAULT_DEVELOP => (
+Readonly::Hash my %DEFAULT_DEVELOP => (
 	'Devel::Cover'        => 0,
 	'Perl::Critic'        => 0,
 	'Test::Pod'           => 0,
@@ -40,7 +42,7 @@ Readonly my %DEFAULT_DEVELOP => (
 
 # Maps each Makefile.PL simple-dependency key to its cpanfile phase name.
 # All of these are treated as 'requires' relationships.
-Readonly my %PHASE_MAP => (
+Readonly::Hash my %PHASE_MAP => (
 	BUILD_REQUIRES     => 'build',
 	CONFIGURE_REQUIRES => 'configure',
 	PREREQ_PM          => 'runtime',
@@ -48,19 +50,30 @@ Readonly my %PHASE_MAP => (
 );
 
 # Valid cpanfile phase names recognised inside 'prereqs => { ... }' blocks.
-Readonly my %VALID_PHASE => map { $_ => 1 }
+Readonly::Hash my %VALID_PHASE => map { $_ => 1 }
 	qw(runtime configure build test develop);
 
 # Valid cpanfile relationship keywords inside each phase block.
-Readonly my %VALID_REL => map { $_ => 1 }
-	qw(requires recommends suggests);
+Readonly::Hash my %VALID_REL => map { $_ => 1 }
+	qw(requires recommends suggests conflicts);
 
 # Canonical emit order for non-runtime phases (runtime is special-cased at
 # the top level per cpanfile convention).
-Readonly my @PHASE_ORDER => qw(configure build test develop);
+Readonly::Array my @PHASE_ORDER => qw(configure build test develop);
 
 # Within each phase block, emit relationships in this order.
-Readonly my @REL_ORDER => qw(requires recommends suggests);
+Readonly::Array my @REL_ORDER => qw(requires recommends suggests conflicts);
+
+# META spec 1.x top-level keys (e.g. directly under META_MERGE) and the
+# phase and relationship each one stands for.
+Readonly::Hash my %LEGACY_KEY => (
+	requires           => [ 'runtime',   'requires' ],
+	build_requires     => [ 'build',     'requires' ],
+	configure_requires => [ 'configure', 'requires' ],
+	recommends         => [ 'runtime',   'recommends' ],
+	suggests           => [ 'runtime',   'suggests' ],
+	conflicts          => [ 'runtime',   'conflicts' ],
+);
 
 # First line of every generated cpanfile.
 Readonly::Scalar my $HEADER => '# Generated from Makefile.PL using makefilepl2cpanfile';
@@ -110,6 +123,23 @@ Readonly::Scalar my $VERSION_RE => qr/
 	\z
 /x;
 
+# A version requirement: a single version (as above), or a CPAN::Meta
+# version range - comma-separated versions each with a comparison operator,
+# e.g. '>= 1.2, < 2.0'.  Only digits, '.', '_', 'v', the operators, ',' and
+# spaces can match, so a requirement can never close the quoted literal it
+# is written into.  Every quantifier is possessive: linear on any input.
+Readonly::Scalar my $REQUIREMENT_RE => qr/
+	\A
+	(?: (?: >= | <= | == | != | > | < ) \s*+ )?+  # optional operator
+	v?+ (?= [0-9._]*? [0-9] ) [0-9._]++  # a version
+	(?:
+		\s*+ , \s*+
+		(?: >= | <= | == | != | > | < ) \s*+  # further parts need an operator
+		v?+ (?= [0-9._]*? [0-9] ) [0-9._]++
+	)*+
+	\z        # no space before or after the whole value
+/x;
+
 # Everything on a line up to and including its first '#' that is not
 # inside a quoted string.  A quote with no partner is taken as a plain
 # character, exactly as a left-to-right scan for quoted strings would.
@@ -147,7 +177,7 @@ Readonly::Scalar my $DEVELOP_OPEN_RE => qr/
 # One entry of a develop block: relationship keyword, quoted module name,
 # optional quoted version.  Quotes must match on both.
 Readonly::Scalar my $DEVELOP_ENTRY_RE => qr/
-	\b (requires|recommends|suggests) \s+  # $1: relationship
+	\b (requires|recommends|suggests|conflicts) \s+  # $1: relationship
 	(?: ' ([^'\n]++) ' | " ([^"\n]++) " )  # $2 or $3: module name
 	(?:
 		\s* , \s*
@@ -239,9 +269,11 @@ C<build>, C<test> and C<configure> phases.
 blocks (the CPAN::Meta::Spec version 2 layout), wherever they appear -
 also inside C<META_MERGE>.
 
-=item * C<recommends =E<gt> { ... }> and C<suggests =E<gt> { ... }>
-directly inside C<META_MERGE> (the older version 1 layout).  These become
-C<recommends> and C<suggests> lines in the C<runtime> phase.
+=item * The older version 1 layout, directly inside C<META_MERGE>:
+C<requires>, C<recommends>, C<suggests> and C<conflicts> become lines of
+that kind in the C<runtime> phase; C<build_requires> and
+C<configure_requires> become C<requires> lines in the C<build> and
+C<configure> phases.
 
 =item * C<MIN_PERL_VERSION>, which becomes C<requires 'perl', 'VERSION';>.
 
@@ -310,10 +342,12 @@ C<parse_prereqs()> returns a hash reference with three levels:
 =item * PHASE is one of C<runtime>, C<configure>, C<build>, C<test> or
 C<develop>.
 
-=item * RELATIONSHIP is one of C<requires>, C<recommends> or C<suggests>.
+=item * RELATIONSHIP is one of C<requires>, C<recommends>, C<suggests> or
+C<conflicts>.
 
-=item * C<version> is the minimum version exactly as it was written (for
-example C<'1.60'> stays C<'1.60'>).  It is C<0> when there is no minimum.
+=item * C<version> is the version requirement exactly as it was written:
+a single version (C<'1.60'> stays C<'1.60'>) or a version range such as
+C<'E<gt>= 1.2, E<lt> 2.0'>.  It is C<0> when there is no requirement.
 
 =item * C<comment> is the text of the C<#> comment after the entry, or
 C<undef> when there is none.
@@ -350,7 +384,9 @@ This also stops look-alike names, such as C<Test::More> written with a
 Cyrillic letter.
 
 =item * B<Version numbers> may use only the ASCII digits 0-9, C<.>,
-C<_> and a leading C<v>, and must contain at least one digit.  The whole
+C<_> and a leading C<v>, and must contain at least one digit.  A version
+range joins such numbers, each after one of the operators C<E<gt>=>,
+C<E<lt>=>, C<==>, C<!=>, C<E<gt>> or C<E<lt>>, with commas.  The whole
 value is checked: C<'1.0-TRIAL'> is not shortened to C<'1.0'>.  Anything
 else is treated as "no minimum version".
 
@@ -379,6 +415,11 @@ reference.  All of them are optional.
 
 =over 4
 
+=item * C<content> - the text of a F<Makefile.PL>, for example from
+L</read_makefile($path)>.  When it is given it is used as it is, and
+C<makefile> is ignored and nothing is read.  Use it to read the file once
+and use the same text for more than one purpose.
+
 =item * C<makefile> - the path of the F<Makefile.PL> to read.  Default:
 C<'Makefile.PL'> in the current directory.  Anything that turns into a
 path when used as a string is accepted, such as a L<Path::Tiny> object.
@@ -387,12 +428,12 @@ C<Cannot read>.
 
 =item * C<existing> - the text of your current F<cpanfile>.  Default:
 C<''> (none).  Only its C<on 'develop' =E<gt> sub { ... }> section is
-used.  Every C<requires>, C<recommends> and C<suggests> line in that
-section is copied to the new text, so your hand-written developer
+used.  Every C<requires>, C<recommends>, C<suggests> and C<conflicts>
+line in that section is copied to the new text, so your hand-written developer
 dependencies are kept.  Lines that are commented out are not copied.
 An entry whose name is not a valid module name is dropped.  An entry
-whose version is not a version number is kept without a version, and
-you get a warning.
+whose version is not a version number or version range is kept without a
+version, and you get a warning.
 
 =item * C<with_develop> - true or false.  Default: true.  When true, the
 developer tools from the configuration file (see L</CONFIGURATION>), or
@@ -466,6 +507,10 @@ not already in the develop phase.
 =head4 Input
 
 	{
+		content => {
+			type     => 'string',
+			optional => 1,
+		},
 		makefile => {
 			type     => 'string',
 			optional => 1,
@@ -511,6 +556,11 @@ Each argument, split into groups of values that behave the same way.
 	            File size: 0 bytes gives just the header line; there is
 	            no upper limit other than memory.
 
+	content
+	  given:    used as the Makefile.PL text; makefile is then ignored
+	            and no file is read (so no "Cannot read" is possible)
+	  default:  undef or not given -> the makefile file is read
+
 	existing
 	  valid:    any string.  Only the first on 'develop' => sub { ... };
 	            block is used; its closing "};" must start a line (after
@@ -519,7 +569,8 @@ Each argument, split into groups of values that behave the same way.
 	  ignored:  a string without a develop block, a block that is never
 	            closed, a reference (its "HASH(0x...)" text has no block)
 	  entries:  0 or more; each needs a valid module name; a version, if
-	            given, must be a version number (see parse_prereqs)
+	            given, must be a version or version range (see
+	            parse_prereqs)
 
 	with_develop
 	  true:     any true Perl value, including 'yes' and '0.0'
@@ -596,33 +647,11 @@ sub generate {
 	# errno; restore the caller's $! on every exit path.
 	local $!;
 
-	# Stringify so a filehandle, glob or other reference is judged by the
-	# same "Cannot read" guard as a bad path, rather than being accepted by
-	# -f (which also tests open handles) and then misread as a path.
-	my $makefile = "@{[ $args->{makefile} // 'Makefile.PL' ]}";
 	my $existing = $args->{existing} // '';
 	my $with_dev = $args->{with_develop} // 1;
 
-	croak "Cannot read '" . _printable($makefile) . q{'} unless -f $makefile && -r _;
-
-	my $content;
-	{
-		local $@;
-		eval { $content = path($makefile)->slurp_utf8 };
-		if ($@) {
-			# Only degrade gracefully for encoding errors; re-throw true I/O
-			# failures so callers can distinguish a corrupt file from an
-			# unreadable one.  Path::Tiny reports I/O failures as
-			# Path::Tiny::Error objects, whose text includes the file's path:
-			# matching keywords against that would misread an I/O error in,
-			# say, ~/src/utf8-tools/ as a decoding problem.  So objects are
-			# always rethrown, and only plain decoder messages are matched.
-			die $@ if ref $@ || $@ !~ /decode|ill-formed|utf/i;
-			carp "Warning: '" . _printable($makefile) . "' contains invalid UTF-8; reading as raw bytes: "
-				. _printable($@ =~ s/\n\z//r);
-			$content = path($makefile)->slurp_raw;
-		}
-	}
+	# Text supplied directly is used as it is; otherwise read the file.
+	my $content = defined $args->{content} ? $args->{content} : read_makefile($args->{makefile});
 	my $min_perl = _parse_min_perl($content);
 	my $deps     = parse_prereqs($content);
 
@@ -654,8 +683,8 @@ sub generate {
 				# turn following entries into executable code.
 				# length(undef) is undef, so one test covers "absent" and "empty":
 				# only a non-empty version can be invalid.
-				if (length($ver // q{}) && !_valid_version($ver)) {
-					carp "Ignoring invalid version for '$mod' in existing cpanfile: '" . _printable($ver) . q{'};
+				if (length($ver // q{}) && !_valid_requirement($ver)) {
+					Carp::carp "Ignoring invalid version for '$mod' in existing cpanfile: '" . _printable($ver) . q{'};
 					$ver = 0;
 				}
 				$deps->{develop}{$rel}{$mod} //= { version => $ver || 0, comment => undef };
@@ -679,6 +708,98 @@ sub generate {
 	}
 
 	return _emit($deps, $min_perl);
+}
+
+=head2 read_makefile($path)
+
+=head3 PURPOSE
+
+Reads the text of a F<Makefile.PL>, exactly as L</generate(%args)> does
+when it is given a C<makefile> argument.  Use it together with the
+C<content> argument of C<generate()> when you need the same text for
+more than one call, so that the file is read only once.
+
+=head3 ARGUMENTS
+
+=over 4
+
+=item * C<$path> - as the C<makefile> argument of L</generate(%args)>:
+optional, default C<'Makefile.PL'>, used as a string.
+
+=back
+
+=head3 RETURNS
+
+The file's text as a character string.  If the file is not valid UTF-8
+you get a warning and its raw bytes instead (see L</generate(%args)>).
+
+=head3 SIDE EFFECTS
+
+Reads the file.  May warn.  Does not change the caller's C<$@>, C<$!>
+or C<$_>.
+
+=head3 USAGE EXAMPLE
+
+	my $text = App::makefilepl2cpanfile::read_makefile('Makefile.PL');
+	my $deps = App::makefilepl2cpanfile::parse_prereqs($text);
+	my $out  = App::makefilepl2cpanfile::generate(content => $text);
+
+=head3 API SPECIFICATION
+
+=head4 Input
+
+	{
+		path => {
+			type     => 'string',
+			optional => 1,
+			min      => 1,
+			default  => 'Makefile.PL',
+			position => 0,
+		},
+	}
+
+=head4 Output
+
+	{
+		type => 'string',
+	}
+
+=head3 MESSAGES
+
+The same as the file-reading messages of L</generate(%args)>:
+C<Cannot read '$path'> (croak), the invalid-UTF-8 warning, and any
+other read error passed on unchanged.
+
+=cut
+
+sub read_makefile {
+	# Stringify so a filehandle, glob or other reference is judged by the
+	# same "Cannot read" guard as a bad path, rather than being accepted by
+	# -f (which also tests open handles) and then misread as a path.
+	my $makefile = "@{[ $_[0] // 'Makefile.PL' ]}";
+
+	# File tests and reads change errno; restore the caller's $! and $@.
+	local $!;
+	local $@;
+
+	Carp::croak "Cannot read '" . _printable($makefile) . q{'} unless -f $makefile && -r _;
+
+	my $content;
+	eval { $content = Path::Tiny::path($makefile)->slurp_utf8 };
+	if ($@) {
+		# Only degrade gracefully for encoding errors; re-throw true I/O
+		# failures so callers can distinguish a corrupt file from an
+		# unreadable one.  Path::Tiny reports I/O failures as
+		# Path::Tiny::Error objects, whose text includes the file's path:
+		# matching keywords against that would misread an I/O error in,
+		# say, ~/src/utf8-tools/ as a decoding problem.  So objects are
+		# always rethrown, and only plain decoder messages are matched.
+		die $@ if ref $@ || $@ !~ /decode|ill-formed|utf/i;
+		Carp::carp "Warning: '" . _printable($makefile) . "' contains invalid UTF-8; reading as raw bytes: "
+			. _printable($@ =~ s/\n\z//r);
+		$content = Path::Tiny::path($makefile)->slurp_raw;
+	}
+	return $content;
 }
 
 =head2 parse_prereqs($content)
@@ -713,15 +834,20 @@ of a line belongs to the last entry on that line.
 written on one line after a C<#>.
 
 =item * A version must contain at least one digit and use only C<0-9>,
-C<.>, C<_> and a leading C<v>.  Anything else (for example C<'.'> or
-C<$VERSION>) means "no minimum version".
+C<.>, C<_> and a leading C<v>; a version range joins such versions, each
+after a comparison operator, with commas.  Anything else (for example
+C<'.'> or C<$VERSION>) means "no minimum version".
 
 =item * When a module appears twice in the same phase and relationship,
 the first one wins.  The simple keys are read before C<prereqs> blocks.
 
-=item * C<recommends> and C<suggests> inside a C<prereqs> block belong to
-that block's phase; only the ones directly inside C<META_MERGE> go to
-C<runtime>.
+=item * Relationship hashes inside a C<prereqs> block belong to that
+block's phase; only the version 1 keys directly inside C<META_MERGE> are
+mapped as described in L</What it reads>.
+
+=item * A comment at the end of a line belongs to the last entry on the
+line that is actually kept; an entry dropped for an invalid name does not
+take the comment with it.
 
 =back
 
@@ -782,16 +908,20 @@ nothing is found.
 	  valid:    the whole value is an optional 'v' followed by ASCII
 	            digits, '.' and '_', with at least one digit:
 	            '1', 1.60, 'v1.2.3', '1.23_01', '5.010001'
+	  range:    (entries only, not MIN_PERL_VERSION) such versions, each
+	            after one of >= <= == != > <, joined by commas:
+	            '>= 1.2, < 2.0', '== 1.5', '< 2'.  '>= 0' means "any".
 	  zero:     '0', 0, '0.0', '0.000', 'v0', 'v0.0.0' -> "no minimum"
 	            (nothing is written)
 	  invalid:  -> "no minimum": '.', '_', 'v', '1e3', '1.0-TRIAL',
 	            '1 0', non-ASCII digits, $VERSION, version->parse(...),
-	            and version ranges such as '>= 1.2, < 2.0' (not supported)
+	            spaces around the whole value, and ranges with a missing
+	            comma or operator ('>= 1.2 < 2.0', '1.2, 2.0')
 	  limits:   no maximum length
 
 	phase / relationship (inside prereqs blocks)
 	  valid:    exactly runtime, configure, build, test, develop /
-	            requires, recommends, suggests (lower case)
+	            requires, recommends, suggests, conflicts (lower case)
 	  ignored:  anything else, including 'Runtime', 'recommend', 'x_foo'
 
 	comment (text after '#' on an entry's line)
@@ -901,18 +1031,18 @@ sub parse_prereqs {
 	# Occurrences inside a 'prereqs' block are phase-scoped and have
 	# already been handled above, so skip them.
 	while ($content =~ /
-		\b (recommends|suggests) ['"]? \s*=>\s* \{
+		\b (requires|build_requires|configure_requires|recommends|suggests|conflicts) ['"]? \s*=>\s* \{
 			( (?: [^{}]++ | \{ [^}]*+ \} )* )
 		\}
 	/gsx) {
-		my ($rel, $block, $start) = ($1, $2, $-[0]);
+		my ($key, $block, $start) = ($1, $2, $-[0]);
 		# The spans come from successive /g matches, so they are sorted and
 		# do not overlap: the same binary search as for comments applies,
 		# O(log P) per block instead of a linear scan (which made many
 		# legacy blocks times many prereqs blocks quadratic).
 		next if _in_comment(\@prereqs_spans, $start);
 		next if _in_comment($comments, $start);
-		_extract_pairs($block, \%deps, 'runtime', $rel);
+		_extract_pairs($block, \%deps, @{ $LEGACY_KEY{$key} });
 	}
 
 	return \%deps;
@@ -971,21 +1101,21 @@ sub _extract_pairs {
 			push @pairs, [ $1 // $2, $3 // $4 // $5 ];
 		}
 
+		# Defense-in-depth: [^'"]+ already excludes quote characters, but it
+		# would accept spaces, ';' and non-ASCII look-alikes.  Only a real
+		# module name may reach the generated cpanfile.  Invalid names are
+		# dropped first, so that the line's comment goes to the last entry
+		# that is actually kept.
+		@pairs = grep { $_->[0] =~ $MODULE_NAME_RE } @pairs;
+
 		for my $i (0 .. $#pairs) {
 			my ($mod, $ver) = @{ $pairs[$i] };
-			# Defense-in-depth: [^'"]+ already excludes quote characters, but
-			# it would accept spaces, ';' and non-ASCII look-alikes.  Only a
-			# real module name may reach the generated cpanfile.
-			next unless $mod =~ $MODULE_NAME_RE;
-			# '.' or '_' alone is not a version; emitting it would produce a
+			# Anything that is not a version or version range ('.', '_',
+			# $VERSION, ...) means "no minimum"; emitting it would produce a
 			# cpanfile that CPAN::Meta::Requirements rejects.
-			# _valid_version(undef) is false, so no separate defined() test.
-			$ver = 0 unless _valid_version($ver);
+			$ver = 0 unless _valid_requirement($ver);
 			# First occurrence wins - do not overwrite already-parsed entries.
 			# A trailing comment belongs to the entry it follows: the last.
-			# TODO: Data Flow Anomaly - D~: when the last pair on a line is
-			# rejected above, the line's comment is captured but never stored,
-			# even if an earlier pair on the same line was kept.
 			$deps->{$phase}{$rel}{$mod} //= {
 				version => $ver,
 				comment => $i == $#pairs ? $comment : undef,
@@ -1003,7 +1133,7 @@ sub _extract_pairs {
 # Exit:     The version string (e.g. '5.010'), or undef if not declared.
 sub _parse_min_perl {
 	my $content = $_[0];
-	return undef unless defined $content;	## no critic (ProhibitExplicitReturnUndef)
+	return undef if !defined $content || ref $content;	## no critic (ProhibitExplicitReturnUndef)
 	return undef unless $content =~ /\bMIN_PERL_VERSION\b\s*=>\s*$VALUE_TOKEN_RE/;	## no critic (ProhibitExplicitReturnUndef)
 	my $ver = $1 // $2 // $3;
 	return _valid_version($ver) ? $ver : undef;
@@ -1063,6 +1193,18 @@ sub _valid_version {
 	return defined $ver && $ver =~ $VERSION_RE ? 1 : 0;
 }
 
+# _valid_requirement
+#
+# Purpose:  Decide whether a string is a module version requirement that is
+#           safe to write inside a single-quoted cpanfile literal: a single
+#           version (see _valid_version) or a CPAN::Meta version range.
+# Entry:    $_[0] - candidate string.
+# Exit:     Boolean.
+sub _valid_requirement {
+	my $req = $_[0];
+	return defined $req && $req =~ $REQUIREMENT_RE ? 1 : 0;
+}
+
 # _printable
 #
 # Purpose:  Make text from a file or the environment safe to put in an
@@ -1097,7 +1239,7 @@ sub _load_develop_config {
 	my $home = File::HomeDir->my_home;
 	return {%DEFAULT_DEVELOP} unless length($home // q{});
 
-	my $cfg_path = path($home)->child('.config', 'makefilepl2cpanfile.yml');
+	my $cfg_path = Path::Tiny::path($home)->child('.config', 'makefilepl2cpanfile.yml');
 	my $cfg_shown = _printable($cfg_path);
 
 	# Guard: the path cannot be examined.  A missing file means "use the
@@ -1105,7 +1247,7 @@ sub _load_develop_config {
 	# silently change the output.
 	my @stat = stat "$cfg_path";
 	unless (@stat) {
-		croak "Failed to parse $cfg_shown: $!" unless $!{ENOENT} || $!{ENOTDIR};
+		Carp::croak "Failed to parse $cfg_shown: $!" unless $!{ENOENT} || $!{ENOTDIR};
 		return {%DEFAULT_DEVELOP};
 	}
 
@@ -1122,7 +1264,7 @@ sub _load_develop_config {
 	unless ($yaml) {
 		my $err = $@ || YAML::Tiny->errstr() // q{};
 		$err =~ s/ at \S++ line \d++\.?\n?\z//;
-		croak "Failed to parse $cfg_shown: " . _printable($err);
+		Carp::croak "Failed to parse $cfg_shown: " . _printable($err);
 	}
 
 	# Guard: no develop hash.  Checking the document's type first means a
@@ -1130,7 +1272,7 @@ sub _load_develop_config {
 	my $doc     = $yaml->[0];
 	my $develop = ref $doc eq 'HASH' ? $doc->{develop} : undef;
 	unless (ref $develop eq 'HASH') {
-		carp "No 'develop' key found in $cfg_shown; using defaults";
+		Carp::carp "No 'develop' key found in $cfg_shown; using defaults";
 		return {%DEFAULT_DEVELOP};
 	}
 
@@ -1141,15 +1283,15 @@ sub _load_develop_config {
 	my %clean;
 	for my $mod (keys %{$develop}) {
 		unless ($mod =~ $MODULE_NAME_RE) {
-			carp "Skipping invalid module name in $cfg_shown: '" . _printable($mod) . q{'};
+			Carp::carp "Skipping invalid module name in $cfg_shown: '" . _printable($mod) . q{'};
 			next;
 		}
 		# Premise 1: a null value means "any version", i.e. 0.
-		# Premise 2: _valid_version accepts '0' (it contains a digit).
+		# Premise 2: _valid_requirement accepts '0' (it contains a digit).
 		# Conclusion: '' is the only extra value that needs allowing.
 		my $v = $develop->{$mod} // 0;
-		unless ($v eq q{} || _valid_version($v)) {
-			carp "Skipping invalid version for '$mod' in $cfg_shown: '" . _printable($v) . q{'};
+		unless ($v eq q{} || _valid_requirement($v)) {
+			Carp::carp "Skipping invalid version for '$mod' in $cfg_shown: '" . _printable($v) . q{'};
 			$v = 0;
 		}
 		$clean{$mod} = $v;
@@ -1251,12 +1393,65 @@ sub _has_version {
 	my $ver = $_[0];
 
 	# Premise 1: every version that reaches here is undef, 0, '' or a string
-	# accepted by _valid_version (ASCII digits, '.', '_', optional 'v').
-	# Premise 2: such a value is zero exactly when none of its digits is
-	# 1-9 ('0', '0.000', 'v0.0.0', '0_0').
-	# Conclusion: "contains a digit from 1 to 9" is the whole test.
-	return defined $ver && $ver =~ /[1-9]/ ? 1 : 0;
+	# accepted by _valid_requirement: a single version (ASCII digits, '.',
+	# '_', optional 'v') or a range, which always contains an operator.
+	# Premise 2: a single version is zero exactly when none of its digits is
+	# 1-9 ('0', '0.000', 'v0.0.0', '0_0'); a range means "any version" only
+	# when it is '>=' a zero version.
+	# Conclusion: two tests decide it.
+	return 0 unless defined $ver;
+	return $ver =~ /\A \s* >= \s* v? [0._]* \s* \z/x ? 0 : 1 if $ver =~ /[<>=!]/x;
+	return $ver =~ /[1-9]/ ? 1 : 0;
 }
+
+
+# -----------------------------------------------------------------------
+# Post-release roadmap (from the 0.05 gap analysis)
+# -----------------------------------------------------------------------
+#
+# Features
+# TODO: Write CPAN::Meta optional_features as cpanfile 'feature' blocks,
+#       and carry x_* custom phases through instead of dropping them.
+# TODO: Command line: --diff should exit non-zero when the cpanfile would
+#       change (like 'git diff --exit-code'); add --makefile FILE,
+#       --output FILE, --quiet, and '-' to read Makefile.PL from stdin.
+# TODO: Read other build files: Build.PL (Module::Build requires,
+#       build_requires, test_requires, configure_requires, recommends) and
+#       possibly dist.ini; consider the reverse direction (cpanfile to a
+#       PREREQ_PM snippet).
+# TODO: Keep more of a hand-written cpanfile than its develop block:
+#       feature blocks, extra 'on test' entries, and comments inside the
+#       develop block.
+# TODO: Optional, never default, mode that runs Makefile.PL in an isolated
+#       sandbox to capture dependencies computed by code.
+# TODO: Translatable messages (e.g. Locale::TextDomain); all messages are
+#       English only.
+#
+# Technical debt
+# TODO: Replace the brace-counting regexes with PPI: parses Perl without
+#       running it, handles any nesting depth, quoting and heredocs, and
+#       could flag conditional dependencies instead of making them
+#       unconditional.
+# TODO: Move bin/makefilepl2cpanfile's logic into a module
+#       (e.g. App::makefilepl2cpanfile::CLI->run(\@ARGV) returning an exit
+#       code) for in-process tests, real coverage, and fewer subprocess
+#       tests (slow, and fragile on Windows).
+# TODO: Consolidate the test suite: move duplicated helpers (empty_home,
+#       make_mf, use_home, run_cli) into t/lib, and merge the overlap
+#       between function.t, unit.t and extended_tests.t.
+# TODO: Readonly hashes and arrays (%PHASE_MAP, %VALID_PHASE, %VALID_REL,
+#       %LEGACY_KEY, @REL_ORDER, @PHASE_ORDER, %DEFAULT_DEVELOP) are tied,
+#       adding overhead to every access; use plain lexicals or constant
+#       lists.
+# TODO: In the command-line tool, rename the temporary file directly
+#       instead of Path::Tiny's move (File::Copy::move moves INTO a
+#       directory; only the non-regular-file guard prevents that today),
+#       and close the small race between the symlink check and the write.
+# TODO: Consider a size limit for Makefile.PL and the existing cpanfile, so
+#       a huge hostile file cannot exhaust memory.
+# TODO: CI matrix: a Perl 5.14 job (the declared minimum), Windows and
+#       macOS runners, and Devel::Cover for the command-line tool's
+#       subprocesses (via PERL5OPT).
 
 1;
 
@@ -1328,10 +1523,11 @@ Each rule below is proved by F<t/logic.t>.
 
 =item * B<Versions.>  Every version is checked when it is read (from the
 F<Makefile.PL>, the existing F<cpanfile> or the configuration file) and
-replaced by C<0> if it is not a version number.  A version number is
-zero exactly when none of its digits is 1 to 9.  So, when the output is
-written, "does it contain a digit from 1 to 9?" is the whole test for
-whether to print a minimum version.
+replaced by C<0> if it is not a version number or version range.  A
+version number is zero exactly when none of its digits is 1 to 9, and a
+range means "any version" only when it is C<E<gt>=> a zero version.  So,
+when the output is written, those two tests decide whether to print a
+requirement.
 
 =item * B<Comments.>  An empty comment is stored as "no comment" when it
 is read, and entries from other sources have no comment.  So, when the
@@ -1412,9 +1608,14 @@ description for everyday use.
 	Str       == seq CHAR
 	ModName   == { s : Str | s matches [A-Za-z_][A-Za-z0-9_]*(::[A-Za-z0-9_]+)* }
 	VersionStr == { s : Str | s matches v?[0-9._]+ ∧ (∃ c ∈ ran s • c ∈ '0'..'9') }
+	Op        ::= >= | <= | == | != | > | <
+	Requirement == VersionStr ∪ { ⁀/ ⟨ o₁ ⁀ v₁, ", " ⁀ o₂ ⁀ v₂, … ⟩ | oᵢ ∈ Op, vᵢ ∈ VersionStr }
 	Phase     ::= runtime | configure | build | test | develop
-	Rel       ::= requires | recommends | suggests
-	Entry     == [ version : VersionStr ∪ {0}; comment : Str ∪ {⊥} ]
+	Rel       ::= requires | recommends | suggests | conflicts
+	Entry     == [ version : Requirement ∪ {0}; comment : Str ∪ {⊥} ]
+	LEGACY    == { requires ↦ (runtime, requires), build_requires ↦ (build, requires),
+	               configure_requires ↦ (configure, requires), recommends ↦ (runtime, recommends),
+	               suggests ↦ (runtime, suggests), conflicts ↦ (runtime, conflicts) }
 	DepMap    == Phase ⇸ (Rel ⇸ (ModName ⇸ Entry))
 
 	-- Left-biased merge: entries already present win.
@@ -1439,28 +1640,29 @@ description for everyday use.
 	                       b ∈ blocks(k, s) }
 	structured(s) == ⋃ { {p ↦ {r ↦ pairs(b)}}
 	                     | P ∈ blocks(prereqs, s), (p ↦ (r ↦ b)) ∈ P, p ∈ Phase, r ∈ Rel }
-	legacy(s)     == ⋃ { {runtime ↦ {r ↦ pairs(b)}}
-	                     | r ∈ {recommends, suggests}, b ∈ blocks(r, s),
+	legacy(s)     == ⋃ { {first(LEGACY(k)) ↦ {second(LEGACY(k)) ↦ pairs(b)}}
+	                     | k ∈ dom LEGACY, b ∈ blocks(k, s),
 	                       ¬ (∃ P ∈ blocks(prereqs, s) • b ⊆ P) }
-	pairs(b)      == { m ↦ ⟨ if v ∈ VersionStr then v else 0, comment(m, b) ⟩
+	pairs(b)      == { m ↦ ⟨ if v ∈ Requirement then v else 0, comment(m, b) ⟩
 	                     | ('m' => v) ∈ b, m ∈ ModName }
+	-- comment(m, b): the line's comment if m is the last valid entry on it
 
 	post  ∀ p ↦ R ∈ result • R ≠ ∅ ∧ (∀ r ↦ M ∈ R • M ≠ ∅)
 	      ∧ no I/O ∧ no warnings
 
 =head2 generate
 
-	Args ≙ [ makefile : Str; existing : Str; with_develop : 𝔹 ]
+	Args ≙ [ content : Str ∪ {⊥}; makefile : Str; existing : Str; with_develop : 𝔹 ]
 
 	generate : Args × Env ⇸ Str
 
-	pre   string(a.makefile) ∈ dom E.fs ∧ regular(a.makefile) ∧ readable(a.makefile)
+	pre   (a.content ≠ ⊥ ∨ string(a.makefile) ∈ dom E.fs ∧ regular(a.makefile) ∧ readable(a.makefile))
 	      ∧ (a.with_develop ⇒ cfg(E) ∉ dom E.fs ∨ ¬ regular(cfg(E)) ∨ yaml_ok(cfg(E)))
 
 	generate(a, E) ==
-	  let content == decode_utf8_or_raw(E.fs(a.makefile))
+	  let content == if a.content ≠ ⊥ then a.content else decode_utf8_or_raw(E.fs(a.makefile))
 	      deps    == parse_prereqs(content)
-	      kept    == { r ↦ { m ↦ ⟨ valid_or_0(v), ⊥ ⟩ }
+	      kept    == { r ↦ { m ↦ ⟨ if v ∈ Requirement then v else 0, ⊥ ⟩ }
 	                   | (r m v) ∈ develop_entries(a.existing) \ comments, m ∈ ModName }
 	      dev     == deps ⊕ₗ {develop ↦ kept}
 	      listed  == ⋃ { dom(dev(develop)(r)) | r ∈ Rel }
@@ -1475,9 +1677,11 @@ description for everyday use.
 	      ∧ prefix(result, HEADER ⁀ "\n") ∧ last(result) = '\n' ∧ ¬ suffix(result, "\n\n")
 	      ∧ E′ = E                           -- nothing is written
 	      ∧ $@′ = $@ ∧ $!′ = $! ∧ $_′ = $_
+	      -- every value from a file or the environment in a message is
+	      -- printable(v): control and bidi characters as \x{..}
 
 	-- Failure cases (the function dies):
-	¬ regular(a.makefile) ∨ ¬ readable(a.makefile)  ⇒  croak("Cannot read '" ⁀ a.makefile ⁀ "'")
+	a.content = ⊥ ∧ (¬ regular(a.makefile) ∨ ¬ readable(a.makefile))  ⇒  croak("Cannot read '" ⁀ a.makefile ⁀ "'")
 	a.with_develop ∧ regular(cfg(E)) ∧ ¬ yaml_ok(cfg(E))  ⇒  croak("Failed to parse " ⁀ cfg(E) ⁀ ": " ⁀ err)
 	a.with_develop ∧ stat(cfg(E)) fails with errno ∉ {ENOENT, ENOTDIR}  ⇒  croak("Failed to parse " ⁀ cfg(E) ⁀ ": " ⁀ errno)
 
@@ -1500,7 +1704,8 @@ step PARSE.
 	| READ_UTF8  |---- decode error --> +-----------+  carp "invalid UTF-8"
 	+------------+                      | READ_RAW  |  (read the raw bytes)
 	    |     \                         +-----------+
-	    |      \---- other I/O error --------------------------> [DIE] error passed on
+	    |      \                             |---- raw read fails --> [DIE] error passed on
+	    |       \---- other I/O error --------------------------> [DIE] error passed on
 	    | ok                                 |
 	    v                                    |
 	+------------+ <-------------------------+
@@ -1546,10 +1751,41 @@ step PARSE.
 	| RETURN |  the cpanfile text; no file written;
 	+--------+  caller's $@, $! and $_ unchanged
 
-The command-line tool adds one final step after RETURN: it writes
-F<cpanfile> (default), prints the text (C<--dry-run>), or prints a diff
-(C<--diff>).  A write error ends the program with a non-zero exit status
-and leaves any existing F<cpanfile> unchanged.
+With the C<content> argument, START goes straight to PARSE: nothing is
+read, so neither C<Cannot read> nor the READ states can occur.
+
+The command-line tool wraps this machine:
+
+	+-----------+  conflicting --with-develop/--no-develop --> [EXIT 255]
+	| OPTIONS   |  --help --> print usage --> [EXIT 0]
+	+-----------+
+	    |
+	    v
+	+-----------+  cpanfile is a symlink, or exists but is not a
+	| GUARD     |  regular file --> [DIE] "Refusing to use 'cpanfile': ..."
+	+-----------+  (nothing is read or written)
+	    |
+	    v
+	+-----------+  read existing cpanfile (if any) and, with read_makefile(),
+	| READ      |  Makefile.PL - once; READ_UTF8/READ_RAW/DIE as above
+	+-----------+
+	    |
+	    v
+	generate(content => ...) from PARSE to RETURN, as above
+	    |
+	    v
+	+-----------+  --check: parse the same text; missing modules --> warn,
+	| CHECK     |  exit status will be 1 (the output below still happens)
+	+-----------+
+	    |---- --diff    --> print a diff, write nothing --> [EXIT 0 or 1]
+	    |---- --dry-run --> print the text, write nothing --> [EXIT 0 or 1]
+	    v
+	+-----------+  GUARD again, then write a temporary file and rename it
+	| WRITE     |  over cpanfile; any failure --> [DIE], old cpanfile kept,
+	+-----------+  no temporary file left
+	    |
+	    v
+	[EXIT 0 or 1]  "cpanfile written successfully."
 
 =head1 LICENSE AND COPYRIGHT
 

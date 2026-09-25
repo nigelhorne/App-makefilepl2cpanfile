@@ -87,6 +87,11 @@ my %LEDGER = (
 	'generate.arg.with_develop_default'     => q{with_develop defaults to true},
 	'generate.arg.flat_list'                => q{arguments accepted as a flat list},
 	'generate.arg.hashref'                  => q{arguments accepted as a single hashref},
+	'generate.arg.content'                  => q{content is used instead of reading makefile},
+	'read_makefile.ret.text'                => q{read_makefile returns the file text},
+	'read_makefile.default'                 => q{read_makefile defaults to Makefile.PL},
+	'read_makefile.msg.cannot_read'         => q{read_makefile croaks "Cannot read '$path'"},
+	'read_makefile.msg.invalid_utf8'        => q{read_makefile warns on invalid UTF-8 and returns raw bytes},
 	'generate.arg.existing.merge_all_rels'  => q{existing develop requires/recommends/suggests carried over},
 	'generate.arg.existing.invalid_dropped' => q{existing develop entries with invalid names dropped},
 	'generate.arg.existing.develop_only'    => q{only the develop block of existing is used},
@@ -387,6 +392,48 @@ subtest 'generate() - argument defaults' => sub {
 		App::makefilepl2cpanfile::generate(makefile => "$mf", with_develop => 1),
 		'omitted with_develop behaves as true';
 	covered('generate.arg.with_develop_default');
+};
+
+# Strategy: read_makefile() is the reading step of generate(), exposed so
+# that one read can feed several calls; content => is the matching input.
+subtest 'read_makefile() and generate(content => ...)' => sub {
+	my ($g) = empty_home();
+	my $mf = make_mf($MF_SIMPLE);
+
+	my $text = App::makefilepl2cpanfile::read_makefile("$mf");
+	is $text, $MF_SIMPLE, 'returns the file text';
+	returns_is($text, { type => 'string' }, 'returns a string');
+	covered('read_makefile.ret.text');
+
+	{
+		my $cwd = Path::Tiny->cwd;
+		chdir $mf->parent or die "chdir: $!";
+		my $default = eval { App::makefilepl2cpanfile::read_makefile() };
+		chdir $cwd or die "chdir: $!";
+		is $default, $MF_SIMPLE, 'no argument reads ./Makefile.PL';
+		covered('read_makefile.default');
+	}
+
+	throws_ok { App::makefilepl2cpanfile::read_makefile('/no/such/Makefile.PL') }
+		qr/\ACannot read '\/no\/such\/Makefile\.PL' at /, 'documented croak';
+	covered('read_makefile.msg.cannot_read');
+
+	{
+		my $m = mock_scoped(
+			'Path::Tiny::slurp_utf8' => sub { die "$CFG{utf8_error}\n" },
+			'Path::Tiny::slurp_raw'  => sub { 'raw bytes' },
+		);
+		my ($raw, @w) = with_warnings(sub { App::makefilepl2cpanfile::read_makefile("$mf") });
+		is $raw, 'raw bytes', 'raw bytes returned';
+		like $w[0], qr/\AWarning: '\Q$mf\E' contains invalid UTF-8; reading as raw bytes: /, 'documented warning';
+		covered('read_makefile.msg.invalid_utf8');
+	}
+
+	# content => is used as is: the makefile argument is then not read at all.
+	is App::makefilepl2cpanfile::generate(content => $text, makefile => '/no/such/file', with_develop => 0),
+		App::makefilepl2cpanfile::generate(makefile => "$mf", with_develop => 0),
+		'content gives the same result as reading the file, and makefile is ignored';
+	covered('generate.arg.content');
 };
 
 subtest 'generate() - flat-list and hashref calling styles are equivalent' => sub {

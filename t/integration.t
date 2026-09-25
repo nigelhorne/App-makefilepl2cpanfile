@@ -352,6 +352,41 @@ subtest 'CLI: --diff without an existing cpanfile writes nothing' => sub {
 # observed through the written output, plus the documented error and the
 # help exit.
 # -----------------------------------------------------------------------
+# -----------------------------------------------------------------------
+# --check exit status
+#
+# Strategy: --check exists to catch dependencies the conversion lost.  A
+# wrapper makes generation drop one module; the run must name it and exit
+# with status 1 so that CI fails, whatever output mode was chosen.
+# -----------------------------------------------------------------------
+subtest 'CLI: --check exits 1 when a module is missing' => sub {
+	my $wrapper = path(tempdir(CLEANUP => 1))->child('drop.pl');
+	$wrapper->spew_utf8(<<'END_PERL');
+use App::makefilepl2cpanfile;
+use Test::Mockingbird;
+Test::Mockingbird::around('App::makefilepl2cpanfile::_emit', sub {
+	my ($orig, @args) = @_;
+	return $orig->(@args) =~ s/^requires 'Moo'.*\n//mr;
+});
+do $ARGV[0];
+die $@ if $@;
+END_PERL
+	for my $mode ([], ['--dry-run'], ['--diff']) {
+		my $dir = make_project($MF_FULL);
+		my $cwd = Path::Tiny->cwd;
+		local $ENV{HOME} = make_home()->stringify;
+		chdir $dir or die "chdir: $!";
+		my ($out, $err, $exit) = capture { system $^X, "-I$LIB", "$wrapper", $BIN, '--check', '--no-develop', @{$mode} };
+		chdir $cwd or die "chdir: $!";
+		s/\r\n/\n/g for $out, $err;
+		my $name = @{$mode} ? "@{$mode}" : 'write';
+		is $exit >> 8, 1, "$name: exit status 1";
+		like $err, qr/^  Moo$/m, "$name: the missing module is named";
+	}
+	my ($out, $err, $exit) = run_cli(make_project($MF_FULL), make_home(), '--check', '--no-develop');
+	is $exit, 0, 'nothing missing: exit status 0';
+};
+
 subtest 'CLI: option handling' => sub {
 	my $home = make_home({ develop => { 'Configured::Tool' => '2.0' } });
 

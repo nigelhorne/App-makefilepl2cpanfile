@@ -8,7 +8,7 @@ use warnings;
 # of data, with deliberately hostile input:
 #
 #   P1  Every stored version is 0, '' (config only), or passes
-#       _valid_version.
+#       _valid_requirement (a version or a version range).
 #   P2  Every stored comment is undef or a non-empty string.
 #
 # Then each reduced condition is tested with one case per logical
@@ -108,7 +108,7 @@ sub capture_emit {
 subtest 'P1: all three sources store only in-domain versions' => sub {
 	my $in_domain = sub {
 		my $v = $_[0];
-		return defined $v && ($v eq '0' || $v eq q{} || App::makefilepl2cpanfile::_valid_version($v));
+		return defined $v && ($v eq '0' || $v eq q{} || App::makefilepl2cpanfile::_valid_requirement($v));
 	};
 
 	# Source 1: Makefile.PL entries, quoted and bare.
@@ -185,6 +185,10 @@ subtest '_has_version: one case per partition' => sub {
 		'smallest > 0'   => [ '0.000001',  1 ],
 		'v-string > 0'   => [ 'v0.0.1',    1 ],
 		'ordinary'       => [ '9',         1 ],
+		'range >= zero'  => [ '>= 0.0',    0 ],
+		'range >= real'  => [ '>= 1.2',    1 ],
+		'range < only'   => [ '< 2',       1 ],
+		'range compound' => [ '>= 0, < 2', 1 ],
 	);
 	for my $name (sort keys %truth) {
 		my ($v, $want) = @{ $truth{$name} };

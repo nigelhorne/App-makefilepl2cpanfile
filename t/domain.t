@@ -333,9 +333,15 @@ subtest 'domain: version' => sub {
 		is parse_entry("'M' => $v,")->{M}{version}, $bare, "valid: $v kept exactly";
 	}
 	for my $v ("'.'", "'_'", "'v'", "'1e3'", "'1.0-TRIAL'", "'1 0'", "'-1'", "'\x{0661}'",
-			'$VERSION', "version->parse('1.0')", "'>= 1.2, < 2.0'", "''") {
+			'$VERSION', "version->parse('1.0')", "'>= 1.2 < 2.0'", "'1.2, 2.0'", "' >= 1.2'", "''") {
 		(my $shown = $v) =~ s/([^\x20-\x7e])/sprintf '\\x{%x}', ord $1/ge;
 		is parse_entry("'M' => $v,")->{M}{version}, 0, "invalid: $shown -> no minimum";
+	}
+	# Version ranges (CPAN::Meta): every part after the first needs an
+	# operator, and parts are separated by commas.
+	for my $range ("'>= 1.2, < 2.0'", "'== 1.5'", "'!= 1.3, >= 1.0'", "'< 2'") {
+		(my $bare = $range) =~ s/'//g;
+		is parse_entry("'M' => $range,")->{M}{version}, $bare, "range: $range kept exactly";
 	}
 	my $long = '1' x $CFG{long_version};
 	is parse_entry("'M' => '$long',")->{M}{version}, $long, 'boundary: very long version kept whole';
@@ -366,13 +372,13 @@ subtest 'domain: version' => sub {
 # -----------------------------------------------------------------------
 subtest 'domain: phase and relationship names' => sub {
 	for my $phase (qw(runtime configure build test develop)) {
-		for my $rel (qw(requires recommends suggests)) {
+		for my $rel (qw(requires recommends suggests conflicts)) {
 			my $d = App::makefilepl2cpanfile::parse_prereqs("prereqs => { $phase => { $rel => { 'M' => 0 } } },");
 			ok exists $d->{$phase}{$rel}{M}, "valid: $phase/$rel";
 		}
 	}
 	for my $case (['Runtime', 'requires'], ['RUNTIME', 'requires'], ['x_phase', 'requires'],
-			['runtime', 'Requires'], ['runtime', 'recommend'], ['runtime', 'require'], ['runtime', 'conflicts']) {
+			['runtime', 'Requires'], ['runtime', 'recommend'], ['runtime', 'require'], ['runtime', 'conflict']) {
 		my ($phase, $rel) = @{$case};
 		is_deeply App::makefilepl2cpanfile::parse_prereqs("prereqs => { $phase => { $rel => { 'M' => 0 } } },"),
 			{}, "invalid: $phase/$rel";

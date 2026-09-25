@@ -18,10 +18,10 @@ use warnings;
 #
 # Every documented edge has a subtest named "State: A -> Trigger: T ->
 # State: B".  Edges that are NOT in the diagram are attempted too and must
-# be refused at the first possible point, without side effects.  Where the
-# code allows an edge the diagram does not show, the subtest is marked
-# "# TODO: FSM Discrepancy" and checks that the undocumented edge is at
-# least safe.
+# be refused at the first possible point, without side effects.  (The two
+# discrepancies this file once flagged - READ_RAW -> DIE and the command
+# line tool's own states - are now drawn in the diagram and tested below
+# as ordinary edges.)
 
 use Test::Most;
 use Test::Mockingbird;
@@ -34,7 +34,7 @@ use POSIX qw(EIO);
 use Readonly;
 use YAML::Tiny;
 
-use App::makefilepl2cpanfile;
+use_ok('App::makefilepl2cpanfile');
 
 Readonly my $PKG => 'App::makefilepl2cpanfile';
 
@@ -208,12 +208,7 @@ subtest 'State: READ_UTF8 -> Trigger: other I/O error -> State: DIE (error passe
 	is scalar @{ $r->{warnings} }, 0, 'no invalid-UTF-8 warning';
 };
 
-# TODO: FSM Discrepancy - the diagram draws READ_RAW -> PARSE as
-# unconditional, but the raw read can fail too.  The code then dies with the
-# read error (after the invalid-UTF-8 warning), an edge READ_RAW -> DIE that
-# the diagram does not show.  Checked here to be safe; the diagram should
-# gain the edge.
-subtest 'State: READ_RAW -> Trigger: raw read fails -> State: DIE (undocumented edge)' => sub {
+subtest 'State: READ_RAW -> Trigger: raw read fails -> State: DIE (error passed on)' => sub {
 	my ($g) = use_home();
 	my $m = mock_scoped(
 		'Path::Tiny::slurp_utf8' => sub { die "$CFG{decode_err}\n" },
@@ -435,13 +430,9 @@ subtest 'State: RETURN -> Trigger: --diff -> State: DIFF' => sub {
 	ok !$dir->child($CFG{cpanfile})->exists, 'nothing written';
 };
 
-# TODO: FSM Discrepancy - the diagram says the command-line tool "adds one
-# final step after RETURN", but it also has states BEFORE START that can end
-# the run: conflicting options, and a cpanfile that is a symlink or not a
-# regular file.  After RETURN it can also report --check
-# results, and it checks for a symlink a second time before writing.  None
-# of these appear in the diagram.  Checked here to fail safely.
-subtest 'CLI states outside the diagram (undocumented, must fail safely)' => sub {
+# The command-line tool's own states: OPTIONS and GUARD before START, and
+# CHECK after RETURN.
+subtest 'CLI: State: OPTIONS / GUARD -> Trigger: bad options or cpanfile -> exit; State: CHECK' => sub {
 	{
 		my $dir = cli_project();
 		my (undef, $err, $exit) = run_cli($dir, '--with-develop', '--no-develop');
@@ -467,11 +458,11 @@ subtest 'CLI states outside the diagram (undocumented, must fail safely)' => sub
 		is_deeply [ $dir->child($CFG{cpanfile})->children ], [], 'cpanfile is a directory: nothing put inside it';
 	}
 	{
-		my $dir = cli_project();
-		my ($out, undef, $exit) = run_cli($dir, '--no-develop', '--check', '--dry-run');
-		is $exit, 0, '--check: succeeds';
-		like $out, qr/^\Q$CFG{all_found}\E$/m, '--check: reports after RETURN';
+		my ($out, undef, $exit) = run_cli(cli_project(), '--no-develop', '--check', '--dry-run');
+		is($exit, 0, '--check: succeeds');
+		like($out, qr/^\Q$CFG{all_found}\E$/m, '--check: reports after RETURN');
+		is($exit, 0, '--check with nothing missing: exit status 0');
 	}
 };
 
-done_testing;
+done_testing();

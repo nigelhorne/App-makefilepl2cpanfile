@@ -4,7 +4,7 @@ App::makefilepl2cpanfile - Convert Makefile.PL to a cpanfile automatically
 
 ## Version
 
-This document describes App::makefilepl2cpanfile version 0.04.
+This document describes App::makefilepl2cpanfile version 0.05.
 
 ## Synopsis
 
@@ -91,9 +91,11 @@ dependencies that are computed while the program runs (see
 - `prereqs => { PHASE => { RELATIONSHIP => { ... } } }`
 blocks (the CPAN::Meta::Spec version 2 layout), wherever they appear -
 also inside `META_MERGE`.
-- `recommends => { ... }` and `suggests => { ... }`
-directly inside `META_MERGE` (the older version 1 layout).  These become
-`recommends` and `suggests` lines in the `runtime` phase.
+- The older version 1 layout, directly inside `META_MERGE`:
+`requires`, `recommends`, `suggests` and `conflicts` become lines of
+that kind in the `runtime` phase; `build_requires` and
+`configure_requires` become `requires` lines in the `build` and
+`configure` phases.
 - `MIN_PERL_VERSION`, which becomes `requires 'perl', 'VERSION';`.
 - A `#` comment after an entry.  It is copied to the `cpanfile`.
 
@@ -161,9 +163,11 @@ put unexpected code into your `cpanfile`.
 
 - PHASE is one of `runtime`, `configure`, `build`, `test` or
 `develop`.
-- RELATIONSHIP is one of `requires`, `recommends` or `suggests`.
-- `version` is the minimum version exactly as it was written (for
-example `'1.60'` stays `'1.60'`).  It is `0` when there is no minimum.
+- RELATIONSHIP is one of `requires`, `recommends`, `suggests` or
+`conflicts`.
+- `version` is the version requirement exactly as it was written:
+a single version (`'1.60'` stays `'1.60'`) or a version range such as
+`'>= 1.2, < 2.0'`.  It is `0` when there is no requirement.
 - `comment` is the text of the `#` comment after the entry, or
 `undef` when there is none.
 
@@ -191,7 +195,9 @@ non-ASCII comment would come back as separate bytes.
 This also stops look-alike names, such as `Test::More` written with a
 Cyrillic letter.
 - **Version numbers** may use only the ASCII digits 0-9, `.`,
-`_` and a leading `v`, and must contain at least one digit.  The whole
+`_` and a leading `v`, and must contain at least one digit.  A version
+range joins such numbers, each after one of the operators `>=`,
+`<=`, `==`, `!=`, `>` or `<`, with commas.  The whole
 value is checked: `'1.0-TRIAL'` is not shortened to `'1.0'`.  Anything
 else is treated as "no minimum version".
 - **The YAML configuration file** is read as UTF-8; the same rules
@@ -214,6 +220,10 @@ The `Makefile.PL` is read as text and is never run.
 Give the arguments as a list of name/value pairs, or as one hash
 reference.  All of them are optional.
 
+- `content` - the text of a `Makefile.PL`, for example from
+["read\_makefile($path)"](#read_makefile-path).  When it is given it is used as it is, and
+`makefile` is ignored and nothing is read.  Use it to read the file once
+and use the same text for more than one purpose.
 - `makefile` - the path of the `Makefile.PL` to read.  Default:
 `'Makefile.PL'` in the current directory.  Anything that turns into a
 path when used as a string is accepted, such as a [Path::Tiny](https://metacpan.org/pod/Path%3A%3ATiny) object.
@@ -221,12 +231,12 @@ A filehandle or another kind of reference is refused with
 `Cannot read`.
 - `existing` - the text of your current `cpanfile`.  Default:
 `''` (none).  Only its `on 'develop' => sub { ... }` section is
-used.  Every `requires`, `recommends` and `suggests` line in that
-section is copied to the new text, so your hand-written developer
+used.  Every `requires`, `recommends`, `suggests` and `conflicts`
+line in that section is copied to the new text, so your hand-written developer
 dependencies are kept.  Lines that are commented out are not copied.
 An entry whose name is not a valid module name is dropped.  An entry
-whose version is not a version number is kept without a version, and
-you get a warning.
+whose version is not a version number or version range is kept without a
+version, and you get a warning.
 - `with_develop` - true or false.  Default: true.  When true, the
 developer tools from the configuration file (see ["CONFIGURATION"](#configuration)), or
 the default tools, are added to the `develop` phase as `requires`.  A
@@ -283,6 +293,10 @@ not already in the develop phase.
 
 ```perl
     {
+            content => {
+                    type     => 'string',
+                    optional => 1,
+            },
             makefile => {
                     type     => 'string',
                     optional => 1,
@@ -332,6 +346,11 @@ Each argument, split into groups of values that behave the same way.
                 File size: 0 bytes gives just the header line; there is
                 no upper limit other than memory.
 
+    content
+      given:    used as the Makefile.PL text; makefile is then ignored
+                and no file is read (so no "Cannot read" is possible)
+      default:  undef or not given -> the makefile file is read
+
     existing
       valid:    any string.  Only the first on 'develop' => sub { ... };
                 block is used; its closing "};" must start a line (after
@@ -340,7 +359,8 @@ Each argument, split into groups of values that behave the same way.
       ignored:  a string without a develop block, a block that is never
                 closed, a reference (its "HASH(0x...)" text has no block)
       entries:  0 or more; each needs a valid module name; a version, if
-                given, must be a version number (see parse_prereqs)
+                given, must be a version or version range (see
+                parse_prereqs)
 
     with_develop
       true:     any true Perl value, including 'yes' and '0.0'
@@ -356,6 +376,12 @@ Each argument, split into groups of values that behave the same way.
 ```
 
 #### Messages
+
+Values taken from files or the environment (paths, module names,
+versions, parser errors) are shown with control characters and Unicode
+direction-override characters replaced by `\x{..}` escapes, so a
+hostile file cannot use a message to send escape sequences to your
+terminal.
 
 Errors (the call dies):
 
@@ -406,6 +432,68 @@ Warnings (processing continues):
         module is kept with no minimum version.
 ```
 
+### Read\_Makefile($Path)
+
+#### Purpose
+
+Reads the text of a `Makefile.PL`, exactly as ["generate(%args)"](#generate-args) does
+when it is given a `makefile` argument.  Use it together with the
+`content` argument of `generate()` when you need the same text for
+more than one call, so that the file is read only once.
+
+#### Arguments
+
+- `$path` - as the `makefile` argument of ["generate(%args)"](#generate-args):
+optional, default `'Makefile.PL'`, used as a string.
+
+#### Returns
+
+The file's text as a character string.  If the file is not valid UTF-8
+you get a warning and its raw bytes instead (see ["generate(%args)"](#generate-args)).
+
+#### Side Effects
+
+Reads the file.  May warn.  Does not change the caller's `$@`, `$!`
+or `$_`.
+
+#### Usage Example
+
+```perl
+    my $text = App::makefilepl2cpanfile::read_makefile('Makefile.PL');
+    my $deps = App::makefilepl2cpanfile::parse_prereqs($text);
+    my $out  = App::makefilepl2cpanfile::generate(content => $text);
+```
+
+#### Api Specification
+
+##### Input
+
+```perl
+    {
+            path => {
+                    type     => 'string',
+                    optional => 1,
+                    min      => 1,
+                    default  => 'Makefile.PL',
+                    position => 0,
+            },
+    }
+```
+
+##### Output
+
+```perl
+    {
+            type => 'string',
+    }
+```
+
+#### Messages
+
+The same as the file-reading messages of ["generate(%args)"](#generate-args):
+`Cannot read '$path'` (croak), the invalid-UTF-8 warning, and any
+other read error passed on unchanged.
+
 ### Parse\_Prereqs($Content)
 
 #### Purpose
@@ -430,13 +518,17 @@ of a line belongs to the last entry on that line.
 - Commented-out code is ignored, including a whole dependency list
 written on one line after a `#`.
 - A version must contain at least one digit and use only `0-9`,
-`.`, `_` and a leading `v`.  Anything else (for example `'.'` or
-`$VERSION`) means "no minimum version".
+`.`, `_` and a leading `v`; a version range joins such versions, each
+after a comparison operator, with commas.  Anything else (for example
+`'.'` or `$VERSION`) means "no minimum version".
 - When a module appears twice in the same phase and relationship,
 the first one wins.  The simple keys are read before `prereqs` blocks.
-- `recommends` and `suggests` inside a `prereqs` block belong to
-that block's phase; only the ones directly inside `META_MERGE` go to
-`runtime`.
+- Relationship hashes inside a `prereqs` block belong to that
+block's phase; only the version 1 keys directly inside `META_MERGE` are
+mapped as described in ["What it reads"](#what-it-reads).
+- A comment at the end of a line belongs to the last entry on the
+line that is actually kept; an entry dropped for an invalid name does not
+take the comment with it.
 
 #### Returns
 
@@ -502,16 +594,20 @@ nothing is found.
       valid:    the whole value is an optional 'v' followed by ASCII
                 digits, '.' and '_', with at least one digit:
                 '1', 1.60, 'v1.2.3', '1.23_01', '5.010001'
+      range:    (entries only, not MIN_PERL_VERSION) such versions, each
+                after one of >= <= == != > <, joined by commas:
+                '>= 1.2, < 2.0', '== 1.5', '< 2'.  '>= 0' means "any".
       zero:     '0', 0, '0.0', '0.000', 'v0', 'v0.0.0' -> "no minimum"
                 (nothing is written)
       invalid:  -> "no minimum": '.', '_', 'v', '1e3', '1.0-TRIAL',
                 '1 0', non-ASCII digits, $VERSION, version->parse(...),
-                and version ranges such as '>= 1.2, < 2.0' (not supported)
+                spaces around the whole value, and ranges with a missing
+                comma or operator ('>= 1.2 < 2.0', '1.2, 2.0')
       limits:   no maximum length
 
     phase / relationship (inside prereqs blocks)
       valid:    exactly runtime, configure, build, test, develop /
-                requires, recommends, suggests (lower case)
+                requires, recommends, suggests, conflicts (lower case)
       ignored:  anything else, including 'Runtime', 'recommend', 'x_foo'
 
     comment (text after '#' on an entry's line)
@@ -578,10 +674,11 @@ Each rule below is proved by `t/logic.t`.
 
 - **Versions.**  Every version is checked when it is read (from the
 `Makefile.PL`, the existing `cpanfile` or the configuration file) and
-replaced by `0` if it is not a version number.  A version number is
-zero exactly when none of its digits is 1 to 9.  So, when the output is
-written, "does it contain a digit from 1 to 9?" is the whole test for
-whether to print a minimum version.
+replaced by `0` if it is not a version number or version range.  A
+version number is zero exactly when none of its digits is 1 to 9, and a
+range means "any version" only when it is `>=` a zero version.  So,
+when the output is written, those two tests decide whether to print a
+requirement.
 - **Comments.**  An empty comment is stored as "no comment" when it
 is read, and entries from other sources have no comment.  So, when the
 output is written, a comment that exists is never empty and can be
@@ -643,9 +740,14 @@ description for everyday use.
     Str       == seq CHAR
     ModName   == { s : Str | s matches [A-Za-z_][A-Za-z0-9_]*(::[A-Za-z0-9_]+)* }
     VersionStr == { s : Str | s matches v?[0-9._]+ ∧ (∃ c ∈ ran s • c ∈ '0'..'9') }
+    Op        ::= >= | <= | == | != | > | <
+    Requirement == VersionStr ∪ { ⁀/ ⟨ o₁ ⁀ v₁, ", " ⁀ o₂ ⁀ v₂, … ⟩ | oᵢ ∈ Op, vᵢ ∈ VersionStr }
     Phase     ::= runtime | configure | build | test | develop
-    Rel       ::= requires | recommends | suggests
-    Entry     == [ version : VersionStr ∪ {0}; comment : Str ∪ {⊥} ]
+    Rel       ::= requires | recommends | suggests | conflicts
+    Entry     == [ version : Requirement ∪ {0}; comment : Str ∪ {⊥} ]
+    LEGACY    == { requires ↦ (runtime, requires), build_requires ↦ (build, requires),
+                   configure_requires ↦ (configure, requires), recommends ↦ (runtime, recommends),
+                   suggests ↦ (runtime, suggests), conflicts ↦ (runtime, conflicts) }
     DepMap    == Phase ⇸ (Rel ⇸ (ModName ⇸ Entry))
 
     -- Left-biased merge: entries already present win.
@@ -672,11 +774,12 @@ description for everyday use.
                            b ∈ blocks(k, s) }
     structured(s) == ⋃ { {p ↦ {r ↦ pairs(b)}}
                          | P ∈ blocks(prereqs, s), (p ↦ (r ↦ b)) ∈ P, p ∈ Phase, r ∈ Rel }
-    legacy(s)     == ⋃ { {runtime ↦ {r ↦ pairs(b)}}
-                         | r ∈ {recommends, suggests}, b ∈ blocks(r, s),
+    legacy(s)     == ⋃ { {first(LEGACY(k)) ↦ {second(LEGACY(k)) ↦ pairs(b)}}
+                         | k ∈ dom LEGACY, b ∈ blocks(k, s),
                            ¬ (∃ P ∈ blocks(prereqs, s) • b ⊆ P) }
-    pairs(b)      == { m ↦ ⟨ if v ∈ VersionStr then v else 0, comment(m, b) ⟩
+    pairs(b)      == { m ↦ ⟨ if v ∈ Requirement then v else 0, comment(m, b) ⟩
                          | ('m' => v) ∈ b, m ∈ ModName }
+    -- comment(m, b): the line's comment if m is the last valid entry on it
 
     post  ∀ p ↦ R ∈ result • R ≠ ∅ ∧ (∀ r ↦ M ∈ R • M ≠ ∅)
           ∧ no I/O ∧ no warnings
@@ -685,17 +788,17 @@ description for everyday use.
 ### Generate
 
 ```perl
-    Args ≙ [ makefile : Str; existing : Str; with_develop : 𝔹 ]
+    Args ≙ [ content : Str ∪ {⊥}; makefile : Str; existing : Str; with_develop : 𝔹 ]
 
     generate : Args × Env ⇸ Str
 
-    pre   string(a.makefile) ∈ dom E.fs ∧ regular(a.makefile) ∧ readable(a.makefile)
+    pre   (a.content ≠ ⊥ ∨ string(a.makefile) ∈ dom E.fs ∧ regular(a.makefile) ∧ readable(a.makefile))
           ∧ (a.with_develop ⇒ cfg(E) ∉ dom E.fs ∨ ¬ regular(cfg(E)) ∨ yaml_ok(cfg(E)))
 
     generate(a, E) ==
-      let content == decode_utf8_or_raw(E.fs(a.makefile))
+      let content == if a.content ≠ ⊥ then a.content else decode_utf8_or_raw(E.fs(a.makefile))
           deps    == parse_prereqs(content)
-          kept    == { r ↦ { m ↦ ⟨ valid_or_0(v), ⊥ ⟩ }
+          kept    == { r ↦ { m ↦ ⟨ if v ∈ Requirement then v else 0, ⊥ ⟩ }
                        | (r m v) ∈ develop_entries(a.existing) \ comments, m ∈ ModName }
           dev     == deps ⊕ₗ {develop ↦ kept}
           listed  == ⋃ { dom(dev(develop)(r)) | r ∈ Rel }
@@ -710,9 +813,11 @@ description for everyday use.
           ∧ prefix(result, HEADER ⁀ "\n") ∧ last(result) = '\n' ∧ ¬ suffix(result, "\n\n")
           ∧ E′ = E                           -- nothing is written
           ∧ $@′ = $@ ∧ $!′ = $! ∧ $_′ = $_
+          -- every value from a file or the environment in a message is
+          -- printable(v): control and bidi characters as \x{..}
 
     -- Failure cases (the function dies):
-    ¬ regular(a.makefile) ∨ ¬ readable(a.makefile)  ⇒  croak("Cannot read '" ⁀ a.makefile ⁀ "'")
+    a.content = ⊥ ∧ (¬ regular(a.makefile) ∨ ¬ readable(a.makefile))  ⇒  croak("Cannot read '" ⁀ a.makefile ⁀ "'")
     a.with_develop ∧ regular(cfg(E)) ∧ ¬ yaml_ok(cfg(E))  ⇒  croak("Failed to parse " ⁀ cfg(E) ⁀ ": " ⁀ err)
     a.with_develop ∧ stat(cfg(E)) fails with errno ∉ {ENOENT, ENOTDIR}  ⇒  croak("Failed to parse " ⁀ cfg(E) ⁀ ": " ⁀ errno)
 ```
@@ -737,7 +842,8 @@ step PARSE.
     | READ_UTF8  |---- decode error --> +-----------+  carp "invalid UTF-8"
     +------------+                      | READ_RAW  |  (read the raw bytes)
         |     \                         +-----------+
-        |      \---- other I/O error --------------------------> [DIE] error passed on
+        |      \                             |---- raw read fails --> [DIE] error passed on
+        |       \---- other I/O error --------------------------> [DIE] error passed on
         | ok                                 |
         v                                    |
     +------------+ <-------------------------+
@@ -784,10 +890,43 @@ step PARSE.
     +--------+  caller's $@, $! and $_ unchanged
 ```
 
-The command-line tool adds one final step after RETURN: it writes
-`cpanfile` (default), prints the text (`--dry-run`), or prints a diff
-(`--diff`).  A write error ends the program with a non-zero exit status
-and leaves any existing `cpanfile` unchanged.
+With the `content` argument, START goes straight to PARSE: nothing is
+read, so neither `Cannot read` nor the READ states can occur.
+
+The command-line tool wraps this machine:
+
+```perl
+    +-----------+  conflicting --with-develop/--no-develop --> [EXIT 255]
+    | OPTIONS   |  --help --> print usage --> [EXIT 0]
+    +-----------+
+        |
+        v
+    +-----------+  cpanfile is a symlink, or exists but is not a
+    | GUARD     |  regular file --> [DIE] "Refusing to use 'cpanfile': ..."
+    +-----------+  (nothing is read or written)
+        |
+        v
+    +-----------+  read existing cpanfile (if any) and, with read_makefile(),
+    | READ      |  Makefile.PL - once; READ_UTF8/READ_RAW/DIE as above
+    +-----------+
+        |
+        v
+    generate(content => ...) from PARSE to RETURN, as above
+        |
+        v
+    +-----------+  --check: parse the same text; missing modules --> warn,
+    | CHECK     |  exit status will be 1 (the output below still happens)
+    +-----------+
+        |---- --diff    --> print a diff, write nothing --> [EXIT 0 or 1]
+        |---- --dry-run --> print the text, write nothing --> [EXIT 0 or 1]
+        v
+    +-----------+  GUARD again, then write a temporary file and rename it
+    | WRITE     |  over cpanfile; any failure --> [DIE], old cpanfile kept,
+    +-----------+  no temporary file left
+        |
+        v
+    [EXIT 0 or 1]  "cpanfile written successfully."
+```
 
 ## License and Copyright
 
