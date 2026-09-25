@@ -77,6 +77,7 @@ my %LEDGER = (
 	'generate.msg.no_develop_key'           => q{carp "No 'develop' key found in $cfg_file; using defaults"},
 	'generate.msg.invalid_module_name'      => q{carp "Skipping invalid module name in $cfg_file: '$module'"},
 	'generate.msg.invalid_version'          => q{carp "Skipping invalid version for '$module' in $cfg_file: '$version'"},
+	'generate.msg.invalid_existing_version' => q{carp "Ignoring invalid version for '$module' in existing cpanfile: '$version'"},
 
 	# generate() ARGUMENTS
 	'generate.arg.makefile_default'         => q{makefile defaults to 'Makefile.PL'},
@@ -330,6 +331,25 @@ subtest 'generate() - invalid config entries are rejected with a warning' => sub
 	like $out, qr/^\trequires 'Odd::Ver';$/m, 'module kept with no minimum version';
 	like $out, qr/^\trequires 'Good::Tool', '1\.5';$/m, 'valid entry unaffected';
 	covered('generate.msg.invalid_version');
+};
+
+# Strategy: a develop entry in the existing cpanfile whose version is not a
+# version number must be kept without a version, with the documented warning.
+subtest 'generate() - invalid version in existing cpanfile is dropped with a warning' => sub {
+	my ($g) = empty_home();
+	my $mf = make_mf($MF_SIMPLE);
+	my $bad = q{1.0\\};
+	my $existing = "on 'develop' => sub {\n\trequires 'Pinned::Tool', '$bad';\n};\n";
+
+	my ($out, @w) = with_warnings(sub {
+		App::makefilepl2cpanfile::generate(makefile => "$mf", existing => $existing, with_develop => 0)
+	});
+	is scalar @w, 1, 'exactly one warning';
+	like $w[0],
+		qr/\AIgnoring invalid version for 'Pinned::Tool' in existing cpanfile: '\Q$bad\E' at /,
+		'warning text as documented';
+	like $out, qr/^\trequires 'Pinned::Tool';$/m, 'entry kept with no minimum version';
+	covered('generate.msg.invalid_existing_version');
 };
 
 # -----------------------------------------------------------------------

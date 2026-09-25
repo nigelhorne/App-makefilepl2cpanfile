@@ -81,12 +81,15 @@ Named arguments, passed either as a flat list or as a single hashref:
 
 - `makefile` (Str, optional, default `'Makefile.PL'`) - path to the
 `Makefile.PL` to read.  Relative paths are resolved against the current
-working directory.
+working directory.  The value is used as a string: an object that
+stringifies to a path (such as a [Path::Tiny](https://metacpan.org/pod/Path%3A%3ATiny) object) is accepted, while a
+filehandle or other reference is rejected with `Cannot read`.
 - `existing` (Str, optional, default `''`) - the text of an existing
 `cpanfile`.  Only its `on 'develop' => sub { ... }` block is used:
 every `requires`, `recommends` and `suggests` entry in it is carried over
-into the output.  Entries whose module name is not a valid Perl package
-name are dropped.
+into the output.  Commented-out lines are not entries.  Entries whose module
+name is not a valid Perl package name are dropped; an entry whose version
+is not a version number is kept with no minimum version, with a warning.
 - `with_develop` (Bool, optional, default true) - when true, the
 develop tools from the user configuration (see ["CONFIGURATION"](#configuration)), or the
 built-in defaults `Devel::Cover`, `Perl::Critic`, `Test::Pod` and
@@ -99,8 +102,8 @@ overwritten.
 
 A Str containing the complete cpanfile, beginning with the line
 `# Generated from Makefile.PL using makefilepl2cpanfile` and terminated by
-exactly one newline.  When `MIN_PERL_VERSION` is declared a
-`requires 'perl', 'VERSION';` line follows the header.  Runtime
+exactly one newline.  When `MIN_PERL_VERSION` is declared as a version
+number a `requires 'perl', 'VERSION';` line follows the header.  Runtime
 dependencies are emitted at the top level; all other phases are emitted in
 `on 'phase' => sub { ... };` blocks in the order configure, build,
 test, develop.  Within each phase entries are grouped requires, recommends,
@@ -204,16 +207,31 @@ warnings via `carp` (see ["MESSAGES"](#messages)).  The caller's `$@`, `$!` and
         and processing continues.
         Resolution: re-save Makefile.PL as UTF-8.
 
+        Which decoder Path::Tiny uses depends on optional modules
+        (Unicode::UTF8, PerlIO::utf8_strict).  Some decode invalid bytes
+        leniently with their own warning instead of failing; in that case
+        this message is not issued but processing still continues, so
+        invalid UTF-8 always yields a warning and never an exception.
+
     Any other error raised while reading the file (die)
         Genuine I/O failures are re-thrown unchanged rather than masked.
 
     "Failed to parse $cfg_file: $error"  (croak)
-        The user config file exists but contains invalid YAML.
-        Resolution: validate the YAML syntax; or delete the file to use defaults.
+        The user config file exists but contains invalid YAML, cannot be
+        read, or its path cannot be examined (e.g. permission denied).  A
+        path that does not exist, or that is not a regular file (a
+        directory, device or FIFO), is treated as no config file.
+        Resolution: validate the YAML syntax and permissions; or delete the
+        file to use defaults.
 
     "No 'develop' key found in $cfg_file; using defaults"  (carp)
         The config file exists but lacks a 'develop' section.
         Resolution: add a develop: block, or delete the file to use defaults.
+
+    "Ignoring invalid version for '$module' in existing cpanfile: '$version'"  (carp)
+        A develop entry in the existing cpanfile has a version that is not
+        a version number.  It is written back with no minimum version, so
+        that it cannot alter the syntax of the generated cpanfile.
 
     "Skipping invalid module name in $cfg_file: '$module'"  (carp)
         A key under 'develop' is not a valid Perl package name; it is ignored
@@ -253,8 +271,11 @@ and `suggests => { ... }` hashes, typically under `META_MERGE`,
 mapped to the `runtime` phase.  Such hashes inside a `prereqs` block
 belong to that block's phase only.
 
-Only entries whose key is a quoted, valid Perl package name are used;
-commented-out lines are skipped.  When a module appears more than once in
+Only entries whose key is a quoted, valid Perl package name are used.
+Commented-out code is skipped, including a whole dependency hash written on
+one line after a `#`.  A version is an optional `v` followed by ASCII
+digits, dots and underscores containing at least one digit; anything else
+(for example `'.'`) is treated as no minimum version.  When a module appears more than once in
 the same phase and relationship, the first occurrence wins, and the simple
 keys are read before `prereqs` blocks.
 

@@ -143,13 +143,16 @@ Named arguments, passed either as a flat list or as a single hashref:
 
 =item * C<makefile> (Str, optional, default C<'Makefile.PL'>) - path to the
 C<Makefile.PL> to read.  Relative paths are resolved against the current
-working directory.
+working directory.  The value is used as a string: an object that
+stringifies to a path (such as a L<Path::Tiny> object) is accepted, while a
+filehandle or other reference is rejected with C<Cannot read>.
 
 =item * C<existing> (Str, optional, default C<''>) - the text of an existing
 C<cpanfile>.  Only its C<on 'develop' =E<gt> sub { ... }> block is used:
 every C<requires>, C<recommends> and C<suggests> entry in it is carried over
-into the output.  Entries whose module name is not a valid Perl package
-name are dropped.
+into the output.  Commented-out lines are not entries.  Entries whose module
+name is not a valid Perl package name are dropped; an entry whose version
+is not a version number is kept with no minimum version, with a warning.
 
 =item * C<with_develop> (Bool, optional, default true) - when true, the
 develop tools from the user configuration (see L</CONFIGURATION>), or the
@@ -165,8 +168,8 @@ overwritten.
 
 A Str containing the complete cpanfile, beginning with the line
 C<# Generated from Makefile.PL using makefilepl2cpanfile> and terminated by
-exactly one newline.  When C<MIN_PERL_VERSION> is declared a
-C<requires 'perl', 'VERSION';> line follows the header.  Runtime
+exactly one newline.  When C<MIN_PERL_VERSION> is declared as a version
+number a C<requires 'perl', 'VERSION';> line follows the header.  Runtime
 dependencies are emitted at the top level; all other phases are emitted in
 C<on 'phase' =E<gt> sub { ... };> blocks in the order configure, build,
 test, develop.  Within each phase entries are grouped requires, recommends,
@@ -269,12 +272,21 @@ C<$_> are left unchanged.
 	    Genuine I/O failures are re-thrown unchanged rather than masked.
 
 	"Failed to parse $cfg_file: $error"  (croak)
-	    The user config file exists but contains invalid YAML.
-	    Resolution: validate the YAML syntax; or delete the file to use defaults.
+	    The user config file exists but contains invalid YAML, cannot be
+	    read, or its path cannot be examined (e.g. permission denied).  A
+	    path that does not exist, or that is not a regular file (a
+	    directory, device or FIFO), is treated as no config file.
+	    Resolution: validate the YAML syntax and permissions; or delete the
+	    file to use defaults.
 
 	"No 'develop' key found in $cfg_file; using defaults"  (carp)
 	    The config file exists but lacks a 'develop' section.
 	    Resolution: add a develop: block, or delete the file to use defaults.
+
+	"Ignoring invalid version for '$module' in existing cpanfile: '$version'"  (carp)
+	    A develop entry in the existing cpanfile has a version that is not
+	    a version number.  It is written back with no minimum version, so
+	    that it cannot alter the syntax of the generated cpanfile.
 
 	"Skipping invalid module name in $cfg_file: '$module'"  (carp)
 	    A key under 'develop' is not a valid Perl package name; it is ignored
@@ -294,7 +306,10 @@ sub generate {
 	# errno; restore the caller's $! on every exit path.
 	local $!;
 
-	my $makefile = $args->{makefile}     // 'Makefile.PL';
+	# Stringify so a filehandle, glob or other reference is judged by the
+	# same "Cannot read" guard as a bad path, rather than being accepted by
+	# -f (which also tests open handles) and then misread as a path.
+	my $makefile = "@{[ $args->{makefile} // 'Makefile.PL' ]}";
 	my $existing = $args->{existing}     // '';
 	my $with_dev = $args->{with_develop} // 1;
 
@@ -322,6 +337,11 @@ sub generate {
 	# silently dropping any module entries that follow the comment.
 	if ($existing =~ /on\s+["']develop["']\s*=>\s*sub\s*\{(.*?)^[ \t]*};/ms) {
 		my $dev_block = $1;
+
+		# A commented-out line is not an entry.  '#' cannot occur in a valid
+		# module name or version, so stripping to end of line is safe.
+		$dev_block =~ s/#[^\n]*//g;
+
 		for my $rel (@REL_ORDER) {
 			# \Q$rel\E: quote metacharacters defensively (rel is a constant word,
 			# but interpolation without quoting is a static-analysis red flag).
@@ -334,7 +354,14 @@ sub generate {
 				# undef — the classic "inner match clobbers outer capture vars" bug.
 				my ($mod, $ver) = ($1, $2);
 				next unless $mod =~ /\A[A-Za-z_]\w*+(?:::\w++)*+\z/;
-				$deps->{develop}{$rel}{$mod} //= { version => $ver // 0, comment => undef };
+				# SECURITY: the version is written back inside a single-quoted
+				# literal; a value such as '\' would escape the closing quote and
+				# turn following entries into executable code.
+				if (defined $ver && $ver ne '' && !_valid_version($ver)) {
+					carp "Ignoring invalid version for '$mod' in existing cpanfile: '$ver'";
+					$ver = 0;
+				}
+				$deps->{develop}{$rel}{$mod} //= { version => $ver || 0, comment => undef };
 			}
 		}
 	}
@@ -401,8 +428,11 @@ belong to that block's phase only.
 
 =back
 
-Only entries whose key is a quoted, valid Perl package name are used;
-commented-out lines are skipped.  When a module appears more than once in
+Only entries whose key is a quoted, valid Perl package name are used.
+Commented-out code is skipped, including a whole dependency hash written on
+one line after a C<#>.  A version is an optional C<v> followed by ASCII
+digits, dots and underscores containing at least one digit; anything else
+(for example C<'.'>) is treated as no minimum version.  When a module appears more than once in
 the same phase and relationship, the first occurrence wins, and the simple
 keys are read before C<prereqs> blocks.
 
@@ -488,6 +518,7 @@ sub parse_prereqs {
 	return {} unless defined $content && !ref $content;
 
 	my %deps;
+	my $comments = _comment_spans($content);
 
 	# ---- Simple dependency keys (PREREQ_PM, BUILD_REQUIRES, etc.) ----
 	# These always map to the 'requires' relationship in their phase.
@@ -505,7 +536,9 @@ sub parse_prereqs {
 				)
 			\}
 		/gsx) {
-			_extract_pairs($1, \%deps, $phase, 'requires');
+			my $block = $1;
+			next if _in_comment($comments, $-[0]);
+			_extract_pairs($block, \%deps, $phase, 'requires');
 		}
 	}
 
@@ -526,7 +559,9 @@ sub parse_prereqs {
 		\}
 	/gsx) {
 		my $prereqs_block = $1;
-		push @prereqs_spans, [ $-[0], $+[0] ];
+		my @span = ($-[0], $+[0]);
+		next if _in_comment($comments, $span[0]);
+		push @prereqs_spans, \@span;
 
 		# Each direct child is a phase name mapping to a relationship hash.
 		while ($prereqs_block =~ /
@@ -564,6 +599,7 @@ sub parse_prereqs {
 	/gsx) {
 		my ($rel, $block, $start) = ($1, $2, $-[0]);
 		next if any { $start >= $_->[0] && $start < $_->[1] } @prereqs_spans;
+		next if _in_comment($comments, $start);
 		_extract_pairs($block, \%deps, 'runtime', $rel);
 	}
 
@@ -612,6 +648,9 @@ sub _extract_pairs {
 			# multi-line string literal in the cpanfile.  Restrict to valid
 			# Perl identifier paths to make the output unambiguously well-formed.
 			next unless $mod =~ /\A[A-Za-z_]\w*+(?:::\w++)*+\z/;
+			# '.' or '_' alone is not a version; emitting it would produce a
+			# cpanfile that CPAN::Meta::Requirements rejects.
+			$ver = 0 unless defined $ver && _valid_version($ver);
 			# First occurrence wins — do not overwrite already-parsed entries.
 			$deps->{$phase}{$rel}{$mod} //= {
 				version => $ver // 0,
@@ -630,9 +669,64 @@ sub _extract_pairs {
 # Exit:     The version string (e.g. '5.010'), or undef if not declared.
 sub _parse_min_perl {
 	my $content = $_[0];
-	return ($content =~ /\bMIN_PERL_VERSION\b\s*=>\s*['"]?([\d._]++)['"]?/)
-		? $1
-		: undef;
+	return undef unless defined $content;	## no critic (ProhibitExplicitReturnUndef)
+	return undef unless $content =~ /\bMIN_PERL_VERSION\b\s*=>\s*['"]?([\d._]++)['"]?/;	## no critic (ProhibitExplicitReturnUndef)
+	my $ver = $1;
+	return _valid_version($ver) ? $ver : undef;
+}
+
+# _comment_spans
+#
+# Purpose:  Find every '#' comment in the content, so that a commented-out
+#           one-line dependency hash is not parsed as live.  One linear pass;
+#           the result is queried with _in_comment for each candidate block.
+# Entry:    $_[0] - content string.
+# Exit:     ArrayRef of [start, end) offsets, ascending and non-overlapping,
+#           each running from an unquoted '#' to the end of its line.
+sub _comment_spans {
+	my $content = $_[0];
+	my @spans;
+	my $offset = 0;
+	for my $line (split /\n/, $content, -1) {
+		# Blank out quoted strings (keeping offsets) so that a '#' inside
+		# e.g. 'C#' is not mistaken for a comment.
+		(my $masked = $line) =~ s/('[^']*+'|"[^"]*+")/'x' x length $1/ge;
+		my $hash = index($masked, '#');
+		push @spans, [ $offset + $hash, $offset + length $line ] if $hash >= 0;
+		$offset += length($line) + 1;
+	}
+	return \@spans;
+}
+
+# _in_comment
+#
+# Purpose:  Decide whether an offset lies inside one of the comment spans.
+# Entry:    $_[0] - ArrayRef from _comment_spans; $_[1] - offset.
+# Exit:     Boolean.  Binary search, so O(log n) per query.
+sub _in_comment {
+	my ($spans, $pos) = @_;
+	my ($lo, $hi) = (0, $#{$spans});
+	while ($lo <= $hi) {
+		my $mid = int(($lo + $hi) / 2);
+		my ($start, $end) = @{ $spans->[$mid] };
+		if ($pos < $start) { $hi = $mid - 1 }
+		elsif ($pos >= $end) { $lo = $mid + 1 }
+		else { return 1 }
+	}
+	return 0;
+}
+
+# _valid_version
+#
+# Purpose:  Decide whether a string is a plausible version number that is
+#           safe to write inside a single-quoted cpanfile literal.
+# Entry:    $_[0] - candidate version string.
+# Exit:     Boolean: an optional leading 'v' followed only by ASCII digits,
+#           dots and underscores, with at least one digit.
+sub _valid_version {
+	my $ver = $_[0];
+	return 0 unless defined $ver;
+	return $ver =~ /\Av?[0-9._]++\z/ && $ver =~ /[0-9]/ ? 1 : 0;
 }
 
 # _load_develop_config
@@ -653,14 +747,31 @@ sub _load_develop_config {
 	# Guard against environments with no home directory (containers, chroots,
 	# or CI systems where getpwuid returns no directory).  path(undef) would
 	# croak from Path::Tiny with a confusing message; return defaults instead.
-	return {%DEFAULT_DEVELOP} unless defined $home;
+	# An empty string is treated the same way: path('') croaks.
+	return {%DEFAULT_DEVELOP} unless defined $home && length $home;
 
 	my $cfg_path = path($home)
 		->child('.config', 'makefilepl2cpanfile.yml');
 
-	if ($cfg_path->is_file) {
-		my $yaml = YAML::Tiny->read("$cfg_path")
-			or croak "Failed to parse $cfg_path: " . YAML::Tiny->errstr();
+	# -f (a regular file), not Path::Tiny's is_file (anything but a
+	# directory): a FIFO here would block the read forever and a device
+	# could stream without end.  Anything else is treated as no config.
+	# A config that does not exist means "use the defaults"; one that exists
+	# but cannot be examined (EACCES, ELOOP, a stale NFS handle...) must not
+	# silently change the output, so that is an error.
+	my @stat = stat "$cfg_path";
+	croak "Failed to parse $cfg_path: $!" unless @stat || $!{ENOENT} || $!{ENOTDIR};
+
+	if (@stat && -f _) {
+		# YAML::Tiny reports failure by dying (current versions) or by
+		# returning false with errstr set (older ones).  Normalise both into
+		# the single documented message, without YAML::Tiny's own location.
+		my $yaml = eval { YAML::Tiny->read("$cfg_path") };
+		unless ($yaml) {
+			my $err = $@ || YAML::Tiny->errstr() // q{};
+			$err =~ s/ at \S+ line \d+\.?\n?\z//;
+			croak "Failed to parse $cfg_path: $err";
+		}
 
 		if (ref $yaml->[0]{develop} eq 'HASH') {
 			# SECURITY: validate every key (module name) and value (version)
@@ -676,7 +787,7 @@ sub _load_develop_config {
 					next;
 				}
 				my $v = defined $ver ? "$ver" : 0;
-				unless ($v eq '0' || $v eq '' || $v =~ /\Av?[\d._]++\z/) {
+				unless ($v eq '0' || $v eq '' || _valid_version($v)) {
 					carp "Skipping invalid version for '$mod' in $cfg_path: '$v'";
 					$v = 0;
 				}
