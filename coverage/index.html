@@ -42,7 +42,7 @@
 		/* Show cursor points on the headers to show that they are clickable */
 		th { background-color: #f2f2f2; cursor: pointer; }
 		th.sortable {
-			cursor: pointer;
+			cursor: grab;
 			user-select: none;
 			white-space: nowrap;
 		}
@@ -54,6 +54,11 @@
 			color: #000;	/* dark for active */
 			font-weight: bold;
 		}
+		/* Prevent child spans intercepting drag events so enter/leave fire only on the th */
+		th.sortable .label,
+		th.sortable .arrow { pointer-events: none; }
+		th.col-dragging { opacity: 0.4; cursor: grabbing; }
+		th.col-drag-over { outline: 2px dashed #555; background-color: #d8eaff !important; }
 		.sparkline {
 			display: inline-block;
 			vertical-align: middle;
@@ -134,10 +139,10 @@
 	<a href="https://github.com/nigelhorne/App-makefilepl2cpanfile">
 		<img src="https://img.shields.io/github/stars/nigelhorne/App-makefilepl2cpanfile?style=social" alt="GitHub stars">
 	</a>
-	<img src="https://img.shields.io/badge/coverage-98%25-brightgreen" alt="Coverage badge">
+	<img src="https://img.shields.io/badge/coverage-100%25-brightgreen" alt="Coverage badge">
 </div>
 <h1>App::makefilepl2cpanfile</h1><h2>Coverage Report</h2>
-<table data-sort-col="0" data-sort-order="asc">
+<table data-sort-col="0" data-sort-order="asc" data-table-id="coverage">
 <!-- Make the column headers clickable -->
 <thead>
 <tr>
@@ -153,9 +158,9 @@
 
 <tbody>
 
-<tr class="high"><td><a href="blib-lib-App-makefilepl2cpanfile-pm.html" title="View coverage line by line" target="_blank">lib/App/makefilepl2cpanfile.pm</a> <a href="https://github.com/nigelhorne/App-makefilepl2cpanfile/blob/3f945f822a16bb4592082afd4f6153dcc50b3187/lib/App/makefilepl2cpanfile.pm" class="icon-link" title="View source on GitHub">&#128269;</a><canvas class="sparkline" width="80" height="20" data-points="97.6,98.6,98.6,99.6,99.6,99.6,98.5,98.5,98.5,98.5"></canvas></td><td>98.7</td><td>97.1</td><td>100.0</td><td>100.0</td><td><span class="coverage-badge badge-good" title="Excellent coverage">98.6%</span></td><td class="neutral" title="Previous (sparkline): 98.5%">&#9679; 0.0%</td></tr>
-<tr class="summary-row nosort"><td colspan="2"><strong>Summary</strong></td><td colspan="2">1 files</td><td colspan="3">Avg: 98%, Low: 0</td></tr>
-<tr class="high nosort"><td><strong>Total</strong></td><td>98.7</td><td>97.1</td><td>100.0</td><td>100.0</td><td colspan="2"><strong>98.6</strong></td></tr>
+<tr class="high"><td><a href="blib-lib-App-makefilepl2cpanfile-pm.html" title="View coverage line by line" target="_blank">lib/App/makefilepl2cpanfile.pm</a> <a href="https://github.com/nigelhorne/App-makefilepl2cpanfile/blob/31f7f9d9e3dc6ec6fb8dd59caf200281596883e5/lib/App/makefilepl2cpanfile.pm" class="icon-link" title="View source on GitHub">&#128269;</a><canvas class="sparkline" width="80" height="20" data-points="98.6,98.6,99.6,99.6,99.6,98.5,98.5,98.5,98.5,98.6"></canvas></td><td>100.0</td><td>100.0</td><td>100.0</td><td>100.0</td><td><span class="coverage-badge badge-good" title="Excellent coverage">100.0%</span></td><td class="positive" title="Previous: 98.6%">&#9650; 1.4%</td></tr>
+<tr class="summary-row nosort"><td colspan="2"><strong>Summary</strong></td><td colspan="2">1 files</td><td colspan="3">Avg: 100%, Low: 0</td></tr>
+<tr class="high nosort"><td><strong>Total</strong></td><td>100.0</td><td>100.0</td><td>100.0</td><td>100.0</td><td colspan="2"><strong>100.0</strong></td></tr>
 </tbody></table>
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1em;">
 	<div>
@@ -202,8 +207,7 @@ function linearRegression(data) {
 }
 
 
-const dataPoints = [ { x: "2026-07-22T11:30:07-04:00", y: 97.5845410628019, delta: 0, url: "https://github.com/nigelhorne/App-makefilepl2cpanfile/commit/46a3949e701252e2e35e64896d447707beae0738", label: "2026-07-22T11:30:07-04:00", pointBackgroundColor: "gray", comment: "Fix CI" },
-{ x: "2026-07-22T12:59:41-04:00", y: 97.5845410628019, delta: 0.0, url: "https://github.com/nigelhorne/App-makefilepl2cpanfile/commit/54e3e09a0f5f1a2d5a16f8e356ac7090c1779021", label: "2026-07-22T12:59:41-04:00", pointBackgroundColor: "gray", comment: "Added integration testing" },
+const dataPoints = [ { x: "2026-07-22T12:59:41-04:00", y: 97.5845410628019, delta: 0, url: "https://github.com/nigelhorne/App-makefilepl2cpanfile/commit/54e3e09a0f5f1a2d5a16f8e356ac7090c1779021", label: "2026-07-22T12:59:41-04:00", pointBackgroundColor: "gray", comment: "Added integration testing" },
 { x: "2026-07-22T14:52:43-04:00", y: 98.6175115207373, delta: 1.0, url: "https://github.com/nigelhorne/App-makefilepl2cpanfile/commit/8f0435bbe1166c09d0b0306d6b331f52f9da89d4", label: "2026-07-22T14:52:43-04:00", pointBackgroundColor: "green", comment: "Added more edge cast testing" },
 { x: "2026-07-22T15:20:30-04:00", y: 98.6175115207373, delta: 0.0, url: "https://github.com/nigelhorne/App-makefilepl2cpanfile/commit/b21276bec39c8bd422771e1aeedda8d45e65d668", label: "2026-07-22T15:20:30-04:00", pointBackgroundColor: "gray", comment: "Test I/O failure recovery" },
 { x: "2026-07-22T20:08:25-04:00", y: 99.609375, delta: 1.0, url: "https://github.com/nigelhorne/App-makefilepl2cpanfile/commit/26efd1c390ec45ce245e052b42e28a75cad8722f", label: "2026-07-22T20:08:25-04:00", pointBackgroundColor: "green", comment: "Prepare for 0.03" },
@@ -211,7 +215,9 @@ const dataPoints = [ { x: "2026-07-22T11:30:07-04:00", y: 97.5845410628019, delt
 { x: "2026-08-02T11:51:45-04:00", y: 98.5074626865672, delta: -1.1, url: "https://github.com/nigelhorne/App-makefilepl2cpanfile/commit/f0571045b552c22e5b9c319e5a66127a27c04076", label: "2026-08-02T11:51:45-04:00", pointBackgroundColor: "red", comment: "Merge pull request #3 from nigelhorne/dependabot/github_actions/actions/checkout-7" },
 { x: "2026-08-02T12:59:26-04:00", y: 98.5074626865672, delta: 0.0, url: "https://github.com/nigelhorne/App-makefilepl2cpanfile/commit/75ea54495e67d0c1dcb94d0fe33e214b86098abc", label: "2026-08-02T12:59:26-04:00", pointBackgroundColor: "gray", comment: "Release 0.04" },
 { x: "2026-08-29T06:50:24-04:00", y: 98.5074626865672, delta: 0.0, url: "https://github.com/nigelhorne/App-makefilepl2cpanfile/commit/d852f676bcff2d4cbce8a9f09e6bb8f09cb8ec3a", label: "2026-08-29T06:50:24-04:00", pointBackgroundColor: "gray", comment: "Merge pull request #5 from nigelhorne/dependabot/github_actions/nigelhorne/App-GHGen-7" },
-{ x: "2026-09-10T21:20:50-04:00", y: 98.5074626865672, delta: 0.0, url: "https://github.com/nigelhorne/App-makefilepl2cpanfile/commit/709a9ead4a470fb62b32498d0b4d6ea9f04133c9", label: "2026-09-10T21:20:50-04:00", pointBackgroundColor: "gray", comment: "Merge pull request #6 from nigelhorne/dependabot/github_actions/nigelhorne/App-GHGen-10" } ];
+{ x: "2026-09-10T21:20:50-04:00", y: 98.5074626865672, delta: 0.0, url: "https://github.com/nigelhorne/App-makefilepl2cpanfile/commit/709a9ead4a470fb62b32498d0b4d6ea9f04133c9", label: "2026-09-10T21:20:50-04:00", pointBackgroundColor: "gray", comment: "Merge pull request #6 from nigelhorne/dependabot/github_actions/nigelhorne/App-GHGen-10" },
+{ x: "2026-09-25T09:07:10-04:00", y: 49.2857142857143, delta: -49.2, url: "https://github.com/nigelhorne/App-makefilepl2cpanfile/commit/3f945f822a16bb4592082afd4f6153dcc50b3187", label: "2026-09-25T09:07:10-04:00", pointBackgroundColor: "red", comment: "Improve the handling of requires and suggests" },
+{ x: "2026-09-25T13:14:41+00:00", y: 100, delta: 50.7, url: "https://github.com/nigelhorne/App-makefilepl2cpanfile/commit/31f7f9d9e3dc6ec6fb8dd59caf200281596883e5", label: "2026-09-25T13:14:41+00:00", pointBackgroundColor: "green", comment: "Added new function tests" } ];
 const regressionPoints = linearRegression(dataPoints);
 // Try to register the zoom plugin (handles different UMD builds)
 (function registerZoomPlugin(){
@@ -334,7 +340,10 @@ if(resetBtn) {
 	});
 }
 
-function sortTable(th, colIndex) {
+function sortTable(th) {
+	// Always recompute colIndex from DOM so it stays correct after drag-reordering.
+	// The historic onclick="sortTable(this, N)" calls still work; the N is ignored.
+	const colIndex = Array.from(th.parentElement.cells).indexOf(th);
 	const table = th.closest("table");
 	if(!table || !table.tBodies.length) return;
 
@@ -345,21 +354,30 @@ function sortTable(th, colIndex) {
 	const prevOrder = table.getAttribute("data-sort-order") || "desc";
 	const asc = (prevCol != colIndex) ? true : (prevOrder === "desc");
 
-	const isNumeric = colIndex === 0; // Date column
+	const isDate = th.dataset.sortType === 'date';
 
 	const normalRows = rows.filter(r => !r.classList.contains("nosort"));
 	const fixedRows = rows.filter(r => r.classList.contains("nosort"));
 
 	normalRows.sort((a, b) => {
-		let x = a.cells[colIndex]?.innerText.trim() || "";
-		let y = b.cells[colIndex]?.innerText.trim() || "";
+		const cellA = a.cells[colIndex];
+		const cellB = b.cells[colIndex];
+		let x = (cellA?.dataset.value ?? cellA?.innerText ?? "").trim();
+		let y = (cellB?.dataset.value ?? cellB?.innerText ?? "").trim();
 
-		if(isNumeric) {
+		if(isDate) {
 			x = Date.parse(x) || 0;
 			y = Date.parse(y) || 0;
 		} else {
-			x = x.toLowerCase();
-			y = y.toLowerCase();
+			const nx = parseFloat(x);
+			const ny = parseFloat(y);
+			if(!isNaN(nx) && !isNaN(ny)) {
+				x = nx;
+				y = ny;
+			} else {
+				x = x.toLowerCase();
+				y = y.toLowerCase();
+			}
 		}
 
 		if(x < y) return asc ? -1 : 1;
@@ -387,28 +405,235 @@ function sortTable(th, colIndex) {
 
 	table.setAttribute("data-sort-col", colIndex);
 	table.setAttribute("data-sort-order", asc ? "asc" : "desc");
+	saveSortState(table);
 }
 
+// ---------------------------------------------------------
+// Column drag-to-reorder
+// ---------------------------------------------------------
+let _dragSrcTh = null;
+let _initializingTables = false;
+
+// ---------------------------------------------------------
+// localStorage persistence for sort state and column order
+// ---------------------------------------------------------
+function _tableId(table) {
+	return table ? table.dataset.tableId : null;
+}
+
+function saveColOrder(table) {
+	const id = _tableId(table);
+	if(!id) return;
+	const headerRow = table.tHead && table.tHead.rows[0];
+	if(!headerRow) return;
+	const order = Array.from(headerRow.cells).map(th => parseInt(th.dataset.colId, 10));
+	try { localStorage.setItem('atg_col_order_' + id, JSON.stringify(order)); } catch(e) {}
+}
+
+function saveSortState(table) {
+	if(_initializingTables) return;
+	const id = _tableId(table);
+	if(!id) return;
+	const colIdx = parseInt(table.getAttribute('data-sort-col'), 10);
+	const order  = table.getAttribute('data-sort-order') || 'asc';
+	const headerRow = table.tHead && table.tHead.rows[0];
+	if(!headerRow) return;
+	const th = headerRow.cells[colIdx];
+	const colId = th ? parseInt(th.dataset.colId, 10) : colIdx;
+	try { localStorage.setItem('atg_sort_' + id, JSON.stringify({colId, order})); } catch(e) {}
+}
+
+function _restoreColOrder(table, savedOrder) {
+	const headerRow = table.tHead && table.tHead.rows[0];
+	if(!headerRow) return;
+	const placed = new Set();
+	savedOrder.forEach((wantedId, dstPos) => {
+		const srcTh = Array.from(headerRow.cells).find(
+			th => parseInt(th.dataset.colId, 10) === wantedId && !placed.has(th)
+		);
+		if(!srcTh) return;
+		const srcIdx = Array.from(headerRow.cells).indexOf(srcTh);
+		const dstIdx = dstPos < headerRow.cells.length ? dstPos : headerRow.cells.length - 1;
+		if(srcIdx === dstIdx) { placed.add(srcTh); return; }
+		Array.from(table.rows).forEach(row => {
+			if(row.cells.length <= Math.max(srcIdx, dstIdx)) return;
+			const moved = row.cells[srcIdx];
+			const ref = row.cells[dstIdx];
+			if(srcIdx < dstIdx) row.insertBefore(moved, ref ? ref.nextSibling : null);
+			else row.insertBefore(moved, ref);
+		});
+		placed.add(srcTh);
+	});
+}
+
+function _applySort(table, th, order) {
+	// Force the desired direction then call sortTable
+	const colIndex = Array.from(th.parentElement.cells).indexOf(th);
+	// Preset state so sortTable's toggle logic lands on `order`
+	table.setAttribute('data-sort-col', colIndex === 0 ? -1 : 0); // make it differ
+	table.setAttribute('data-sort-order', order === 'asc' ? 'desc' : 'asc');
+	sortTable(th);
+}
+
+function _colDragStart(e) {
+	_dragSrcTh = this;
+	e.dataTransfer.effectAllowed = 'move';
+	e.dataTransfer.setData('text/plain', ''); // required by Firefox
+	this.classList.add('col-dragging');
+}
+
+function _colDragOver(e) {
+	if(!_dragSrcTh || _dragSrcTh === this) return;
+	e.preventDefault();
+	e.dataTransfer.dropEffect = 'move';
+}
+
+function _colDragEnter(e) {
+	if(!_dragSrcTh || _dragSrcTh === this) return;
+	// Clear previous drag-over highlight before setting the new one
+	document.querySelectorAll('th.col-drag-over').forEach(t => t.classList.remove('col-drag-over'));
+	this.classList.add('col-drag-over');
+}
+
+function _colDragLeave(e) {
+	// Only clear when leaving to something truly outside this th
+	if(!this.contains(e.relatedTarget)) {
+		this.classList.remove('col-drag-over');
+	}
+}
+
+function _colDrop(e) {
+	e.preventDefault();
+	e.stopPropagation();
+	if(!_dragSrcTh || _dragSrcTh === this) return false;
+
+	const table = this.closest('table');
+	const srcIdx = Array.from(_dragSrcTh.parentElement.cells).indexOf(_dragSrcTh);
+	const dstIdx = Array.from(this.parentElement.cells).indexOf(this);
+
+	// Move the cell at srcIdx to dstIdx in every row (thead + tbody)
+	Array.from(table.rows).forEach(row => {
+		const cells = row.cells;
+		if(cells.length <= Math.max(srcIdx, dstIdx)) return;
+		const moved = cells[srcIdx];
+		if(srcIdx < dstIdx) {
+			row.insertBefore(moved, cells[dstIdx].nextSibling);
+		} else {
+			row.insertBefore(moved, cells[dstIdx]);
+		}
+	});
+
+	// Update data-sort-col so the next sort-click knows the active column's new position
+	const activeArrow = table.querySelector('thead .arrow.active');
+	if(activeArrow) {
+		const activeTh = activeArrow.closest('th');
+		const newIdx = Array.from(activeTh.parentElement.cells).indexOf(activeTh);
+		table.setAttribute('data-sort-col', newIdx);
+	}
+
+	saveColOrder(table);
+	return false;
+}
+
+function _colDragEnd(e) {
+	this.classList.remove('col-dragging');
+	document.querySelectorAll('th.col-drag-over').forEach(t => t.classList.remove('col-drag-over'));
+	_dragSrcTh = null;
+}
 
 // Initial display.
-// The table has been set up sorted in ascending order on the filename; reflect that in the GUI
+// The coverage table is pre-sorted ascending by filename from Perl; reflect that in the GUI.
+// The mutation and duplication tables are sorted by JS on load so the arrows always match data.
+// Saved column order and sort state are restored from localStorage when present.
 document.addEventListener("DOMContentLoaded", () => {
-	const table = document.querySelector("table");
-	if(!table) return;
+	_initializingTables = true;
 
-	const headers = table.tHead.rows[0].cells;
-	for(let i = 0; i < headers.length; i++) {
-		const arrow = headers[i].querySelector(".arrow");
-		if(!arrow) continue;
+	// Assign original column indices as data-col-id (must be done before any reordering)
+	document.querySelectorAll('table[data-table-id]').forEach(table => {
+		const headerRow = table.tHead && table.tHead.rows[0];
+		if(!headerRow) return;
+		Array.from(headerRow.cells).forEach((th, i) => { th.dataset.colId = i; });
+	});
 
-		if(i === 0) {
-			arrow.textContent = "▲";
-			arrow.classList.add("active");
-		} else {
-			arrow.textContent = "▲";
-			arrow.classList.remove("active");
+	// Restore saved column order, then sort state, for every identified table
+	document.querySelectorAll('table[data-table-id]').forEach(table => {
+		const id = _tableId(table);
+		// --- column order ---
+		let savedOrder = null;
+		try { savedOrder = JSON.parse(localStorage.getItem('atg_col_order_' + id)); } catch(e) {}
+		if(Array.isArray(savedOrder) && savedOrder.length) {
+			_restoreColOrder(table, savedOrder);
+		}
+
+		// --- sort state ---
+		let savedSort = null;
+		try { savedSort = JSON.parse(localStorage.getItem('atg_sort_' + id)); } catch(e) {}
+		if(savedSort && typeof savedSort.colId === 'number') {
+			const headerRow = table.tHead && table.tHead.rows[0];
+			const th = headerRow && Array.from(headerRow.cells).find(
+				c => parseInt(c.dataset.colId, 10) === savedSort.colId
+			);
+			if(th) {
+				_applySort(table, th, savedSort.order || 'asc');
+				return; // done with this table
+			}
+		}
+
+		// No saved sort — apply defaults
+		if(table.classList.contains('mut-table')) {
+			// Score% column (original col 5)
+			const headerRow = table.tHead && table.tHead.rows[0];
+			const th = headerRow && Array.from(headerRow.cells).find(
+				c => parseInt(c.dataset.colId, 10) === 5
+			);
+			if(th) _applySort(table, th, 'asc');
+		} else if(table.classList.contains('dup-table')) {
+			// File column (original col 0)
+			const headerRow = table.tHead && table.tHead.rows[0];
+			const th = headerRow && Array.from(headerRow.cells).find(
+				c => parseInt(c.dataset.colId, 10) === 0
+			);
+			if(th) _applySort(table, th, 'asc');
+		} else if(table.classList.contains('sortable-table') && !table.classList.contains('mut-table') && !table.classList.contains('dup-table')) {
+			// CPAN Testers: sort by Date (original col 0) ascending
+			const headerRow = table.tHead && table.tHead.rows[0];
+			const th = headerRow && Array.from(headerRow.cells).find(
+				c => parseInt(c.dataset.colId, 10) === 0
+			);
+			if(th) _applySort(table, th, 'asc');
+		}
+	});
+
+	// Coverage table: pre-sorted ascending by File (col 0) from Perl — just update arrows
+	const covTable = document.querySelector("table[data-table-id='coverage']");
+	if(covTable && covTable.tHead) {
+		const id = _tableId(covTable);
+		let savedSort = null;
+		try { savedSort = JSON.parse(localStorage.getItem('atg_sort_' + id)); } catch(e) {}
+		if(!savedSort) {
+			const headers = covTable.tHead.rows[0].cells;
+			for(let i = 0; i < headers.length; i++) {
+				const arrow = headers[i].querySelector(".arrow");
+				if(!arrow) continue;
+				arrow.textContent = "▲";
+				arrow.classList.toggle("active", i === 0);
+			}
 		}
 	}
+
+	_initializingTables = false;
+
+	// Wire up drag-to-reorder on every sortable column header
+	document.querySelectorAll('th.sortable').forEach(th => {
+		th.setAttribute('draggable', 'true');
+		th.title = (th.title ? th.title + ' · ' : '') + 'Drag to reorder columns';
+		th.addEventListener('dragstart',  _colDragStart);
+		th.addEventListener('dragover',   _colDragOver);
+		th.addEventListener('dragenter',  _colDragEnter);
+		th.addEventListener('dragleave',  _colDragLeave);
+		th.addEventListener('drop',       _colDrop);
+		th.addEventListener('dragend',    _colDragEnd);
+	});
 });
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -500,11 +725,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
 	update();
 });
-document.addEventListener("DOMContentLoaded", () => {
-	const th = document.querySelector("table.sortable-table th");
-	if(th) sortTable(th, 0);
-});
 </script>
+
 
 <p><em>Showing one failure per OS/Perl combination.</em></p>
 <div style="margin-bottom: 0.5em;">
@@ -526,10 +748,10 @@ document.addEventListener("DOMContentLoaded", () => {
 	</label>
 </div>
 
-<table class="sortable-table" data-sort-col="0" data-sort-order="asc">
+<table class="sortable-table" data-sort-col="0" data-sort-order="asc" data-table-id="cpan">
 <thead>
 <tr>
-	<th class="sortable" onclick="sortTable(this, 0)">
+	<th class="sortable" onclick="sortTable(this, 0)" data-sort-type="date">
 		<span class="label">Date</span> <span class="arrow">&#x25B2;</span>
 	</th>
 	<th class="sortable" onclick="sortTable(this, 1)">
@@ -550,46 +772,46 @@ document.addEventListener("DOMContentLoaded", () => {
 </thead>
 <tbody>
 
-<tr class="cpan-fail"><td>2026-08-03T06:03:00Z</td><td>freebsd</td><td>5.14.4</td><td>Slaven Rezi&#x107;</td><td></td>
-				<td><a href="https://www.cpantesters.org/cpan/report/01136e54-8f01-11f1-a873-cc436e8775ea" target="_blank">View</a></td><td></td></tr>
+<tr class="cpan-fail"><td>2026-08-02T18:34:00Z</td><td>linux</td><td>5.42.1</td><td>Andreas J. K&ouml;nig (ANDK)</td><td></td>
+				<td><a href="https://www.cpantesters.org/cpan/report/c93c5dd4-8ea0-11f1-8716-e411992e4d53" target="_blank">View</a></td><td></td></tr>
+<tr class="cpan-fail"><td>2026-08-02T18:48:00Z</td><td>linux</td><td>5.28.1</td><td>Andreas J. K&ouml;nig (ANDK)</td><td></td>
+				<td><a href="https://www.cpantesters.org/cpan/report/b9b70376-8ea2-11f1-b1fc-95202d5190e9" target="_blank">View</a></td><td></td></tr>
+<tr class="cpan-fail"><td>2026-08-02T18:55:00Z</td><td>linux</td><td>5.12.5</td><td>Andreas J. K&ouml;nig (ANDK)</td><td></td>
+				<td><a href="https://www.cpantesters.org/cpan/report/cb8e876c-8ea3-11f1-8c41-ec3efbac8951" target="_blank">View</a></td><td></td></tr>
+<tr class="cpan-fail"><td>2026-08-02T18:58:00Z</td><td>linux</td><td>5.12.1</td><td>Andreas J. K&ouml;nig (ANDK)</td><td></td>
+				<td><a href="https://www.cpantesters.org/cpan/report/1b1a63b4-8ea4-11f1-b3b0-96a0199afecd" target="_blank">View</a></td><td></td></tr>
+<tr class="cpan-fail"><td>2026-08-02T18:57:00Z</td><td>linux</td><td>5.12.3</td><td>Andreas J. K&ouml;nig (ANDK)</td><td></td>
+				<td><a href="https://www.cpantesters.org/cpan/report/fd4fddf0-8ea3-11f1-860b-d1f930131dc3" target="_blank">View</a></td><td></td></tr>
+<tr class="cpan-fail"><td>2026-08-02T18:39:00Z</td><td>linux</td><td>5.38.3</td><td>Andreas J. K&ouml;nig (ANDK)</td><td></td>
+				<td><a href="https://www.cpantesters.org/cpan/report/7b0f2b36-8ea1-11f1-949e-b5003cd05f0b" target="_blank">View</a></td><td></td></tr>
+<tr class="cpan-fail"><td>2026-08-02T18:46:00Z</td><td>linux</td><td>5.30.1</td><td>Andreas J. K&ouml;nig (ANDK)</td><td></td>
+				<td><a href="https://www.cpantesters.org/cpan/report/6ed1e704-8ea2-11f1-8cae-9b3237fba0c6" target="_blank">View</a></td><td></td></tr>
 <tr class="cpan-na"><td>2026-08-04T20:02:00Z</td><td>freebsd</td><td>5.8.9</td><td>Slaven Rezi&#x107;</td><td></td>
 				<td><a href="https://www.cpantesters.org/cpan/report/661eab80-903f-11f1-84a7-b3396e8775ea" target="_blank">View</a></td><td></td></tr>
 <tr class="cpan-fail"><td>2026-08-02T18:48:00Z</td><td>linux</td><td>5.26.3</td><td>Andreas J. K&ouml;nig (ANDK)</td><td></td>
 				<td><a href="https://www.cpantesters.org/cpan/report/c8bbfd9a-8ea2-11f1-8615-bf166249c895" target="_blank">View</a></td><td></td></tr>
-<tr class="cpan-fail"><td>2026-08-02T18:52:00Z</td><td>linux</td><td>5.20.0</td><td>Andreas J. K&ouml;nig (ANDK)</td><td></td>
-				<td><a href="https://www.cpantesters.org/cpan/report/407f8eaa-8ea3-11f1-8fe5-e2a1a103064a" target="_blank">View</a></td><td></td></tr>
 <tr class="cpan-fail"><td>2026-08-02T18:36:00Z</td><td>linux</td><td>5.38.5</td><td>Andreas J. K&ouml;nig (ANDK)</td><td></td>
 				<td><a href="https://www.cpantesters.org/cpan/report/04070612-8ea1-11f1-ac35-889ed4745444" target="_blank">View</a></td><td></td></tr>
-<tr class="cpan-fail"><td>2026-08-02T18:46:00Z</td><td>linux</td><td>5.30.1</td><td>Andreas J. K&ouml;nig (ANDK)</td><td></td>
-				<td><a href="https://www.cpantesters.org/cpan/report/6ed1e704-8ea2-11f1-8cae-9b3237fba0c6" target="_blank">View</a></td><td></td></tr>
-<tr class="cpan-fail"><td>2026-08-02T18:34:00Z</td><td>linux</td><td>5.42.1</td><td>Andreas J. K&ouml;nig (ANDK)</td><td></td>
-				<td><a href="https://www.cpantesters.org/cpan/report/c93c5dd4-8ea0-11f1-8716-e411992e4d53" target="_blank">View</a></td><td></td></tr>
-<tr class="cpan-fail"><td>2026-08-02T18:39:00Z</td><td>linux</td><td>5.38.3</td><td>Andreas J. K&ouml;nig (ANDK)</td><td></td>
-				<td><a href="https://www.cpantesters.org/cpan/report/7b0f2b36-8ea1-11f1-949e-b5003cd05f0b" target="_blank">View</a></td><td></td></tr>
-<tr class="cpan-fail"><td>2026-08-02T18:48:00Z</td><td>linux</td><td>5.28.1</td><td>Andreas J. K&ouml;nig (ANDK)</td><td></td>
-				<td><a href="https://www.cpantesters.org/cpan/report/b9b70376-8ea2-11f1-b1fc-95202d5190e9" target="_blank">View</a></td><td></td></tr>
-<tr class="cpan-fail"><td>2026-08-02T18:57:00Z</td><td>linux</td><td>5.12.3</td><td>Andreas J. K&ouml;nig (ANDK)</td><td></td>
-				<td><a href="https://www.cpantesters.org/cpan/report/fd4fddf0-8ea3-11f1-860b-d1f930131dc3" target="_blank">View</a></td><td></td></tr>
-<tr class="cpan-fail"><td>2026-08-02T18:55:00Z</td><td>linux</td><td>5.14.4</td><td>Andreas J. K&ouml;nig (ANDK)</td><td></td>
-				<td><a href="https://www.cpantesters.org/cpan/report/afe98fc0-8ea3-11f1-8efc-d3013b89335e" target="_blank">View</a></td><td></td></tr>
-<tr class="cpan-fail"><td>2026-08-03T13:14:00Z</td><td>linux</td><td>5.32.1</td><td>David Solimano</td><td></td>
-				<td><a href="https://www.cpantesters.org/cpan/report/495e7cb2-8f3d-11f1-85ab-ef145e49c0d9" target="_blank">View</a></td><td></td></tr>
-<tr class="cpan-fail"><td>2026-08-02T18:55:00Z</td><td>linux</td><td>5.12.5</td><td>Andreas J. K&ouml;nig (ANDK)</td><td></td>
-				<td><a href="https://www.cpantesters.org/cpan/report/cb8e876c-8ea3-11f1-8c41-ec3efbac8951" target="_blank">View</a></td><td></td></tr>
 <tr class="cpan-fail"><td>2026-08-03T15:22:00Z</td><td>MSWin32</td><td>5.42.2</td><td>gregor herrmann</td><td></td>
 				<td><a href="https://www.cpantesters.org/cpan/report/4eed92ff-7171-1014-a52b-f4af59f563cc" target="_blank">View</a></td><td></td></tr>
-<tr class="cpan-fail"><td>2026-08-05T05:28:00Z</td><td>freebsd</td><td>5.10.1</td><td>Slaven Rezi&#x107;</td><td></td>
-				<td><a href="https://www.cpantesters.org/cpan/report/87804672-908e-11f1-b207-f7176e8775ea" target="_blank">View</a></td><td></td></tr>
-<tr class="cpan-fail"><td>2026-08-02T18:43:00Z</td><td>linux</td><td>5.36.3</td><td>Andreas J. K&ouml;nig (ANDK)</td><td></td>
-				<td><a href="https://www.cpantesters.org/cpan/report/17c1b1ce-8ea2-11f1-a29d-e92734c16a9b" target="_blank">View</a></td><td></td></tr>
-<tr class="cpan-fail"><td>2026-08-02T18:51:00Z</td><td>linux</td><td>5.20.3</td><td>Andreas J. K&ouml;nig (ANDK)</td><td></td>
-				<td><a href="https://www.cpantesters.org/cpan/report/375c845e-8ea3-11f1-b636-ea14530165e4" target="_blank">View</a></td><td></td></tr>
 <tr class="cpan-fail"><td>2026-08-02T18:56:00Z</td><td>linux</td><td>5.12.4</td><td>Andreas J. K&ouml;nig (ANDK)</td><td></td>
 				<td><a href="https://www.cpantesters.org/cpan/report/de3151a6-8ea3-11f1-8dfe-f98e38ce4f5c" target="_blank">View</a></td><td></td></tr>
+<tr class="cpan-fail"><td>2026-08-05T05:28:00Z</td><td>freebsd</td><td>5.10.1</td><td>Slaven Rezi&#x107;</td><td></td>
+				<td><a href="https://www.cpantesters.org/cpan/report/87804672-908e-11f1-b207-f7176e8775ea" target="_blank">View</a></td><td></td></tr>
+<tr class="cpan-fail"><td>2026-08-02T18:51:00Z</td><td>linux</td><td>5.20.3</td><td>Andreas J. K&ouml;nig (ANDK)</td><td></td>
+				<td><a href="https://www.cpantesters.org/cpan/report/375c845e-8ea3-11f1-b636-ea14530165e4" target="_blank">View</a></td><td></td></tr>
+<tr class="cpan-fail"><td>2026-08-03T06:03:00Z</td><td>freebsd</td><td>5.14.4</td><td>Slaven Rezi&#x107;</td><td></td>
+				<td><a href="https://www.cpantesters.org/cpan/report/01136e54-8f01-11f1-a873-cc436e8775ea" target="_blank">View</a></td><td></td></tr>
+<tr class="cpan-fail"><td>2026-08-03T13:14:00Z</td><td>linux</td><td>5.32.1</td><td>David Solimano</td><td></td>
+				<td><a href="https://www.cpantesters.org/cpan/report/495e7cb2-8f3d-11f1-85ab-ef145e49c0d9" target="_blank">View</a></td><td></td></tr>
+<tr class="cpan-fail"><td>2026-08-02T18:52:00Z</td><td>linux</td><td>5.20.0</td><td>Andreas J. K&ouml;nig (ANDK)</td><td></td>
+				<td><a href="https://www.cpantesters.org/cpan/report/407f8eaa-8ea3-11f1-8fe5-e2a1a103064a" target="_blank">View</a></td><td></td></tr>
+<tr class="cpan-fail"><td>2026-08-02T18:43:00Z</td><td>linux</td><td>5.36.3</td><td>Andreas J. K&ouml;nig (ANDK)</td><td></td>
+				<td><a href="https://www.cpantesters.org/cpan/report/17c1b1ce-8ea2-11f1-a29d-e92734c16a9b" target="_blank">View</a></td><td></td></tr>
+<tr class="cpan-fail"><td>2026-08-02T18:55:00Z</td><td>linux</td><td>5.14.4</td><td>Andreas J. K&ouml;nig (ANDK)</td><td></td>
+				<td><a href="https://www.cpantesters.org/cpan/report/afe98fc0-8ea3-11f1-8efc-d3013b89335e" target="_blank">View</a></td><td></td></tr>
 <tr class="cpan-fail"><td>2026-08-02T18:45:00Z</td><td>linux</td><td>5.32.1</td><td>Andreas J. K&ouml;nig (ANDK)</td><td></td>
 				<td><a href="https://www.cpantesters.org/cpan/report/45585bb0-8ea2-11f1-9983-bc8a81081044" target="_blank">View</a></td><td></td></tr>
-<tr class="cpan-fail"><td>2026-08-02T18:58:00Z</td><td>linux</td><td>5.12.1</td><td>Andreas J. K&ouml;nig (ANDK)</td><td></td>
-				<td><a href="https://www.cpantesters.org/cpan/report/1b1a63b4-8ea4-11f1-b3b0-96a0199afecd" target="_blank">View</a></td><td></td></tr>
 </tbody></table>
 <h2>Mutation Report</h2>
 <h3>Mutation Summary</h3>
@@ -602,30 +824,44 @@ document.addEventListener("DOMContentLoaded", () => {
 <li><b>Survived</b>: 
 3
 </li>
+<li><b>Duplication</b>: no duplicate code blocks detected</li>
 </ul>
 <h3>Mutation Files</h3>
 
-<table border='1' cellpadding='5'>
+<table border='1' cellpadding='5' class="sortable-table mut-table" data-sort-col="5" data-sort-order="asc" data-table-id="mut">
 
-<tr><th>File</th><th>Total</th><th>Killed</th><th>Survivors</th><th>Skipped</th><th>Score%</th><th>Complexity</th><th title="TER1=Statement, TER2=Branch, TER3=LCSAJ Path">TER1 / TER2 / TER3</th></tr>
+<thead>
+<tr>
+<th class="sortable" onclick="sortTable(this, 0)"><span class="label">File</span> <span class="arrow">&#x25B2;</span></th>
+<th class="sortable" onclick="sortTable(this, 1)"><span class="label">Total</span> <span class="arrow">&#x25B2;</span></th>
+<th class="sortable" onclick="sortTable(this, 2)"><span class="label">Killed</span> <span class="arrow">&#x25B2;</span></th>
+<th class="sortable" onclick="sortTable(this, 3)"><span class="label">Survivors</span> <span class="arrow">&#x25B2;</span></th>
+<th class="sortable" onclick="sortTable(this, 4)"><span class="label">Skipped</span> <span class="arrow">&#x25B2;</span></th>
+<th class="sortable" onclick="sortTable(this, 5)"><span class="label">Score%</span> <span class="arrow active">&#x25B2;</span></th>
+<th class="sortable" onclick="sortTable(this, 6)"><span class="label">Complexity</span> <span class="arrow">&#x25B2;</span></th>
+<th class="sortable" onclick="sortTable(this, 7)" title="TER1=Statement, TER2=Branch, TER3=LCSAJ Path"><span class="label">TER1 / TER2 / TER3</span> <span class="arrow">&#x25B2;</span></th>
+<th class="sortable" onclick="sortTable(this, 8)"><span class="label">Dup%</span> <span class="arrow">&#x25B2;</span></th>
+</tr>
+</thead>
+<tbody>
 
-<tr class="high"><td><a href="mutation_html/lib/App/makefilepl2cpanfile.pm.html" title="View mutation line by line" target="_blank">lib/App/makefilepl2cpanfile.pm</a> <a href="https://github.com/nigelhorne/App-makefilepl2cpanfile/blob/3f945f822a16bb4592082afd4f6153dcc50b3187/lib/App/makefilepl2cpanfile.pm" class="icon-link" title="View source on GitHub">&#128269;</a></td><td>34</td><td>31</td><td>3</td><td>0</td><td><span class="coverage-badge badge-good" title="Excellent">91.2%</span></td><td><span class="coverage-badge badge-good" title="Good">55</span></td><td><span class="coverage-badge badge-good" title="Excellent">98.7%</span> / <span class="coverage-badge badge-good" title="Excellent">97.1%</span> / <span class="coverage-badge badge-good" title="Excellent">100.0%</span></td></tr>
-</table>
+<tr class="high"><td><a href="mutation_html/lib/App/makefilepl2cpanfile.pm.html" title="View mutation line by line" target="_blank">lib/App/makefilepl2cpanfile.pm</a> <a href="https://github.com/nigelhorne/App-makefilepl2cpanfile/blob/31f7f9d9e3dc6ec6fb8dd59caf200281596883e5/lib/App/makefilepl2cpanfile.pm" class="icon-link" title="View source on GitHub">&#128269;</a></td><td>34</td><td>31</td><td>3</td><td>0</td><td><span class="coverage-badge badge-good" title="Excellent">91.2%</span></td><td><span class="coverage-badge badge-good" title="Good">56</span></td><td><span class="coverage-badge badge-good" title="Excellent">100.0%</span> / <span class="coverage-badge badge-good" title="Excellent">100.0%</span> / <span class="coverage-badge badge-good" title="Excellent">100.0%</span></td><td><span class="coverage-badge badge-good" title="Low duplication">0.0%</span></td></tr>
+</tbody></table>
 
 <h2>Structural Coverage (Approximate)</h2>
 <div class='summary'>
-Statement Coverage: 98.72% (154 / 156)<br>
-Branch Coverage: 97.06% (66 / 68)<br>
+Statement Coverage: 100.00% (157 / 157)<br>
+Branch Coverage: 100.00% (70 / 70)<br>
 <em>Approximate LCSAJ derived from branch and statement coverage.</em>
 </div>
 <h2>Executive Summary</h2>
 <div class='summary'>
-Tests execute 98.72% of the code and detect 91.18% of injected faults.
+Tests execute 100.00% of the code and detect 91.18% of injected faults.
 </div>
 <footer>
 	<p>Project: <a href="https://github.com/nigelhorne/App-makefilepl2cpanfile">App-makefilepl2cpanfile</a></p>
-	<p><em>Last updated: 2026-09-25 13:09:16 - <a href="https://github.com/nigelhorne/App-makefilepl2cpanfile/commit/3f945f822a16bb4592082afd4f6153dcc50b3187">commit <code>3f945f8</code></a></em></p>
-	<p style="float: right; font-size: 0.85em; color: #999;">Powered by <a href="https://metacpan.org/dist/App-Test-Generator">App::Test::Generator 0.43</a></p>
+	<p><em>Last updated: 2026-09-25 13:13:52 - <a href="https://github.com/nigelhorne/App-makefilepl2cpanfile/commit/31f7f9d9e3dc6ec6fb8dd59caf200281596883e5">commit <code>31f7f9d</code></a></em></p>
+	<p style="float: right; font-size: 0.85em; color: #999;">Powered by <a href="https://metacpan.org/dist/App-Test-Generator">App::Test::Generator 0.46</a></p>
 </footer>
 </body>
 </html>
