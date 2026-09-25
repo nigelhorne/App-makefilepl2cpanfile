@@ -1930,6 +1930,59 @@ subtest 'upstream: File::HomeDir returns failure values' => sub {
 	}
 };
 
+subtest 'security: CLI refuses a cpanfile that is a symlink (arbitrary file overwrite)' => sub {
+	# A cloned repository controls its own files.  Path::Tiny's spew follows
+	# symlinks, so 'cpanfile -> ~/.bashrc' made the tool overwrite a file
+	# outside the repository.  Both a live and a dangling link (which would
+	# create a file wherever it points) must be refused, and nothing written.
+	SKIP: {
+		skip 'symlinks not supported', 8 unless $Config{d_symlink};
+		my $outside = path(tempdir(CLEANUP => 1));
+		my $victim  = $outside->child('victim_rc');
+		$victim->spew_utf8("precious\n");
+		for my $target ("$victim", $outside->child('not_yet_created')->stringify) {
+			my $kind = -e $target ? 'live link' : 'dangling link';
+			my $repo = path(tempdir(CLEANUP => 1));
+			$repo->child('Makefile.PL')->spew_utf8($MF_SIMPLE);
+			symlink $target, $repo->child($HOSTILE{cpanfile})->stringify
+				or skip "cannot create a symlink here: $!", 8;
+			my $cwd = Path::Tiny->cwd;
+			local $ENV{HOME} = tempdir(CLEANUP => 1);
+			chdir $repo or die "chdir: $!";
+			my ($out, $err, $exit) = Capture::Tiny::capture(sub { system $^X, "-I$LIB_PATH", $BIN_PATH });
+			chdir $cwd or die "chdir: $!";
+			isnt $exit >> 8, 0, "$kind: non-zero exit";
+			like $err, qr/Refusing to use 'cpanfile': it is a symbolic link/, "$kind: refused with the documented message";
+			unlike $out, qr/\Q$HOSTILE{written}\E/, "$kind: no success message";
+		}
+		is $victim->slurp_utf8, "precious\n", 'the linked file was not changed';
+		ok !-e $outside->child('not_yet_created'), 'no file was created through the dangling link';
+	}
+};
+
+subtest 'security: untrusted text in warnings and errors cannot drive the terminal' => sub {
+	# Values from the existing cpanfile, the config file and the parser's
+	# own error text are echoed in messages.  Raw, an ESC ] 0 ; ... BEL
+	# sequence retitles the terminal and CR + ESC [ 2 K erases the line, so
+	# a warning could be hidden or forged.  They must arrive escaped.
+	my $esc = "\e]0;OWNED\a\e[2K\r";
+	my $no_controls = qr/\A[^\x00-\x08\x0B-\x1F\x7F]*\z/;
+
+	my $g  = empty_home();
+	my $mf = make_mf($MF_SIMPLE);
+	my (undef, @w) = capture_warns(sub {
+		App::makefilepl2cpanfile::generate(makefile => "$mf", with_develop => 0,
+			existing => "on 'develop' => sub {\n\trequires 'X', '1${esc}';\n};\n")
+	});
+	like $w[0], qr/'1\\x\{1B\}\]0;OWNED\\x\{7\}\\x\{1B\}\[2K\\x\{D\}'/, 'existing-cpanfile version shown escaped';
+	like $w[0] =~ s/\n\z//r, $no_controls, 'no raw control characters in the warning';
+
+	my ($gc) = home_with_config({ develop => { "Bad${esc}Name" => 0, 'Tool' => "1${esc}" } });
+	(undef, @w) = capture_warns(sub { App::makefilepl2cpanfile::generate(makefile => "$mf") });
+	is scalar @w, 2, 'one warning per bad config entry';
+	like $_ =~ s/\n\z//r, $no_controls, 'config warning has no raw control characters' for @w;
+};
+
 subtest 'upstream: I/O error whose path contains decoder keywords is not mistaken for bad UTF-8' => sub {
 	# Path::Tiny's I/O errors are objects whose text includes the path.
 	# Matching /decode|ill-formed|utf/ against that text treated an I/O

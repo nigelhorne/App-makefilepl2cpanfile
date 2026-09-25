@@ -535,6 +535,12 @@ Each argument, split into groups of values that behave the same way.
 
 =head3 MESSAGES
 
+Values taken from files or the environment (paths, module names,
+versions, parser errors) are shown with control characters and Unicode
+direction-override characters replaced by C<\x{..}> escapes, so a
+hostile file cannot use a message to send escape sequences to your
+terminal.
+
 Errors (the call dies):
 
 	Cannot read '$makefile'
@@ -597,7 +603,7 @@ sub generate {
 	my $existing = $args->{existing} // '';
 	my $with_dev = $args->{with_develop} // 1;
 
-	croak "Cannot read '$makefile'" unless -f $makefile && -r _;
+	croak "Cannot read '" . _printable($makefile) . q{'} unless -f $makefile && -r _;
 
 	my $content;
 	{
@@ -612,7 +618,8 @@ sub generate {
 			# say, ~/src/utf8-tools/ as a decoding problem.  So objects are
 			# always rethrown, and only plain decoder messages are matched.
 			die $@ if ref $@ || $@ !~ /decode|ill-formed|utf/i;
-			carp "Warning: '$makefile' contains invalid UTF-8; reading as raw bytes: $@";
+			carp "Warning: '" . _printable($makefile) . "' contains invalid UTF-8; reading as raw bytes: "
+				. _printable($@ =~ s/\n\z//r);
 			$content = path($makefile)->slurp_raw;
 		}
 	}
@@ -648,7 +655,7 @@ sub generate {
 				# length(undef) is undef, so one test covers "absent" and "empty":
 				# only a non-empty version can be invalid.
 				if (length($ver // q{}) && !_valid_version($ver)) {
-					carp "Ignoring invalid version for '$mod' in existing cpanfile: '$ver'";
+					carp "Ignoring invalid version for '$mod' in existing cpanfile: '" . _printable($ver) . q{'};
 					$ver = 0;
 				}
 				$deps->{develop}{$rel}{$mod} //= { version => $ver || 0, comment => undef };
@@ -1056,6 +1063,22 @@ sub _valid_version {
 	return defined $ver && $ver =~ $VERSION_RE ? 1 : 0;
 }
 
+# _printable
+#
+# Purpose:  Make text from a file or the environment safe to put in an
+#           error or warning.  SECURITY: such text is printed to the user's
+#           terminal, where escape sequences (e.g. ESC ] 0 ; ... to retitle
+#           the window, or CR and ESC [ 2 K to erase the line and print
+#           something else) could hide or forge messages.
+# Entry:    $_[0] - any value (stringified).
+# Exit:     The string with control characters and bidirectional-override
+#           characters replaced by \x{..} escapes; everything else as is.
+sub _printable {
+	my $text = "$_[0]";
+	$text =~ s/($UNSAFE_COMMENT_CHARS_RE)/sprintf '\\x{%X}', ord $1/ge;
+	return $text;
+}
+
 # _load_develop_config
 #
 # Return the develop-tools hash from the user's YAML config file,
@@ -1075,13 +1098,14 @@ sub _load_develop_config {
 	return {%DEFAULT_DEVELOP} unless length($home // q{});
 
 	my $cfg_path = path($home)->child('.config', 'makefilepl2cpanfile.yml');
+	my $cfg_shown = _printable($cfg_path);
 
 	# Guard: the path cannot be examined.  A missing file means "use the
 	# defaults"; any other stat failure (EACCES, ELOOP, stale NFS...) must not
 	# silently change the output.
 	my @stat = stat "$cfg_path";
 	unless (@stat) {
-		croak "Failed to parse $cfg_path: $!" unless $!{ENOENT} || $!{ENOTDIR};
+		croak "Failed to parse $cfg_shown: $!" unless $!{ENOENT} || $!{ENOTDIR};
 		return {%DEFAULT_DEVELOP};
 	}
 
@@ -1098,7 +1122,7 @@ sub _load_develop_config {
 	unless ($yaml) {
 		my $err = $@ || YAML::Tiny->errstr() // q{};
 		$err =~ s/ at \S++ line \d++\.?\n?\z//;
-		croak "Failed to parse $cfg_path: $err";
+		croak "Failed to parse $cfg_shown: " . _printable($err);
 	}
 
 	# Guard: no develop hash.  Checking the document's type first means a
@@ -1106,7 +1130,7 @@ sub _load_develop_config {
 	my $doc     = $yaml->[0];
 	my $develop = ref $doc eq 'HASH' ? $doc->{develop} : undef;
 	unless (ref $develop eq 'HASH') {
-		carp "No 'develop' key found in $cfg_path; using defaults";
+		carp "No 'develop' key found in $cfg_shown; using defaults";
 		return {%DEFAULT_DEVELOP};
 	}
 
@@ -1117,7 +1141,7 @@ sub _load_develop_config {
 	my %clean;
 	for my $mod (keys %{$develop}) {
 		unless ($mod =~ $MODULE_NAME_RE) {
-			carp "Skipping invalid module name in $cfg_path: '$mod'";
+			carp "Skipping invalid module name in $cfg_shown: '" . _printable($mod) . q{'};
 			next;
 		}
 		# Premise 1: a null value means "any version", i.e. 0.
@@ -1125,7 +1149,7 @@ sub _load_develop_config {
 		# Conclusion: '' is the only extra value that needs allowing.
 		my $v = $develop->{$mod} // 0;
 		unless ($v eq q{} || _valid_version($v)) {
-			carp "Skipping invalid version for '$mod' in $cfg_path: '$v'";
+			carp "Skipping invalid version for '$mod' in $cfg_shown: '" . _printable($v) . q{'};
 			$v = 0;
 		}
 		$clean{$mod} = $v;

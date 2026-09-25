@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use autodie qw(:all);
 
+use Carp qw(croak);
 use Getopt::Long qw(GetOptions);
 use Path::Tiny;
 use Text::Diff;
@@ -53,6 +54,12 @@ mutually exclusive>) and the program exits with a non-zero status.
 
 =item * C<--help> prints the usage message and exits with status 0.
 
+=item * If F<cpanfile> is a symbolic link the program stops with
+C<Refusing to use 'cpanfile': it is a symbolic link> and a non-zero exit
+status, without reading or writing it.  Writing would otherwise replace
+whatever file the link points to, which in a cloned repository could be
+any file of yours.
+
 =back
 
 =cut
@@ -77,6 +84,14 @@ $with_dev //= !$no_dev;
 
 # Read existing cpanfile so its develop block can be preserved during merge.
 my $cpanfile_path = path('cpanfile');
+
+# SECURITY: a repository controls its own files, symlinks included, and
+# Path::Tiny's spew follows a symlink and replaces its target.  A 'cpanfile'
+# pointing at, say, ~/.bashrc would be overwritten with generated text.
+# Refuse to read or write through a symlink; checked again before writing.
+my $symlink_refusal = "Refusing to use '$cpanfile_path': it is a symbolic link";
+croak $symlink_refusal if -l $cpanfile_path;
+
 my $existing = $cpanfile_path->is_file ? $cpanfile_path->slurp_utf8 : '';
 
 my $out = App::makefilepl2cpanfile::generate(
@@ -132,6 +147,7 @@ if ($dry) {
 	exit 0;
 }
 
+croak $symlink_refusal if -l $cpanfile_path;
 $cpanfile_path->spew_utf8($out);
 print "cpanfile written successfully.\n";
 

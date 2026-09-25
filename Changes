@@ -45,6 +45,17 @@ Revision history for App-makefilepl2cpanfile
 	  the regenerated cpanfile.  Invalid versions are dropped with a warning
 	Strip control characters and Unicode bidirectional overrides
 	  ("Trojan Source", CVE-2021-42574) from comments copied to the cpanfile
+	The command-line tool refuses to read or write a cpanfile that is a
+	  symbolic link; a cloned repository could otherwise make it overwrite
+	  (or create) any file the user can write, such as ~/.bashrc
+	Escape control and direction-override characters in warnings and
+	  errors, so text from a hostile file cannot send escape sequences to
+	  the terminal to hide or forge messages
+	Fix regular expressions that were quadratic on hostile input (an
+	  existing cpanfile with many unclosed develop blocks, and comments
+	  with long runs of spaces) and could stall the tool for minutes
+	An I/O error in a directory whose name contains "utf" or "decode" is
+	  no longer mistaken for an encoding error and hidden
 
 	[ Documentation ]
 	Rewrote the POD: examples, encoding rules, common pitfalls, input
