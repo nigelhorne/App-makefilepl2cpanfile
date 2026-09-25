@@ -197,4 +197,28 @@ like $out, qr/^recommends 'XML::Simple', '2\.25';$/m,
 like $out, qr/^suggests 'YAML::XS', '0\.88';\s+# YAML backend$/m,
 	'generate emits legacy suggests at top level';
 
+# -----------------------------------------------------------------------
+# Several entries on one line (regression: only the first was kept)
+# -----------------------------------------------------------------------
+
+my $dep6 = App::makefilepl2cpanfile::parse_prereqs(
+	"PREREQ_PM => { 'DBI' => 1.60, 'Moo' => '2.0', 'Carp' => 0,   # core\n\t'Next::Line' => 0 },"
+);
+is_deeply $dep6->{runtime}{requires}, {
+	'DBI'        => { version => '1.60', comment => undef },
+	'Moo'        => { version => '2.0',  comment => undef },
+	'Carp'       => { version => 0,      comment => 'core' },
+	'Next::Line' => { version => 0,      comment => undef },
+}, 'every entry on a line is kept; the comment belongs to the last one';
+
+# -----------------------------------------------------------------------
+# Module names must be ASCII (CPAN requires it; blocks look-alikes)
+# -----------------------------------------------------------------------
+
+my $dep7 = App::makefilepl2cpanfile::parse_prereqs(
+	"PREREQ_PM => {\n\t'Caf\x{e9}' => 0,\n\t'T\x{435}st::More' => 0,\n\t'\x{c9}lan' => 0,\n\t'Plain' => 0,\n},"
+);
+is_deeply [ keys %{ $dep7->{runtime}{requires} } ], ['Plain'],
+	'names with non-ASCII letters (including Cyrillic look-alikes) are rejected';
+
 done_testing;

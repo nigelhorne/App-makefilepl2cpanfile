@@ -8,6 +8,7 @@ MANIFEST			This list of files
 MANIFEST.SKIP
 README.md
 t/basics.t
+t/data-flow.t
 t/develop_block.t
 t/edge_cases.t
 t/eof.t

@@ -88,6 +88,9 @@ my $out = App::makefilepl2cpanfile::generate(
 # --check: reuse the library's parser to verify nothing was dropped.
 # This avoids duplicating the extraction regex in the script.
 if ($check) {
+	# TODO: Data Flow Anomaly - DD: Makefile.PL is read a second time here
+	# (generate() read it already), so a change between the two reads makes
+	# the check compare against different content than was converted.
 	my $content  = path('Makefile.PL')->slurp_utf8;
 	my $expected = App::makefilepl2cpanfile::parse_prereqs($content);
 
