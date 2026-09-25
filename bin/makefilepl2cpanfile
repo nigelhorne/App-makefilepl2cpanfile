@@ -57,6 +57,10 @@ mutually exclusive>) and the program exits with a non-zero status.
 
 =item * C<--help> prints the usage message and exits with status 0.
 
+=item * If F<cpanfile> exists but is not a regular file (a directory, a
+FIFO, a device) the program stops with C<Refusing to use 'cpanfile': it is
+not a regular file> and a non-zero exit status.
+
 =item * If F<cpanfile> is a symbolic link the program stops with
 C<Refusing to use 'cpanfile': it is a symbolic link> and a non-zero exit
 status, without reading or writing it.  Writing would otherwise replace
@@ -94,6 +98,12 @@ my $cpanfile_path = path('cpanfile');
 # Refuse to read or write through a symlink; checked again before writing.
 my $symlink_refusal = "Refusing to use '$cpanfile_path': it is a symbolic link";
 croak $symlink_refusal if -l $cpanfile_path;
+
+# Anything else in the way that is not a plain file (a directory, a FIFO, a
+# device) is refused too: File::Copy::move, used below, would otherwise move
+# the new file INTO a directory named cpanfile and report success.
+my $irregular_refusal = "Refusing to use '$cpanfile_path': it is not a regular file";
+croak $irregular_refusal if -e $cpanfile_path && !-f _;
 
 my $existing = $cpanfile_path->is_file ? $cpanfile_path->slurp_utf8 : '';
 
@@ -151,6 +161,7 @@ if ($dry) {
 }
 
 croak $symlink_refusal if -l $cpanfile_path;
+croak $irregular_refusal if -e $cpanfile_path && !-f _;
 
 # Write atomically and leave no debris.  The text goes to a temporary file
 # in this directory, renamed over cpanfile only once it is complete, so a
