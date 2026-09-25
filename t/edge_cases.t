@@ -2033,11 +2033,19 @@ subtest 'CLI: write failures are reported and leave the old cpanfile intact' => 
 		my $dir = path(tempdir(CLEANUP => 1));
 		$dir->child('Makefile.PL')->spew_utf8($MF_SIMPLE);
 		$dir->child($HOSTILE{cpanfile})->spew_utf8($old);
-		my ($out, $err, $exit) = $run->($dir, '-MPath::Tiny', '-MTest::Mockingbird', '-MPOSIX=ENOSPC', '-e', <<'END_PERL', $BIN_PATH);
+		# The wrapper goes in a file, not on the command line: Windows
+		# flattens system()'s argument list into one string, and a
+		# multi-line -e program with quotes does not survive that.
+		my $wrapper = path(tempdir(CLEANUP => 1))->child('enospc.pl');
+		$wrapper->spew_utf8(<<'END_PERL');
+use Path::Tiny;
+use POSIX qw(ENOSPC);
+use Test::Mockingbird;
 Test::Mockingbird::mock('Path::Tiny', 'spew_utf8', sub { local $! = ENOSPC; die "Error spew: $!\n" });
 do $ARGV[0];
 die $@ if $@;
 END_PERL
+		my ($out, $err, $exit) = $run->($dir, "$wrapper", $BIN_PATH);
 		isnt $exit, 0, 'ENOSPC: non-zero exit';
 		like $err, qr/\Q$MSG_ENOSPC\E/, 'ENOSPC: error reported';
 		unlike $out, qr/\Q$HOSTILE{written}\E/, 'ENOSPC: no success message';
@@ -2075,6 +2083,16 @@ subtest 'performance: pathological inputs complete in linear-ish time' => sub {
 		"$n blocks on one line");
 	is scalar keys %{ $d->{runtime}{requires} || {} }, $n, 'every requires found';
 	is scalar keys %{ $d->{runtime}{recommends} || {} }, $n, 'every recommends found';
+
+	# Legacy blocks interleaved with prereqs blocks: each legacy block is
+	# checked against the prereqs spans, which was a linear scan (quadratic
+	# overall: about 25s here) before it became a binary search.
+	my $interleaved = join "\n", map {
+		"prereqs => { test => { requires => { 'T$_' => 0 } } },\nrecommends => { 'R$_' => 0 },"
+	} 1 .. $n;
+	my $mixed = within_time_limit(sub { App::makefilepl2cpanfile::parse_prereqs($interleaved) },
+		"$n legacy blocks among $n prereqs blocks");
+	is scalar keys %{ $mixed->{runtime}{recommends} || {} }, $n, 'every legacy block found';
 
 	within_time_limit(sub { App::makefilepl2cpanfile::parse_prereqs('recommends => {' x $HOSTILE{bomb_depth}) },
 		'unclosed legacy blocks');

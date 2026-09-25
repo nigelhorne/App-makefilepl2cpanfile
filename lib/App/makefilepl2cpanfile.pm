@@ -5,7 +5,6 @@ use warnings;
 use autodie qw(:all);
 use Carp qw(croak carp);
 use Readonly;
-use List::Util    qw(any);
 use Path::Tiny;
 use Params::Get;
 use YAML::Tiny;
@@ -64,23 +63,42 @@ Readonly my @PHASE_ORDER => qw(configure build test develop);
 Readonly my @REL_ORDER => qw(requires recommends suggests);
 
 # First line of every generated cpanfile.
-Readonly my $HEADER => '# Generated from Makefile.PL using makefilepl2cpanfile';
+Readonly::Scalar my $HEADER => '# Generated from Makefile.PL using makefilepl2cpanfile';
 
 # A CPAN module name: ASCII only (as PAUSE requires), so look-alike
 # characters from other scripts cannot smuggle in a different module.
 # Possessive quantifiers: no backtracking on hostile input.
-Readonly my $MODULE_NAME_RE => qr/\A[A-Za-z_]\w*+(?:::\w++)*+\z/a;
+Readonly::Scalar my $MODULE_NAME_RE => qr/\A[A-Za-z_]\w*+(?:::\w++)*+\z/a;
 
 # The whole value after '=>': a single- or double-quoted string, or a bare
 # token.  The complete token is captured so that it is validated as a
 # unit - capturing only a numeric prefix would turn '1e3' into '1'.
-Readonly my $VALUE_TOKEN_RE => qr/(?:'([^'\n]*+)'|"([^"\n]*+)"|([^\s,}#'"]++))/;
+Readonly::Scalar my $VALUE_TOKEN_RE => qr/(?:'([^'\n]*+)'|"([^"\n]*+)"|([^\s,}#'"]++))/;
+
+# One dependency entry: a quoted module name (quotes must match), '=>',
+# then an optional value token.  Compiled once here: interpolating
+# $VALUE_TOKEN_RE inside the per-line loop made Perl re-check the pattern
+# on every line.
+Readonly::Scalar my $PAIR_RE => qr/(?:'([^'\n]++)'|"([^"\n]++)")\s*=>\s*$VALUE_TOKEN_RE?/;
+
+# A version number: optional 'v', ASCII digits, '.' and '_', at least one
+# digit.  The lookahead finds a digit lazily and the main match is
+# possessive, so the check is linear even on long hostile strings.
+Readonly::Scalar my $VERSION_RE => qr/\Av?+(?=[0-9._]*?[0-9])[0-9._]++\z/;
+
+# Everything on a line up to and including its first '#' that is not
+# inside a quoted string.  A quote with no partner is taken as a plain
+# character, exactly as a left-to-right scan for quoted strings would.
+Readonly::Scalar my $TO_COMMENT_RE => qr/\A(?:[^'"#]++|'[^']*+'|"[^"]*+"|['"])*+#/;
+
+# The four simple keys, for a single pass over the content.
+Readonly::Scalar my $SIMPLE_KEY_RE => qr/(?:BUILD_REQUIRES|CONFIGURE_REQUIRES|PREREQ_PM|TEST_REQUIRES)/;
 
 # Characters stripped from comments before they are written out: C0/C1
 # controls other than TAB (a CR can visually overwrite a line) and the
 # Unicode bidirectional controls used by "Trojan Source" (CVE-2021-42574)
 # to make text display differently from how it is read.
-Readonly my $UNSAFE_COMMENT_CHARS_RE =>
+Readonly::Scalar my $UNSAFE_COMMENT_CHARS_RE =>
 	qr/[\x00-\x08\x0A-\x1F\x7F-\x9F\x{061C}\x{200E}\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}]/;
 
 =head1 SYNOPSIS
@@ -733,25 +751,24 @@ sub parse_prereqs {
 	my $comments = _comment_spans($content);
 
 	# ---- Simple dependency keys (PREREQ_PM, BUILD_REQUIRES, etc.) ----
-	# These always map to the 'requires' relationship in their phase.
-	for my $mf_key (keys %PHASE_MAP) {
-		my $phase = $PHASE_MAP{$mf_key};
-
-		# The regex allows up to four levels of brace nesting so that unusual
-		# Makefile.PL constructs (e.g. version objects) don't terminate the
-		# block match prematurely.
-		while ($content =~ /
-			\b $mf_key \s*=>\s* \{
-				( (?: [^{}]++
-				    | \{ (?: [^{}]++ | \{ (?: [^{}]++ | \{ [^}]*+ \} )* \} )* \}
-				  )*
-				)
-			\}
-		/gsx) {
-			my $block = $1;
-			next if _in_comment($comments, $-[0]);
-			_extract_pairs($block, \%deps, $phase, 'requires');
-		}
+	# These always map to the 'requires' relationship in their phase.  All
+	# four are found in one pass: each key has its own phase, so the order
+	# in which blocks are met cannot change which entry wins.
+	#
+	# The regex allows up to four levels of brace nesting so that unusual
+	# Makefile.PL constructs (e.g. version objects) don't terminate the
+	# block match prematurely.
+	while ($content =~ /
+		\b ($SIMPLE_KEY_RE) \s*=>\s* \{
+			( (?: [^{}]++
+			    | \{ (?: [^{}]++ | \{ (?: [^{}]++ | \{ [^}]*+ \} )* \} )* \}
+			  )*
+			)
+		\}
+	/gsx) {
+		my ($key, $block) = ($1, $2);
+		next if _in_comment($comments, $-[0]);
+		_extract_pairs($block, \%deps, $PHASE_MAP{$key}, 'requires');
 	}
 
 	# ---- Structured 'prereqs' blocks (CPAN Meta Spec style) ----
@@ -818,7 +835,11 @@ sub parse_prereqs {
 		\}
 	/gsx) {
 		my ($rel, $block, $start) = ($1, $2, $-[0]);
-		next if any { $start >= $_->[0] && $start < $_->[1] } @prereqs_spans;
+		# The spans come from successive /g matches, so they are sorted and
+		# do not overlap: the same binary search as for comments applies,
+		# O(log P) per block instead of a linear scan (which made many
+		# legacy blocks times many prereqs blocks quadratic).
+		next if _in_comment(\@prereqs_spans, $start);
 		next if _in_comment($comments, $start);
 		_extract_pairs($block, \%deps, 'runtime', $rel);
 	}
@@ -856,19 +877,23 @@ sub _extract_pairs {
 		# spaces one by one until \S anchors on the last non-space char.
 		# Avoids the super-linear behaviour of (.+?)\s*$ which re-evaluates
 		# \s*$ at every expanded position of the lazy quantifier.
-		my ($comment) = ($line =~ /#\s*(.*\S)/);
-		if (defined $comment) {
-			$comment =~ s/$UNSAFE_COMMENT_CHARS_RE//g;
-			$comment =~ s/\A\s+|\s+\z//g;
-			$comment = undef if $comment eq q{};
+		my $comment;
+		# Most lines have no '#': index() is far cheaper than the regexes.
+		if (index($line, '#') >= 0) {
+			($comment) = ($line =~ /#\s*(.*\S)/);
+			if (defined $comment) {
+				$comment =~ s/$UNSAFE_COMMENT_CHARS_RE//g;
+				$comment =~ s/\A\s+|\s+\z//g;
+				$comment = undef if $comment eq q{};
+			}
+			$line =~ s/#.*$//;
 		}
-		$line =~ s/#.*$//;
 
 		# A line may hold several entries ('A' => 0, 'B' => 0); take them all.
 		my @pairs;
 		# Opening and closing quotes must match: with ['"]...['"] the key
 		# "A'B" was read as 'B" and recorded as a different module, B.
-		while ($line =~ /(?:'([^'\n]++)'|"([^"\n]++)")\s*=>\s*$VALUE_TOKEN_RE?/g) {
+		while ($line =~ /$PAIR_RE/g) {
 			push @pairs, [ $1 // $2, $3 // $4 // $5 ];
 		}
 
@@ -923,11 +948,12 @@ sub _comment_spans {
 	my @spans;
 	my $offset = 0;
 	for my $line (split /\n/, $content, -1) {
-		# Blank out quoted strings (keeping offsets) so that a '#' inside
-		# e.g. 'C#' is not mistaken for a comment.
-		(my $masked = $line) =~ s/('[^']*+'|"[^"]*+")/'x' x length $1/ge;
-		my $hash = index($masked, '#');
-		push @spans, [ $offset + $hash, $offset + length $line ] if $hash >= 0;
+		# Most lines have no '#' at all; only the rest need the quote-aware
+		# scan, which finds the first '#' outside quoted strings (so that
+		# e.g. 'C#' is not mistaken for a comment) without building a copy.
+		if (index($line, '#') >= 0 && $line =~ $TO_COMMENT_RE) {
+			push @spans, [ $offset + $+[0] - 1, $offset + length $line ];
+		}
 		$offset += length($line) + 1;
 	}
 	return \@spans;
@@ -960,8 +986,7 @@ sub _in_comment {
 #           dots and underscores, with at least one digit.
 sub _valid_version {
 	my $ver = $_[0];
-	return 0 unless defined $ver;
-	return $ver =~ /\Av?[0-9._]++\z/ && $ver =~ /[0-9]/ ? 1 : 0;
+	return defined $ver && $ver =~ $VERSION_RE ? 1 : 0;
 }
 
 # _load_develop_config
@@ -1226,6 +1251,13 @@ printed without further checks.
 phase already lists it under any relationship.  So the set of listed
 modules is built once, and every configured tool outside that set is
 added.
+
+=item * B<Speed.>  Parsing takes time proportional to the size of the
+F<Makefile.PL>, however its blocks are arranged: every position test
+(is this block inside a comment, or inside a C<prereqs> block?) is a
+binary search over sorted, non-overlapping ranges.  Lines without a
+C<#> skip the comment checks, the four simple keys are found in one
+pass, and the patterns used on every line are compiled once.
 
 =item * B<Order of checks.>  Each function stops at the first check that
 fails: an unreadable F<Makefile.PL> is refused before anything is read,
