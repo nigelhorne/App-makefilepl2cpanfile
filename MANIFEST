@@ -10,6 +10,7 @@ README.md
 t/basics.t
 t/data-flow.t
 t/develop_block.t
+t/domain.t
 t/edge_cases.t
 t/eof.t
 t/eol.t

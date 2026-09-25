@@ -69,6 +69,18 @@ Readonly my @REL_ORDER => qw(requires recommends suggests);
 # Possessive quantifiers: no backtracking on hostile input.
 Readonly my $MODULE_NAME_RE => qr/\A[A-Za-z_]\w*+(?:::\w++)*+\z/a;
 
+# The whole value after '=>': a single- or double-quoted string, or a bare
+# token.  The complete token is captured so that it is validated as a
+# unit - capturing only a numeric prefix would turn '1e3' into '1'.
+Readonly my $VALUE_TOKEN_RE => qr/(?:'([^'\n]*+)'|"([^"\n]*+)"|([^\s,}#'"]++))/;
+
+# Characters stripped from comments before they are written out: C0/C1
+# controls other than TAB (a CR can visually overwrite a line) and the
+# Unicode bidirectional controls used by "Trojan Source" (CVE-2021-42574)
+# to make text display differently from how it is read.
+Readonly my $UNSAFE_COMMENT_CHARS_RE =>
+	qr/[\x00-\x08\x0A-\x1F\x7F-\x9F\x{061C}\x{200E}\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}]/;
+
 =head1 SYNOPSIS
 
 Create or refresh the F<cpanfile> of the project in the current directory:
@@ -234,8 +246,11 @@ A phase or relationship with no modules is not present at all.
 =over 4
 
 =item * B<The Makefile.PL file> is read as UTF-8.  Comments may contain
-any Unicode text, including accented letters and emoji; they are copied
-to the output unchanged.  If the file is not valid UTF-8 you get a
+any printable Unicode text, including accented letters, emoji and
+combining marks; they are copied to the output unchanged.  Control
+characters (other than TAB) and Unicode direction-override characters
+are removed from comments, so that the generated file cannot be made to
+look different from what it really contains.  If the file is not valid UTF-8 you get a
 warning and processing continues (see L</generate(%args)>).
 
 =item * B<The returned cpanfile text> is a Perl character string.  Write
@@ -254,7 +269,8 @@ This also stops look-alike names, such as C<Test::More> written with a
 Cyrillic letter.
 
 =item * B<Version numbers> may use only the ASCII digits 0-9, C<.>,
-C<_> and a leading C<v>, and must contain at least one digit.  Anything
+C<_> and a leading C<v>, and must contain at least one digit.  The whole
+value is checked: C<'1.0-TRIAL'> is not shortened to C<'1.0'>.  Anything
 else is treated as "no minimum version".
 
 =item * B<The YAML configuration file> is read as UTF-8; the same rules
@@ -429,6 +445,7 @@ not already in the develop phase.
 		makefile => {
 			type     => 'string',
 			optional => 1,
+			min      => 1,
 			default  => 'Makefile.PL',
 		},
 		existing => {
@@ -449,6 +466,48 @@ not already in the develop phase.
 		type    => 'string',
 		matches => qr/\A# Generated from Makefile\.PL using makefilepl2cpanfile\n.*(?<!\n)\n\z/s,
 	}
+
+=head4 Domains
+
+Each argument, split into groups of values that behave the same way.
+"Refused" means the call dies with C<Cannot read '...'>.
+
+	makefile
+	  valid:    a readable regular file, given as a relative path, an
+	            absolute path, or an object that stringifies to one
+	            (e.g. Path::Tiny).  Any characters the file system allows,
+	            including spaces, non-ASCII letters and shell characters.
+	  default:  undef or not given -> 'Makefile.PL'
+	  refused:  '' and '0' (unless such a file exists), a missing file,
+	            a directory, a device, a FIFO, a symlink loop, a file
+	            without read permission, any reference (filehandle, glob,
+	            array, hash, code)
+	  limits:   a file name component up to the file system's NAME_MAX
+	            (usually 255 bytes) is accepted; one byte more is refused.
+	            File size: 0 bytes gives just the header line; there is
+	            no upper limit other than memory.
+
+	existing
+	  valid:    any string.  Only the first on 'develop' => sub { ... };
+	            block is used; its closing "};" must start a line (after
+	            optional spaces or tabs).  'develop' or "develop".
+	  default:  undef or not given -> ''
+	  ignored:  a string without a develop block, a block that is never
+	            closed, a reference (its "HASH(0x...)" text has no block)
+	  entries:  0 or more; each needs a valid module name; a version, if
+	            given, must be a version number (see parse_prereqs)
+
+	with_develop
+	  true:     any true Perl value, including 'yes' and '0.0'
+	  false:    0, '0', ''
+	  default:  undef or not given -> true
+
+	combinations
+	  - with_develop false does not stop the existing develop block from
+	    being kept; it only stops tools being added.
+	  - An empty Makefile.PL with an existing develop block gives the
+	    header plus that develop block.
+	  - A configuration file with an empty "develop: {}" adds no tools.
 
 =head3 MESSAGES
 
@@ -549,11 +608,12 @@ sub generate {
 			# [^'"\n]++ possessive: never cross a line boundary when capturing a
 			# module name or version, and commit immediately - no backtracking into
 			# individual chars needed once the quote is closed.
-			while ($dev_block =~ /\b\Q$rel\E\s+['"]([^'"\n]++)['"](?:\s*,\s*['"]([^'"\n]*+)['"])?/g) {
+			# Quotes must match, or "A'B" would be read as a different module.
+			while ($dev_block =~ /\b\Q$rel\E\s+(?:'([^'\n]++)'|"([^"\n]++)")(?:\s*,\s*(?:'([^'\n]*+)'|"([^"\n]*+)"))?/g) {
 				# Save immediately: the inner validation regex below has no capturing
 				# groups, so running it directly against $1 would reset $1/$2 to
 				# undef - the classic "inner match clobbers outer capture vars" bug.
-				my ($mod, $ver) = ($1, $2);
+				my ($mod, $ver) = ($1 // $2, $3 // $4);
 				next unless $mod =~ $MODULE_NAME_RE;
 				# SECURITY: the version is written back inside a single-quoted
 				# literal; a value such as '\' would escape the closing quote and
@@ -676,6 +736,46 @@ caller's C<$@>, C<$!> or C<$_>.
 	{
 		type => 'hashref',
 	}
+
+=head4 Domains
+
+	content
+	  valid:    any string (decoded characters; see ENCODING)
+	  empty:    '', undef, any reference, text with no dependency lists
+	            -> {} (no warning)
+
+	module name (the quoted key of an entry)
+	  valid:    ASCII letter or '_' first, then ASCII letters, digits and
+	            '_', in parts joined by '::'.  Shortest: one character
+	            ('A', '_').  No maximum length.
+	  ignored:  '' ; leading digit ('1A') ; '::' at either end ; ':::' ;
+	            '-', space, ';' or the old "'" package separator ;
+	            any non-ASCII character ; a bareword (unquoted) key
+
+	version (the value of an entry, and MIN_PERL_VERSION)
+	  valid:    the whole value is an optional 'v' followed by ASCII
+	            digits, '.' and '_', with at least one digit:
+	            '1', 1.60, 'v1.2.3', '1.23_01', '5.010001'
+	  zero:     '0', 0, '0.0', '0.000', 'v0', 'v0.0.0' -> "no minimum"
+	            (nothing is written)
+	  invalid:  -> "no minimum": '.', '_', 'v', '1e3', '1.0-TRIAL',
+	            '1 0', non-ASCII digits, $VERSION, version->parse(...),
+	            and version ranges such as '>= 1.2, < 2.0' (not supported)
+	  limits:   no maximum length
+
+	phase / relationship (inside prereqs blocks)
+	  valid:    exactly runtime, configure, build, test, develop /
+	            requires, recommends, suggests (lower case)
+	  ignored:  anything else, including 'Runtime', 'recommend', 'x_foo'
+
+	comment (text after '#' on an entry's line)
+	  kept:     any printable Unicode: accents, 'ss'-type letters, emoji,
+	            combining marks, right-to-left scripts
+	  removed:  control characters other than TAB (for example CR) and
+	            the bidirectional control characters U+061C, U+200E,
+	            U+200F, U+202A-U+202E, U+2066-U+2069, which could make the
+	            generated file display differently from its real content
+	  empty:    a comment that is empty after this -> undef
 
 =head3 MESSAGES
 
@@ -812,14 +912,21 @@ sub _extract_pairs {
 		# Avoids the super-linear behaviour of (.+?)\s*$ which re-evaluates
 		# \s*$ at every expanded position of the lazy quantifier.
 		my ($comment) = ($line =~ /#\s*(.*\S)/);
+		if (defined $comment) {
+			$comment =~ s/$UNSAFE_COMMENT_CHARS_RE//g;
+			$comment =~ s/\A\s+|\s+\z//g;
+			$comment = undef if $comment eq q{};
+		}
 		$line =~ s/#.*$//;
 
 		next unless $line =~ /\S/;		# skip blank / formerly comment-only lines
 
 		# A line may hold several entries ('A' => 0, 'B' => 0); take them all.
 		my @pairs;
-		while ($line =~ /['"]([^'"]+)['"]\s*=>\s*['"]?([\d._]+)?['"]?/g) {
-			push @pairs, [ $1, $2 ];
+		# Opening and closing quotes must match: with ['"]...['"] the key
+		# "A'B" was read as 'B" and recorded as a different module, B.
+		while ($line =~ /(?:'([^'\n]++)'|"([^"\n]++)")\s*=>\s*$VALUE_TOKEN_RE?/g) {
+			push @pairs, [ $1 // $2, $3 // $4 // $5 ];
 		}
 
 		for my $i (0 .. $#pairs) {
@@ -854,8 +961,8 @@ sub _extract_pairs {
 sub _parse_min_perl {
 	my $content = $_[0];
 	return undef unless defined $content;	## no critic (ProhibitExplicitReturnUndef)
-	return undef unless $content =~ /\bMIN_PERL_VERSION\b\s*=>\s*['"]?([\d._]++)['"]?/;	## no critic (ProhibitExplicitReturnUndef)
-	my $ver = $1;
+	return undef unless $content =~ /\bMIN_PERL_VERSION\b\s*=>\s*$VALUE_TOKEN_RE/;	## no critic (ProhibitExplicitReturnUndef)
+	my $ver = $1 // $2 // $3;
 	return _valid_version($ver) ? $ver : undef;
 }
 
@@ -1012,7 +1119,8 @@ sub _emit {
 	my @sections;
 
 	push @sections, '# Generated from Makefile.PL using makefilepl2cpanfile';
-	push @sections, "requires 'perl', '$min_perl';" if $min_perl;
+	# Same zero test as every other version: '0' and '0.0' mean "any".
+	push @sections, "requires 'perl', '$min_perl';" if _has_version($min_perl);
 
 	# Runtime: emitted at the top level, not inside an 'on' block.
 	if (my $rt = $deps->{runtime}) {
@@ -1084,6 +1192,11 @@ sub _has_version {
 	my $ver = $_[0];
 
 	return 0 unless defined $ver && $ver ne '' && $ver ne '0';
+
+	# A v-string made only of zeros ('v0', 'v0.0.0') is zero too; without
+	# this it would fall into the non-numeric branch below and count as a
+	# real minimum, unlike its numeric twin '0.0'.
+	return 0 if $ver =~ /\Av[0._]*\z/;
 
 	# Use looks_like_number to avoid spurious non-numeric warnings when
 	# comparing against 0 - version strings are always numeric, but be safe.
