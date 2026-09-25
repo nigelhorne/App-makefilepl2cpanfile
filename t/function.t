@@ -208,10 +208,13 @@ subtest '_fmt_dep - single dependency line formatting' => sub {
 		"$CFG{phase_indent}suggests 'Log::Any';\n",
 		'suggests keyword emitted verbatim';
 
-	# An empty comment would otherwise leave a dangling '#' on the line.
-	is $fmt->('requires', 'Foo', { version => 0, comment => q{} }, $CFG{top_indent}),
-		"requires 'Foo';\n",
-		'empty-string comment suppressed';
+	# _fmt_dep relies on its callers never storing an empty comment (it
+	# only tests defined()).  Prove that premise at the source: a comment
+	# that is empty, blank, or made only of stripped characters is undef.
+	for my $raw ('#', '#   ', "# \x{202E}", "#\t\r") {
+		my $d = App::makefilepl2cpanfile::parse_prereqs("PREREQ_PM => {\n\t'Foo' => 0, $raw\n},");
+		is $d->{runtime}{requires}{Foo}{comment}, undef, 'empty comment stored as undef, never as the empty string';
+	}
 
 	is $fmt->('requires', 'Bar', { version => '0', comment => undef }, $CFG{top_indent}),
 		"requires 'Bar';\n",

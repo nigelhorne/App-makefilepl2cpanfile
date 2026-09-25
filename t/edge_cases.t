@@ -831,13 +831,9 @@ subtest 'generate: Makefile.PL with trailing invalid UTF-8 bytes - warns, finds 
 };
 
 subtest 'parse_prereqs: extreme numerical version strings - _has_version contract' => sub {
-	# Verify that unusual-but-valid number strings (Inf, NaN, very large ints)
-	# are handled consistently by the looks_like_number + != 0 logic.
-	# These are "real constraints" (non-zero) even if nonsensical in practice.
+	# Very large and very small numbers are valid versions and must be
+	# classified by their digits: any digit 1-9 makes a real constraint.
 	Readonly my @EXTREME_NONZERO_VERS => (
-		[ 'Inf',                    1, 'Inf is looks_like_number and != 0'           ],
-		[ '-Inf',                   1, '-Inf is looks_like_number and != 0'          ],
-		[ 'NaN',                    1, 'NaN is looks_like_number and != 0 (IEEE 754)'],
 		[ '99999999999999999999',   1, '20-digit int overflows to ~1e20, != 0'       ],
 		[ '0.000000001',            1, 'tiny positive fraction is non-zero'          ],
 		[ '1e300',                  1, 'very large float is non-zero'                ],
@@ -854,6 +850,14 @@ subtest 'parse_prereqs: extreme numerical version strings - _has_version contrac
 	for my $case (@EXTREME_ZERO_VERS) {
 		my ($ver, $expected, $label) = @{$case};
 		is !!App::makefilepl2cpanfile::_has_version($ver), !!$expected, $label;
+	}
+
+	# Inf, -Inf and NaN are numbers to Perl but not versions.  _has_version
+	# only ever sees validated versions, so prove they are stopped upstream:
+	# none of them may reach the output as a requirement.
+	for my $ver ('Inf', '-Inf', 'NaN', 'inf', 'nan') {
+		my $d = App::makefilepl2cpanfile::parse_prereqs("PREREQ_PM => { 'M' => '$ver' },");
+		is $d->{runtime}{requires}{M}{version}, 0, "'$ver' is rejected before it could reach _has_version";
 	}
 };
 

@@ -9,6 +9,51 @@ Revision history for App-makefilepl2cpanfile
 	  runtime suggests
 	recommends/suggests blocks nested inside prereqs => { ... } remain
 	  phase-scoped and are not duplicated into runtime
+	Read every entry on a line; previously only the first was kept, so
+	  PREREQ_PM => { 'A' => 0, 'B' => 0 } silently lost B
+	Validate the whole version value instead of its numeric prefix:
+	  '1e3' is no longer truncated to '1' nor '1.0-TRIAL' to '1.0', and
+	  v-strings such as 'v1.2.3' and MIN_PERL_VERSION => 'v5.10.0' are no
+	  longer dropped
+	Versions with no digit ('.', '_') or with non-ASCII digits are treated
+	  as no minimum instead of being written to the cpanfile
+	Treat 'v0', 'v0.0.0' and MIN_PERL_VERSION '0.0' as zero, like '0'
+	Require matching quotes around module names: "A'B" was misread as a
+	  different module (B, or A in an existing cpanfile)
+	Ignore dependency hashes commented out on one line, and commented-out
+	  entries in an existing cpanfile's develop block
+	Only accept ASCII module names, as CPAN requires
+	generate() no longer changes the caller's $@ or $!
+	generate() no longer creates empty develop recommends/suggests hashes
+	  as a side effect of checking for existing develop tools
+	A filehandle or other reference passed as makefile is refused with
+	  "Cannot read" instead of failing inside Path::Tiny
+	An empty home directory from File::HomeDir falls back to the default
+	  develop tools instead of dying
+	Config file: YAML::Tiny errors are now reported as the documented
+	  "Failed to parse" message; a directory, device or FIFO at the config
+	  path is treated as no config (a FIFO previously blocked forever); a
+	  config path that cannot be examined (e.g. permission denied) croaks
+	  instead of silently using the defaults
+	--diff never writes the cpanfile; with no existing cpanfile it shows
+	  a diff against an empty file
+
+	[ Security ]
+	Validate versions carried over from an existing cpanfile's develop
+	  block; a crafted version ending in a backslash could inject code into
+	  the regenerated cpanfile.  Invalid versions are dropped with a warning
+	Strip control characters and Unicode bidirectional overrides
+	  ("Trojan Source", CVE-2021-42574) from comments copied to the cpanfile
+
+	[ Documentation ]
+	Rewrote the POD: examples, encoding rules, common pitfalls, input
+	  domains, API specifications, formal specification and state diagram
+
+	[ Testing ]
+	Added t/data-flow.t and t/domain.t; extended function, unit,
+	  integration and edge-case tests
+	New test dependencies: Capture::Tiny, Module::CPANfile,
+	  Test::Without::Module
 
 0.04	Sun Aug  2 12:59:14 PM EDT 2026
 	[ Bug Fixes ]

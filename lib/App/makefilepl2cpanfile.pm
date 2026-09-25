@@ -6,7 +6,6 @@ use autodie qw(:all);
 use Carp qw(croak carp);
 use Readonly;
 use List::Util    qw(any);
-use Scalar::Util  qw(looks_like_number);
 use Path::Tiny;
 use Params::Get;
 use YAML::Tiny;
@@ -63,6 +62,9 @@ Readonly my @PHASE_ORDER => qw(configure build test develop);
 
 # Within each phase block, emit relationships in this order.
 Readonly my @REL_ORDER => qw(requires recommends suggests);
+
+# First line of every generated cpanfile.
+Readonly my $HEADER => '# Generated from Makefile.PL using makefilepl2cpanfile';
 
 # A CPAN module name: ASCII only (as PAUSE requires), so look-alike
 # characters from other scripts cannot smuggle in a different module.
@@ -618,7 +620,9 @@ sub generate {
 				# SECURITY: the version is written back inside a single-quoted
 				# literal; a value such as '\' would escape the closing quote and
 				# turn following entries into executable code.
-				if (defined $ver && $ver ne '' && !_valid_version($ver)) {
+				# length(undef) is undef, so one test covers "absent" and "empty":
+				# only a non-empty version can be invalid.
+				if (length($ver // q{}) && !_valid_version($ver)) {
 					carp "Ignoring invalid version for '$mod' in existing cpanfile: '$ver'";
 					$ver = 0;
 				}
@@ -630,20 +634,15 @@ sub generate {
 	if ($with_dev) {
 		my $config = _load_develop_config();
 
-		# Only inject tools not already listed under any relationship.
-		for my $mod (keys %{$config}) {
-			# Test each level separately: a bare exists on the leaf would
-			# autovivify empty develop/<rel> hashes for every relationship.
-			my $already_present = any {
-				exists $deps->{develop}{$_} && exists $deps->{develop}{$_}{$mod}
-			} @REL_ORDER;
-
-			unless ($already_present) {
-				$deps->{develop}{requires}{$mod} = {
-					version => $config->{$mod},
-					comment => undef,
-				};
-			}
+		# Premise 1: a listed tool must never be added again or overwritten.
+		# Premise 2: "listed" means present under any relationship.
+		# Conclusion: build that set once, then add every tool outside it.
+		# ($dev is a copy of the reference or a fresh {}, so reading it
+		# cannot autovivify $deps->{develop} or its relationship hashes.)
+		my $dev = $deps->{develop} || {};
+		my %listed = map { $_ => 1 } map { keys %{ $dev->{$_} || {} } } @REL_ORDER;
+		for my $mod (grep { !$listed{$_} } keys %{$config}) {
+			$deps->{develop}{requires}{$mod} = { version => $config->{$mod}, comment => undef };
 		}
 	}
 
@@ -919,8 +918,6 @@ sub _extract_pairs {
 		}
 		$line =~ s/#.*$//;
 
-		next unless $line =~ /\S/;		# skip blank / formerly comment-only lines
-
 		# A line may hold several entries ('A' => 0, 'B' => 0); take them all.
 		my @pairs;
 		# Opening and closing quotes must match: with ['"]...['"] the key
@@ -937,7 +934,8 @@ sub _extract_pairs {
 			next unless $mod =~ $MODULE_NAME_RE;
 			# '.' or '_' alone is not a version; emitting it would produce a
 			# cpanfile that CPAN::Meta::Requirements rejects.
-			$ver = 0 unless defined $ver && _valid_version($ver);
+			# _valid_version(undef) is false, so no separate defined() test.
+			$ver = 0 unless _valid_version($ver);
 			# First occurrence wins - do not overwrite already-parsed entries.
 			# A trailing comment belongs to the entry it follows: the last.
 			# TODO: Data Flow Anomaly - D~: when the last pair on a line is
@@ -1033,66 +1031,68 @@ sub _load_develop_config {
 	# caller's value intact so an enclosing eval/$@ check is not disturbed.
 	local $@;
 
+	# Guard: no usable home directory (containers, chroots, CI).  length()
+	# of undef is undef, so one test rejects both undef and ''.
 	my $home = File::HomeDir->my_home;
+	return {%DEFAULT_DEVELOP} unless length($home // q{});
 
-	# Guard against environments with no home directory (containers, chroots,
-	# or CI systems where getpwuid returns no directory).  path(undef) would
-	# croak from Path::Tiny with a confusing message; return defaults instead.
-	# An empty string is treated the same way: path('') croaks.
-	return {%DEFAULT_DEVELOP} unless defined $home && length $home;
+	my $cfg_path = path($home)->child('.config', 'makefilepl2cpanfile.yml');
 
-	my $cfg_path = path($home)
-		->child('.config', 'makefilepl2cpanfile.yml');
-
-	# -f (a regular file), not Path::Tiny's is_file (anything but a
-	# directory): a FIFO here would block the read forever and a device
-	# could stream without end.  Anything else is treated as no config.
-	# A config that does not exist means "use the defaults"; one that exists
-	# but cannot be examined (EACCES, ELOOP, a stale NFS handle...) must not
-	# silently change the output, so that is an error.
+	# Guard: the path cannot be examined.  A missing file means "use the
+	# defaults"; any other stat failure (EACCES, ELOOP, stale NFS...) must not
+	# silently change the output.
 	my @stat = stat "$cfg_path";
-	croak "Failed to parse $cfg_path: $!" unless @stat || $!{ENOENT} || $!{ENOTDIR};
-
-	# Test the mode bits we just fetched rather than Perl's implicit '_'
-	# buffer, which any intervening stat (even a lazy require) would replace.
-	if (@stat && Fcntl::S_ISREG($stat[2])) {
-		# YAML::Tiny reports failure by dying (current versions) or by
-		# returning false with errstr set (older ones).  Normalise both into
-		# the single documented message, without YAML::Tiny's own location.
-		my $yaml = eval { YAML::Tiny->read("$cfg_path") };
-		unless ($yaml) {
-			my $err = $@ || YAML::Tiny->errstr() // q{};
-			$err =~ s/ at \S+ line \d+\.?\n?\z//;
-			croak "Failed to parse $cfg_path: $err";
-		}
-
-		if (ref $yaml->[0]{develop} eq 'HASH') {
-			# SECURITY: validate every key (module name) and value (version)
-			# before use.  YAML config keys are arbitrary strings; without
-			# this guard a key such as "Safe'; system('evil'); requires 'X"
-			# closes the single-quoted literal in _fmt_dep and injects
-			# executable Perl into the generated cpanfile, which cpanm eval's.
-			my %clean;
-			for my $mod (keys %{ $yaml->[0]{develop} }) {
-				my $ver = $yaml->[0]{develop}{$mod};
-				unless ($mod =~ $MODULE_NAME_RE) {
-					carp "Skipping invalid module name in $cfg_path: '$mod'";
-					next;
-				}
-				my $v = defined $ver ? "$ver" : 0;
-				unless ($v eq '0' || $v eq '' || _valid_version($v)) {
-					carp "Skipping invalid version for '$mod' in $cfg_path: '$v'";
-					$v = 0;
-				}
-				$clean{$mod} = $v;
-			}
-			return \%clean;
-		}
-		carp "No 'develop' key found in $cfg_path; using defaults";
+	unless (@stat) {
+		croak "Failed to parse $cfg_path: $!" unless $!{ENOENT} || $!{ENOTDIR};
+		return {%DEFAULT_DEVELOP};
 	}
 
-	# Return a copy so callers cannot mutate the constant.
-	return {%DEFAULT_DEVELOP};
+	# Guard: not a regular file.  A FIFO would block the read forever and a
+	# device could stream without end.  The mode bits come from @stat, not
+	# from Perl's implicit '_' buffer, which another stat could replace.
+	return {%DEFAULT_DEVELOP} unless Fcntl::S_ISREG($stat[2]);
+
+	# Guard: unreadable or invalid YAML.  YAML::Tiny reports failure by dying
+	# (current versions) or by returning false with errstr set (older ones);
+	# both become the single documented message, without YAML::Tiny's own
+	# location.
+	my $yaml = eval { YAML::Tiny->read("$cfg_path") };
+	unless ($yaml) {
+		my $err = $@ || YAML::Tiny->errstr() // q{};
+		$err =~ s/ at \S+ line \d+\.?\n?\z//;
+		croak "Failed to parse $cfg_path: $err";
+	}
+
+	# Guard: no develop hash.  Checking the document's type first means a
+	# document that is not a hash is never dereferenced.
+	my $doc     = $yaml->[0];
+	my $develop = ref $doc eq 'HASH' ? $doc->{develop} : undef;
+	unless (ref $develop eq 'HASH') {
+		carp "No 'develop' key found in $cfg_path; using defaults";
+		return {%DEFAULT_DEVELOP};
+	}
+
+	# SECURITY: validate every key (module name) and value (version) before
+	# use.  Keys are arbitrary strings: without this guard a key such as
+	# "Safe'; system('evil'); requires 'X" would close the quoted literal in
+	# _fmt_dep and inject code into the generated cpanfile, which cpanm runs.
+	my %clean;
+	for my $mod (keys %{$develop}) {
+		unless ($mod =~ $MODULE_NAME_RE) {
+			carp "Skipping invalid module name in $cfg_path: '$mod'";
+			next;
+		}
+		# Premise 1: a null value means "any version", i.e. 0.
+		# Premise 2: _valid_version accepts '0' (it contains a digit).
+		# Conclusion: '' is the only extra value that needs allowing.
+		my $v = $develop->{$mod} // 0;
+		unless ($v eq q{} || _valid_version($v)) {
+			carp "Skipping invalid version for '$mod' in $cfg_path: '$v'";
+			$v = 0;
+		}
+		$clean{$mod} = $v;
+	}
+	return \%clean;
 }
 
 # _emit
@@ -1113,48 +1113,41 @@ sub _load_develop_config {
 sub _emit {
 	my ($deps, $min_perl) = @_;
 
-	# Build the output as a list of sections joined by blank lines.  This
-	# avoids the trailing-double-newline bug that arises when a runtime-only
-	# output adds a separator newline with no following phase blocks.
-	my @sections;
-
-	push @sections, '# Generated from Makefile.PL using makefilepl2cpanfile';
-	# Same zero test as every other version: '0' and '0.0' mean "any".
+	# Build the output as a list of sections joined by blank lines.
+	my @sections = ($HEADER);
 	push @sections, "requires 'perl', '$min_perl';" if _has_version($min_perl);
 
-	# Runtime: emitted at the top level, not inside an 'on' block.
-	if (my $rt = $deps->{runtime}) {
-		my @lines;
-		for my $rel (@REL_ORDER) {
-			my $h = $rt->{$rel} or next;
-			for my $m (sort keys %{$h}) {
-				push @lines, _fmt_dep($rel, $m, $h->{$m}, '');
-			}
-		}
-		# join without an extra newline; _fmt_dep already appends \n per line.
-		push @sections, join('', @lines) if @lines;
+	# Runtime is emitted at the top level; every other phase in an 'on'
+	# block, in @PHASE_ORDER.  Both use the same line builder.
+	for my $phase ('runtime', @PHASE_ORDER) {
+		my $indent = $phase eq 'runtime' ? q{} : "\t";
+		my $body = join q{}, map { _fmt_dep(@{$_}, $indent) } @{ _phase_entries($deps->{$phase}) };
+		# Premise: an absent phase, or one whose relationships are all
+		# empty, yields no entries.  Conclusion: it yields no section.
+		next if $body eq q{};
+		push @sections, $phase eq 'runtime'
+			? $body =~ s/\n\z//r		# the blank-line separator is added by join
+			: "on '$phase' => sub {\n$body};";
 	}
 
-	# All other phases each get a named 'on' block.
-	for my $phase (@PHASE_ORDER) {
-		my $p = $deps->{$phase} or next;
-
-		my @lines;
-		for my $rel (@REL_ORDER) {
-			my $h = $p->{$rel} or next;
-			for my $m (sort keys %{$h}) {
-				push @lines, _fmt_dep($rel, $m, $h->{$m}, "\t");
-			}
-		}
-		next unless @lines;
-
-		push @sections, "on '$phase' => sub {\n" . join('', @lines) . "};";
-	}
-
-	# _fmt_dep appends \n to each line, so strip trailing newlines from
-	# sections before joining so the blank-line separator is exactly one \n\n.
-	s/\n+$// for @sections;
 	return join("\n\n", @sections) . "\n";
+}
+
+# _phase_entries
+#
+# Purpose:  List one phase's entries in output order: relationships in
+#           @REL_ORDER, modules alphabetically within each.
+# Entry:    $_[0] - the phase's hashref ({ rel => { module => entry } }),
+#           or undef when the phase is absent.
+# Exit:     ArrayRef of [ rel, module, entry ] triples; empty when none.
+sub _phase_entries {
+	my $phase = $_[0] || {};
+	my @entries;
+	for my $rel (@REL_ORDER) {
+		my $mods = $phase->{$rel} || {};
+		push @entries, [ $rel, $_, $mods->{$_} ] for sort keys %{$mods};
+	}
+	return \@entries;
 }
 
 # _fmt_dep
@@ -1172,7 +1165,11 @@ sub _fmt_dep {
 	my $line = "${indent}$rel '$mod'";
 	$line .= ", '$entry->{version}'" if _has_version($entry->{version});
 
-	if (defined $entry->{comment} && $entry->{comment} ne '') {
+	# Premise 1: every producer of entries stores a comment that is undef
+	# or non-empty (_extract_pairs turns an empty comment into undef; merged
+	# and configured entries have none).  Premise 2: _fmt_dep is only called
+	# by _emit on such entries.  Conclusion: defined() is sufficient.
+	if (defined $entry->{comment}) {
 		$line .= ";   # $entry->{comment}\n";
 	} else {
 		$line .= ";\n";
@@ -1191,21 +1188,48 @@ sub _fmt_dep {
 sub _has_version {
 	my $ver = $_[0];
 
-	return 0 unless defined $ver && $ver ne '' && $ver ne '0';
-
-	# A v-string made only of zeros ('v0', 'v0.0.0') is zero too; without
-	# this it would fall into the non-numeric branch below and count as a
-	# real minimum, unlike its numeric twin '0.0'.
-	return 0 if $ver =~ /\Av[0._]*\z/;
-
-	# Use looks_like_number to avoid spurious non-numeric warnings when
-	# comparing against 0 - version strings are always numeric, but be safe.
-	return looks_like_number($ver) ? ($ver != 0) : 1;
+	# Premise 1: every version that reaches here is undef, 0, '' or a string
+	# accepted by _valid_version (ASCII digits, '.', '_', optional 'v').
+	# Premise 2: such a value is zero exactly when none of its digits is
+	# 1-9 ('0', '0.000', 'v0.0.0', '0_0').
+	# Conclusion: "contains a digit from 1 to 9" is the whole test.
+	return defined $ver && $ver =~ /[1-9]/ ? 1 : 0;
 }
 
 1;
 
 __END__
+
+=head1 DESIGN NOTES
+
+Some checks are made once, where data enters, and relied on afterwards.
+Each rule below is proved by F<t/logic.t>.
+
+=over 4
+
+=item * B<Versions.>  Every version is checked when it is read (from the
+F<Makefile.PL>, the existing F<cpanfile> or the configuration file) and
+replaced by C<0> if it is not a version number.  A version number is
+zero exactly when none of its digits is 1 to 9.  So, when the output is
+written, "does it contain a digit from 1 to 9?" is the whole test for
+whether to print a minimum version.
+
+=item * B<Comments.>  An empty comment is stored as "no comment" when it
+is read, and entries from other sources have no comment.  So, when the
+output is written, a comment that exists is never empty and can be
+printed without further checks.
+
+=item * B<Developer tools.>  A tool must not be added if the develop
+phase already lists it under any relationship.  So the set of listed
+modules is built once, and every configured tool outside that set is
+added.
+
+=item * B<Order of checks.>  Each function stops at the first check that
+fails: an unreadable F<Makefile.PL> is refused before anything is read,
+and the configuration file is only parsed once it is known to exist and
+to be a regular file.
+
+=back
 
 =head1 LIMITATIONS
 
@@ -1338,63 +1362,63 @@ ends at RETURN or at an error.  The diagram shows the states that one
 call to C<generate()> passes through.  C<parse_prereqs()> is the single
 step PARSE.
 
-  +-------+
-  | START |  generate(%args) is called
-  +-------+
-      |
-      | makefile is a readable regular file?
-      |---- no ------------------------------------> [DIE] croak "Cannot read '...'"
-      | yes
-      v
-  +------------+  read as UTF-8
-  | READ_UTF8  |---- decode error --> +-----------+  carp "invalid UTF-8"
-  +------------+                      | READ_RAW  |  (read the raw bytes)
-      |     \                         +-----------+
-      |      \---- other I/O error --------------------------> [DIE] error passed on
-      | ok                                 |
-      v                                    |
-  +------------+ <-------------------------+
-  |   PARSE    |  parse_prereqs(content); find MIN_PERL_VERSION
-  +------------+  (pure: no I/O, no warnings)
-      |
-      | existing has an on 'develop' section?
-      |---- no ----------------------------+
-      | yes                                |
-      v                                    |
-  +------------+  copy entries; drop       |
-  |   MERGE    |  bad names; carp and      |
-  +------------+  drop bad versions        |
-      |                                    |
-      +<-----------------------------------+
-      |
-      | with_develop true?
-      |---- no ----------------------------------------------+
-      | yes                                                  |
-      v                                                      |
-  +------------+  no home dir, or config path missing        |
-  | CONFIG     |  or not a regular file -------> DEFAULTS    |
-  +------------+                                   |         |
-      | config is a regular file                   |         |
-      |---- stat/read/YAML error --> [DIE] croak "Failed to parse ..."
-      v                                            |         |
-  +------------+  no develop: key --> carp --> DEFAULTS      |
-  | VALIDATE   |  bad name    --> carp, skip entry           |
-  +------------+  bad version --> carp, version 0            |
-      |                                            |         |
-      v                                            v         |
-  +------------+ <---------------------------------+         |
-  |   INJECT   |  add tools not already in develop           |
-  +------------+                                             |
-      |                                                      |
-      v                                                      |
-  +------------+ <-------------------------------------------+
-  |    EMIT    |  format the text (sorted, fixed order)
-  +------------+
-      |
-      v
-  +--------+
-  | RETURN |  the cpanfile text; no file written;
-  +--------+  caller's $@, $! and $_ unchanged
+	+-------+
+	| START |  generate(%args) is called
+	+-------+
+	    |
+	    | makefile is a readable regular file?
+	    |---- no ------------------------------------> [DIE] croak "Cannot read '...'"
+	    | yes
+	    v
+	+------------+  read as UTF-8
+	| READ_UTF8  |---- decode error --> +-----------+  carp "invalid UTF-8"
+	+------------+                      | READ_RAW  |  (read the raw bytes)
+	    |     \                         +-----------+
+	    |      \---- other I/O error --------------------------> [DIE] error passed on
+	    | ok                                 |
+	    v                                    |
+	+------------+ <-------------------------+
+	|   PARSE    |  parse_prereqs(content); find MIN_PERL_VERSION
+	+------------+  (pure: no I/O, no warnings)
+	    |
+	    | existing has an on 'develop' section?
+	    |---- no ----------------------------+
+	    | yes                                |
+	    v                                    |
+	+------------+  copy entries; drop       |
+	|   MERGE    |  bad names; carp and      |
+	+------------+  drop bad versions        |
+	    |                                    |
+	    +<-----------------------------------+
+	    |
+	    | with_develop true?
+	    |---- no ----------------------------------------------+
+	    | yes                                                  |
+	    v                                                      |
+	+------------+  no home dir, or config path missing        |
+	| CONFIG     |  or not a regular file -------> DEFAULTS    |
+	+------------+                                   |         |
+	    | config is a regular file                   |         |
+	    |---- stat/read/YAML error --> [DIE] croak "Failed to parse ..."
+	    v                                            |         |
+	+------------+  no develop: key --> carp --> DEFAULTS      |
+	| VALIDATE   |  bad name    --> carp, skip entry           |
+	+------------+  bad version --> carp, version 0            |
+	    |                                            |         |
+	    v                                            v         |
+	+------------+ <---------------------------------+         |
+	|   INJECT   |  add tools not already in develop           |
+	+------------+                                             |
+	    |                                                      |
+	    v                                                      |
+	+------------+ <-------------------------------------------+
+	|    EMIT    |  format the text (sorted, fixed order)
+	+------------+
+	    |
+	    v
+	+--------+
+	| RETURN |  the cpanfile text; no file written;
+	+--------+  caller's $@, $! and $_ unchanged
 
 The command-line tool adds one final step after RETURN: it writes
 F<cpanfile> (default), prints the text (C<--dry-run>), or prints a diff
