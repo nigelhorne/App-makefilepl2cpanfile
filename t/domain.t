@@ -10,6 +10,8 @@ use warnings;
 # sides.  Each input has its own subtest.
 
 use Test::Most;
+use lib 't/lib';
+use Test::Permissions qw(can_revoke_read);
 use Test::Mockingbird;
 use Test::Returns;
 use Config;
@@ -35,6 +37,11 @@ Readonly my %CFG => (
 );
 
 Readonly my $MF_ONE => "WriteMakefile(PREREQ_PM => { 'One::Mod' => 0 });\n";
+
+# A file name full of shell metacharacters that is still legal on this OS.
+# Windows forbids < > : " / \ | ? * in names, so there it uses the
+# characters cmd.exe treats specially instead.
+Readonly my $SHELL_CHARS_NAME => $^O eq 'MSWin32' ? 'a;b&c^d%PATH%e.PL' : 'a;b|c>d&e.PL';
 
 # Character-domain samples, written as escapes to keep this file ASCII.
 Readonly my %TEXT => (
@@ -114,7 +121,7 @@ subtest 'domain: generate() makefile' => sub {
 		'absolute path'     => "$mf",
 		'Path::Tiny object' => $mf,
 		'non-ASCII + space' => make_mf($MF_ONE, "\xC3\x84rger \xC3\x9F.PL")->stringify,
-		'shell characters'  => make_mf($MF_ONE, 'a;b|c>d.PL')->stringify,
+		'shell characters'  => make_mf($MF_ONE, $SHELL_CHARS_NAME)->stringify,
 	);
 	for my $form (sort keys %forms) {
 		like gen(makefile => $forms{$form}, with_develop => 0), qr/^requires 'One::Mod';$/m, "valid: $form";
@@ -146,19 +153,24 @@ subtest 'domain: generate() makefile' => sub {
 	}
 	throws_ok { gen(makefile => [$mf]) } qr/\ACannot read 'ARRAY\(0x[0-9a-f]+\)' at /, 'refused: reference';
 	SKIP: {
-		skip 'permission bits are not enforced for root', 1 if $> == 0;
+		skip 'chmod cannot make a file unreadable here (root or Windows)', 1 unless can_revoke_read();
 		my $locked = make_mf($MF_ONE);
 		chmod 0, "$locked";
 		throws_ok { gen(makefile => "$locked") } qr/\ACannot read '\Q$locked\E' at /, 'refused: unreadable';
 	}
 
-	# Boundary: file name length at NAME_MAX and one past it.
-	my $name_max = POSIX::pathconf($dir, POSIX::_PC_NAME_MAX()) || $CFG{name_max_fallback};
-	my $at_max = path($dir)->child('M' x $name_max);
-	$at_max->spew_utf8($MF_ONE);
-	like gen(makefile => "$at_max", with_develop => 0), qr/One::Mod/, "boundary: name of $name_max bytes accepted";
-	my $over = path($dir)->child('M' x ($name_max + 1));
-	throws_ok { gen(makefile => "$over") } qr/\ACannot read /, 'boundary: name of NAME_MAX + 1 bytes refused';
+	# Boundary: file name length at NAME_MAX and one past it.  pathconf is
+	# not implemented everywhere (Windows), and a whole path may hit a
+	# shorter limit first (Windows MAX_PATH), so the edge is only tested
+	# where a name of exactly NAME_MAX bytes can really be created.
+	SKIP: {
+		my $name_max = eval { POSIX::pathconf($dir, POSIX::_PC_NAME_MAX()) } || $CFG{name_max_fallback};
+		my $at_max = path($dir)->child('M' x $name_max);
+		skip "a $name_max-byte file name cannot be created here", 2 unless eval { $at_max->spew_utf8($MF_ONE); 1 };
+		like gen(makefile => "$at_max", with_develop => 0), qr/One::Mod/, "boundary: name of $name_max bytes accepted";
+		my $over = path($dir)->child('M' x ($name_max + 1));
+		throws_ok { gen(makefile => "$over") } qr/\ACannot read /, 'boundary: name of NAME_MAX + 1 bytes refused';
+	}
 
 	# Boundary: file size.
 	is gen(makefile => make_mf(q{})->stringify, with_develop => 0), "$CFG{header}\n", 'boundary: 0-byte file -> header only';

@@ -18,7 +18,9 @@ t/error_paths.t
 t/extended_tests.t
 t/function.t
 t/integration.t
+t/lib/Test/Permissions.pm
 t/locales.t
+t/logic.t
 t/parse_prereqs.t
 t/preserve.t
 t/unit.t

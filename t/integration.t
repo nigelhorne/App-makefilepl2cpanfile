@@ -26,10 +26,9 @@ use Test::Mockingbird;
 use Test::Returns;
 use Capture::Tiny qw(capture);
 use Config;
-use File::Spec;
 use File::Temp qw(tempdir);
 use FindBin qw($Bin);
-use POSIX ();
+use IPC::Open3 qw(open3);
 use Path::Tiny;
 use Readonly;
 use YAML::Tiny;
@@ -164,6 +163,8 @@ sub run_cli {
 	local $ENV{HOME} = "$home";
 	chdir $dir or die "chdir $dir: $!";
 	my ($out, $err, $exit) = capture { system cli_command($without, @args) };
+	# A child's STDOUT/STDERR use CRLF on Windows; the tests check content.
+	s/\r\n/\n/g for $out, $err;
 	chdir $cwd or die "chdir $cwd: $!";
 	diag "CLI @args\nSTDOUT:\n$out\nSTDERR:\n$err" if $ENV{TEST_VERBOSE};
 	return ($out, $err, $exit >> 8);
@@ -481,21 +482,24 @@ subtest 'concurrency: parallel CLI runs do not interfere' => sub {
 		}
 	} 1 .. $CFG{parallel_runs};
 
-	# Launch all before reaping any.
+	# Launch all before reaping any.  open3 is used rather than fork+exec
+	# because it works on Windows too, where fork is emulated with threads
+	# and reopening STDOUT in the child would redirect the parent's as well.
+	# Each child inherits the working directory and HOME in force at the
+	# moment it is spawned.
+	my $cwd = Path::Tiny->cwd;
 	for my $job (@jobs) {
-		my $pid = fork;
-		die "fork: $!" unless defined $pid;
-		if($pid == 0) {
-			$ENV{HOME} = "$job->{home}";
-			chdir $job->{dir} or POSIX::_exit(1);
-			open STDOUT, '>', File::Spec->devnull;
-			exec cli_command([]) or POSIX::_exit(1);
-		}
-		$job->{pid} = $pid;
+		local $ENV{HOME} = "$job->{home}";
+		chdir $job->{dir} or die "chdir $job->{dir}: $!";
+		$job->{pid} = open3(my $stdin, my $output, undef, cli_command([]));
+		close $stdin;
+		$job->{output} = $output;
+		chdir $cwd or die "chdir $cwd: $!";
 	}
 	for my $job (@jobs) {
+		my $text = do { local $/; readline $job->{output} };
 		waitpid $job->{pid}, 0;
-		is $? >> 8, 0, "run $job->{n}: exit status 0";
+		is $? >> 8, 0, "run $job->{n}: exit status 0" or diag $text;
 	}
 
 	for my $job (@jobs) {

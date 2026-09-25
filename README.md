@@ -172,8 +172,11 @@ A phase or relationship with no modules is not present at all.
 ## Encoding
 
 - **The Makefile.PL file** is read as UTF-8.  Comments may contain
-any Unicode text, including accented letters and emoji; they are copied
-to the output unchanged.  If the file is not valid UTF-8 you get a
+any printable Unicode text, including accented letters, emoji and
+combining marks; they are copied to the output unchanged.  Control
+characters (other than TAB) and Unicode direction-override characters
+are removed from comments, so that the generated file cannot be made to
+look different from what it really contains.  If the file is not valid UTF-8 you get a
 warning and processing continues (see ["generate(%args)"](#generate-args)).
 - **The returned cpanfile text** is a Perl character string.  Write
 it with a UTF-8 output layer, for example `path(...)->spew_utf8` or
@@ -188,7 +191,8 @@ non-ASCII comment would come back as separate bytes.
 This also stops look-alike names, such as `Test::More` written with a
 Cyrillic letter.
 - **Version numbers** may use only the ASCII digits 0-9, `.`,
-`_` and a leading `v`, and must contain at least one digit.  Anything
+`_` and a leading `v`, and must contain at least one digit.  The whole
+value is checked: `'1.0-TRIAL'` is not shortened to `'1.0'`.  Anything
 else is treated as "no minimum version".
 - **The YAML configuration file** is read as UTF-8; the same rules
 for names and versions apply.
@@ -325,6 +329,7 @@ not already in the develop phase.
             makefile => {
                     type     => 'string',
                     optional => 1,
+                    min      => 1,
                     default  => 'Makefile.PL',
             },
             existing => {
@@ -347,6 +352,50 @@ not already in the develop phase.
             type    => 'string',
             matches => qr/\A# Generated from Makefile\.PL using makefilepl2cpanfile\n.*(?<!\n)\n\z/s,
     }
+```
+
+##### Domains
+
+Each argument, split into groups of values that behave the same way.
+"Refused" means the call dies with `Cannot read '...'`.
+
+```perl
+    makefile
+      valid:    a readable regular file, given as a relative path, an
+                absolute path, or an object that stringifies to one
+                (e.g. Path::Tiny).  Any characters the file system allows,
+                including spaces, non-ASCII letters and shell characters.
+      default:  undef or not given -> 'Makefile.PL'
+      refused:  '' and '0' (unless such a file exists), a missing file,
+                a directory, a device, a FIFO, a symlink loop, a file
+                without read permission, any reference (filehandle, glob,
+                array, hash, code)
+      limits:   a file name component up to the file system's NAME_MAX
+                (usually 255 bytes) is accepted; one byte more is refused.
+                File size: 0 bytes gives just the header line; there is
+                no upper limit other than memory.
+
+    existing
+      valid:    any string.  Only the first on 'develop' => sub { ... };
+                block is used; its closing "};" must start a line (after
+                optional spaces or tabs).  'develop' or "develop".
+      default:  undef or not given -> ''
+      ignored:  a string without a develop block, a block that is never
+                closed, a reference (its "HASH(0x...)" text has no block)
+      entries:  0 or more; each needs a valid module name; a version, if
+                given, must be a version number (see parse_prereqs)
+
+    with_develop
+      true:     any true Perl value, including 'yes' and '0.0'
+      false:    0, '0', ''
+      default:  undef or not given -> true
+
+    combinations
+      - with_develop false does not stop the existing develop block from
+        being kept; it only stops tools being added.
+      - An empty Makefile.PL with an existing develop block gives the
+        header plus that develop block.
+      - A configuration file with an empty "develop: {}" adds no tools.
 ```
 
 #### Messages
@@ -481,9 +530,75 @@ caller's `$@`, `$!` or `$_`.
     }
 ```
 
+##### Domains
+
+```
+    content
+      valid:    any string (decoded characters; see ENCODING)
+      empty:    '', undef, any reference, text with no dependency lists
+                -> {} (no warning)
+
+    module name (the quoted key of an entry)
+      valid:    ASCII letter or '_' first, then ASCII letters, digits and
+                '_', in parts joined by '::'.  Shortest: one character
+                ('A', '_').  No maximum length.
+      ignored:  '' ; leading digit ('1A') ; '::' at either end ; ':::' ;
+                '-', space, ';' or the old "'" package separator ;
+                any non-ASCII character ; a bareword (unquoted) key
+
+    version (the value of an entry, and MIN_PERL_VERSION)
+      valid:    the whole value is an optional 'v' followed by ASCII
+                digits, '.' and '_', with at least one digit:
+                '1', 1.60, 'v1.2.3', '1.23_01', '5.010001'
+      zero:     '0', 0, '0.0', '0.000', 'v0', 'v0.0.0' -> "no minimum"
+                (nothing is written)
+      invalid:  -> "no minimum": '.', '_', 'v', '1e3', '1.0-TRIAL',
+                '1 0', non-ASCII digits, $VERSION, version->parse(...),
+                and version ranges such as '>= 1.2, < 2.0' (not supported)
+      limits:   no maximum length
+
+    phase / relationship (inside prereqs blocks)
+      valid:    exactly runtime, configure, build, test, develop /
+                requires, recommends, suggests (lower case)
+      ignored:  anything else, including 'Runtime', 'recommend', 'x_foo'
+
+    comment (text after '#' on an entry's line)
+      kept:     any printable Unicode: accents, 'ss'-type letters, emoji,
+                combining marks, right-to-left scripts
+      removed:  control characters other than TAB (for example CR) and
+                the bidirectional control characters U+061C, U+200E,
+                U+200F, U+202A-U+202E, U+2066-U+2069, which could make the
+                generated file display differently from its real content
+      empty:    a comment that is empty after this -> undef
+```
+
 #### Messages
 
 None.  Text that is not recognised is ignored without a warning.
+
+## Design Notes
+
+Some checks are made once, where data enters, and relied on afterwards.
+Each rule below is proved by `t/logic.t`.
+
+- **Versions.**  Every version is checked when it is read (from the
+`Makefile.PL`, the existing `cpanfile` or the configuration file) and
+replaced by `0` if it is not a version number.  A version number is
+zero exactly when none of its digits is 1 to 9.  So, when the output is
+written, "does it contain a digit from 1 to 9?" is the whole test for
+whether to print a minimum version.
+- **Comments.**  An empty comment is stored as "no comment" when it
+is read, and entries from other sources have no comment.  So, when the
+output is written, a comment that exists is never empty and can be
+printed without further checks.
+- **Developer tools.**  A tool must not be added if the develop
+phase already lists it under any relationship.  So the set of listed
+modules is built once, and every configured tool outside that set is
+added.
+- **Order of checks.**  Each function stops at the first check that
+fails: an unreadable `Makefile.PL` is refused before anything is read,
+and the configuration file is only parsed once it is known to exist and
+to be a regular file.
 
 ## Limitations
 
@@ -609,63 +724,63 @@ call to `generate()` passes through.  `parse_prereqs()` is the single
 step PARSE.
 
 ```perl
-+-------+
-| START |  generate(%args) is called
-+-------+
-    |
-    | makefile is a readable regular file?
-    |---- no ------------------------------------> [DIE] croak "Cannot read '...'"
-    | yes
-    v
-+------------+  read as UTF-8
-| READ_UTF8  |---- decode error --> +-----------+  carp "invalid UTF-8"
-+------------+                      | READ_RAW  |  (read the raw bytes)
-    |     \                         +-----------+
-    |      \---- other I/O error --------------------------> [DIE] error passed on
-    | ok                                 |
-    v                                    |
-+------------+ <-------------------------+
-|   PARSE    |  parse_prereqs(content); find MIN_PERL_VERSION
-+------------+  (pure: no I/O, no warnings)
-    |
-    | existing has an on 'develop' section?
-    |---- no ----------------------------+
-    | yes                                |
-    v                                    |
-+------------+  copy entries; drop       |
-|   MERGE    |  bad names; carp and      |
-+------------+  drop bad versions        |
-    |                                    |
-    +<-----------------------------------+
-    |
-    | with_develop true?
-    |---- no ----------------------------------------------+
-    | yes                                                  |
-    v                                                      |
-+------------+  no home dir, or config path missing        |
-| CONFIG     |  or not a regular file -------> DEFAULTS    |
-+------------+                                   |         |
-    | config is a regular file                   |         |
-    |---- stat/read/YAML error --> [DIE] croak "Failed to parse ..."
-    v                                            |         |
-+------------+  no develop: key --> carp --> DEFAULTS      |
-| VALIDATE   |  bad name    --> carp, skip entry           |
-+------------+  bad version --> carp, version 0            |
-    |                                            |         |
-    v                                            v         |
-+------------+ <---------------------------------+         |
-|   INJECT   |  add tools not already in develop           |
-+------------+                                             |
-    |                                                      |
-    v                                                      |
-+------------+ <-------------------------------------------+
-|    EMIT    |  format the text (sorted, fixed order)
-+------------+
-    |
-    v
-+--------+
-| RETURN |  the cpanfile text; no file written;
-+--------+  caller's $@, $! and $_ unchanged
+    +-------+
+    | START |  generate(%args) is called
+    +-------+
+        |
+        | makefile is a readable regular file?
+        |---- no ------------------------------------> [DIE] croak "Cannot read '...'"
+        | yes
+        v
+    +------------+  read as UTF-8
+    | READ_UTF8  |---- decode error --> +-----------+  carp "invalid UTF-8"
+    +------------+                      | READ_RAW  |  (read the raw bytes)
+        |     \                         +-----------+
+        |      \---- other I/O error --------------------------> [DIE] error passed on
+        | ok                                 |
+        v                                    |
+    +------------+ <-------------------------+
+    |   PARSE    |  parse_prereqs(content); find MIN_PERL_VERSION
+    +------------+  (pure: no I/O, no warnings)
+        |
+        | existing has an on 'develop' section?
+        |---- no ----------------------------+
+        | yes                                |
+        v                                    |
+    +------------+  copy entries; drop       |
+    |   MERGE    |  bad names; carp and      |
+    +------------+  drop bad versions        |
+        |                                    |
+        +<-----------------------------------+
+        |
+        | with_develop true?
+        |---- no ----------------------------------------------+
+        | yes                                                  |
+        v                                                      |
+    +------------+  no home dir, or config path missing        |
+    | CONFIG     |  or not a regular file -------> DEFAULTS    |
+    +------------+                                   |         |
+        | config is a regular file                   |         |
+        |---- stat/read/YAML error --> [DIE] croak "Failed to parse ..."
+        v                                            |         |
+    +------------+  no develop: key --> carp --> DEFAULTS      |
+    | VALIDATE   |  bad name    --> carp, skip entry           |
+    +------------+  bad version --> carp, version 0            |
+        |                                            |         |
+        v                                            v         |
+    +------------+ <---------------------------------+         |
+    |   INJECT   |  add tools not already in develop           |
+    +------------+                                             |
+        |                                                      |
+        v                                                      |
+    +------------+ <-------------------------------------------+
+    |    EMIT    |  format the text (sorted, fixed order)
+    +------------+
+        |
+        v
+    +--------+
+    | RETURN |  the cpanfile text; no file written;
+    +--------+  caller's $@, $! and $_ unchanged
 ```
 
 The command-line tool adds one final step after RETURN: it writes

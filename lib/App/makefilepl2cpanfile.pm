@@ -284,63 +284,6 @@ and C<|> are safe: no shell is ever used.
 
 =back
 
-=head1 COMMON PITFALLS
-
-=over 4
-
-=item * B<Code in Makefile.PL is not run.>  Dependencies that are built
-by code are not seen, for example C<PREREQ_PM =E<gt> \%deps> or a list
-returned by a function.  Entries inside a condition, such as
-C<$^O eq 'MSWin32' ? ('Win32' =E<gt> 0) : ()>, are seen but become
-unconditional.  Write such dependencies as plain entries, or add them to
-the F<cpanfile> another way.
-
-=item * B<Only the develop section of an existing cpanfile is kept.>
-Hand edits anywhere else (for example a C<feature> block or an extra
-C<on 'test'> line) are lost when you regenerate.  Put hand-written
-entries in C<on 'develop' =E<gt> sub { ... }>.
-
-=item * B<Conditions inside the kept develop section are removed.>  An
-C<if (...) { requires 'X' }> inside the develop block is carried over as
-a plain C<requires 'X'>.  Comments in the develop block are not kept.
-
-=item * B<Which entry wins.>  When the same module is listed twice in the
-same phase and relationship, the first one wins.  The simple keys
-(C<PREREQ_PM> and friends) are read before C<prereqs> blocks, and entries
-from F<Makefile.PL> win over entries in the existing develop section.
-The same module under two different relationships (for example
-C<requires> and C<recommends>) is kept twice.
-
-=item * B<The configuration file replaces the default tools.>  If you
-list only C<My::Tool>, then C<Perl::Critic> and the others are no longer
-added.  List them too if you want them.
-
-=item * B<undef means "use the default".>  C<makefile =E<gt> undef> reads
-F<Makefile.PL>; C<existing =E<gt> undef> is the same as C<''>; and
-C<with_develop =E<gt> undef> means B<true>.  Use C<with_develop =E<gt> 0>
-to turn developer tools off.
-
-=item * B<parse_prereqs(undef) is silent.>  It returns an empty hash
-reference with no warning, so a failed file read can look like "no
-dependencies".  Check that the read worked before you call it.
-
-=item * B<The output depends on who runs it.>  With C<with_develop> on,
-the tool list comes from the home directory of the current user.  Use
-C<with_develop =E<gt> 0> when every computer must produce the same file.
-
-=item * B<generate() does not write any file.>  It returns the text.
-Save it yourself (see L</SYNOPSIS>) or use the command-line tool.
-
-=item * B<Relative paths> in C<makefile> are relative to the current
-working directory, not to your script.
-
-=item * B<Warnings are not errors.>  Problems such as invalid UTF-8 or a
-bad configuration entry are reported with C<warn> (through L<Carp>) and
-processing continues.  Catch them with C<$SIG{__WARN__}> if you need to
-act on them.
-
-=back
-
 =head1 METHODS
 
 =head2 generate(%args)
@@ -572,7 +515,7 @@ sub generate {
 	# same "Cannot read" guard as a bad path, rather than being accepted by
 	# -f (which also tests open handles) and then misread as a path.
 	my $makefile = "@{[ $args->{makefile} // 'Makefile.PL' ]}";
-	my $existing = $args->{existing}     // '';
+	my $existing = $args->{existing} // '';
 	my $with_dev = $args->{with_develop} // 1;
 
 	croak "Cannot read '$makefile'" unless -f $makefile && -r _;
@@ -697,11 +640,6 @@ C<runtime>.
 
 A hash reference as described in L</DATA STRUCTURE>.  It is empty when
 nothing is found.
-
-=head3 SIDE EFFECTS
-
-None.  It reads no files, prints no warnings, and does not change the
-caller's C<$@>, C<$!> or C<$_>.
 
 =head3 USAGE EXAMPLE
 
@@ -834,6 +772,10 @@ sub parse_prereqs {
 	/gsx) {
 		my $prereqs_block = $1;
 		my @span = ($-[0], $+[0]);
+		# Offset of the block's text in $content: nested matches below are
+		# made on substrings, so their positions must be shifted by this
+		# before they can be looked up in the comment map.
+		my $prereqs_base = $-[1];
 		next if _in_comment($comments, $span[0]);
 		push @prereqs_spans, \@span;
 
@@ -844,7 +786,9 @@ sub parse_prereqs {
 			\}
 		/gsx) {
 			my ($phase_name, $phase_block) = ($1, $2);
+			my ($phase_at, $phase_base) = ($prereqs_base + $-[0], $prereqs_base + $-[2]);
 			next unless $VALID_PHASE{$phase_name};
+			next if _in_comment($comments, $phase_at);
 
 			# Each child of the phase block is a relationship name.
 			while ($phase_block =~ /
@@ -853,7 +797,9 @@ sub parse_prereqs {
 				\}
 			/gsx) {
 				my ($rel, $rel_block) = ($1, $2);
+				my $rel_at = $phase_base + $-[0];
 				next unless $VALID_REL{$rel};
+				next if _in_comment($comments, $rel_at);
 
 				_extract_pairs($rel_block, \%deps, $phase_name, $rel);
 			}
@@ -1199,6 +1145,63 @@ sub _has_version {
 1;
 
 __END__
+
+=head1 COMMON PITFALLS
+
+=over 4
+
+=item * B<Code in Makefile.PL is not run.>  Dependencies that are built
+by code are not seen, for example C<PREREQ_PM =E<gt> \%deps> or a list
+returned by a function.  Entries inside a condition, such as
+C<$^O eq 'MSWin32' ? ('Win32' =E<gt> 0) : ()>, are seen but become
+unconditional.  Write such dependencies as plain entries, or add them to
+the F<cpanfile> another way.
+
+=item * B<Only the develop section of an existing cpanfile is kept.>
+Hand edits anywhere else (for example a C<feature> block or an extra
+C<on 'test'> line) are lost when you regenerate.  Put hand-written
+entries in C<on 'develop' =E<gt> sub { ... }>.
+
+=item * B<Conditions inside the kept develop section are removed.>  An
+C<if (...) { requires 'X' }> inside the develop block is carried over as
+a plain C<requires 'X'>.  Comments in the develop block are not kept.
+
+=item * B<Which entry wins.>  When the same module is listed twice in the
+same phase and relationship, the first one wins.  The simple keys
+(C<PREREQ_PM> and friends) are read before C<prereqs> blocks, and entries
+from F<Makefile.PL> win over entries in the existing develop section.
+The same module under two different relationships (for example
+C<requires> and C<recommends>) is kept twice.
+
+=item * B<The configuration file replaces the default tools.>  If you
+list only C<My::Tool>, then C<Perl::Critic> and the others are no longer
+added.  List them too if you want them.
+
+=item * B<undef means "use the default".>  C<makefile =E<gt> undef> reads
+F<Makefile.PL>; C<existing =E<gt> undef> is the same as C<''>; and
+C<with_develop =E<gt> undef> means B<true>.  Use C<with_develop =E<gt> 0>
+to turn developer tools off.
+
+=item * B<parse_prereqs(undef) is silent.>  It returns an empty hash
+reference with no warning, so a failed file read can look like "no
+dependencies".  Check that the read worked before you call it.
+
+=item * B<The output depends on who runs it.>  With C<with_develop> on,
+the tool list comes from the home directory of the current user.  Use
+C<with_develop =E<gt> 0> when every computer must produce the same file.
+
+=item * B<generate() does not write any file.>  It returns the text.
+Save it yourself (see L</SYNOPSIS>) or use the command-line tool.
+
+=item * B<Relative paths> in C<makefile> are relative to the current
+working directory, not to your script.
+
+=item * B<Warnings are not errors.>  Problems such as invalid UTF-8 or a
+bad configuration entry are reported with C<warn> (through L<Carp>) and
+processing continues.  Catch them with C<$SIG{__WARN__}> if you need to
+act on them.
+
+=back
 
 =head1 DESIGN NOTES
 

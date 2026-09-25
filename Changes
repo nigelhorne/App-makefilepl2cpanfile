@@ -20,8 +20,9 @@ Revision history for App-makefilepl2cpanfile
 	Treat 'v0', 'v0.0.0' and MIN_PERL_VERSION '0.0' as zero, like '0'
 	Require matching quotes around module names: "A'B" was misread as a
 	  different module (B, or A in an existing cpanfile)
-	Ignore dependency hashes commented out on one line, and commented-out
-	  entries in an existing cpanfile's develop block
+	Ignore dependency hashes commented out on one line, at any level
+	  (including phases and relationships inside prereqs blocks), and
+	  commented-out entries in an existing cpanfile's develop block
 	Only accept ASCII module names, as CPAN requires
 	generate() no longer changes the caller's $@ or $!
 	generate() no longer creates empty develop recommends/suggests hashes

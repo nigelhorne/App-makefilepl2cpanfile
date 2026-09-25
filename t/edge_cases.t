@@ -48,6 +48,8 @@ use warnings;
 # it does have (File::HomeDir, Path::Tiny, YAML::Tiny).
 
 use Test::Most;
+use lib 't/lib';
+use Test::Permissions qw(can_revoke_read can_revoke_search can_revoke_write);
 use Test::Mockingbird;
 use File::Temp qw(tempdir);
 use Path::Tiny;
@@ -959,8 +961,8 @@ subtest 'generate: unreadable Makefile.PL (mode 000) must croak' => sub {
 	# Strategy: create a file, remove all permissions, then verify the
 	# -r guard fires.  Root bypasses permissions, so skip under euid 0.
 	SKIP: {
-		skip 'running as root - filesystem permissions are not enforced', 1
-			if $> == 0;
+		skip 'chmod cannot make a file unreadable here (root or Windows)', 1
+			unless can_revoke_read();
 
 		my $g   = empty_home();
 		my $dir = tempdir(CLEANUP => 1);
@@ -1142,7 +1144,7 @@ subtest 'upstream: config path cannot be examined (stat() failure) - croaks' => 
 	# the output without explanation; the error must reach the caller.  A
 	# real EACCES is produced by making ~/.config unsearchable.
 	SKIP: {
-		skip 'permission bits are not enforced for root', 1 if $> == 0;
+		skip 'chmod cannot make a directory unsearchable here (root or Windows)', 1 unless can_revoke_search();
 		my $home = path(tempdir(CLEANUP => 1));
 		my $cfg_dir = $home->child('.config');
 		$cfg_dir->mkpath;
@@ -1735,10 +1737,15 @@ subtest 'filesystem: hostile but real file names are read safely' => sub {
 	my $victim = $dir->child('victim');
 	$victim->spew_utf8($MF_SIMPLE);
 
-	my @names = (
+	# Windows forbids these characters in file names, so names using them
+	# are only tried where the file system accepts them.  The cmd.exe
+	# metacharacters (& ^ %) are legal everywhere and always tried.
+	my $illegal = $^O eq 'MSWin32' ? qr/[<>:"|?*\x00-\x1f]/ : qr/\x00/;
+	my @names = grep { $_ !~ $illegal } (
 		"with space.PL", " leading.PL", "trailing.PL ", "semi;touch $HOSTILE{canary};.PL",
 		"pipe | touch $HOSTILE{canary}", "touch $HOSTILE{canary} |", '>victim', '<victim',
 		"\$(touch $HOSTILE{canary})", "`touch $HOSTILE{canary}`", "new\nline.PL", '-dash.PL', '*glob?.PL',
+		"amp & type nul > $HOSTILE{canary}", "and & echo $HOSTILE{canary}.PL", 'caret^.PL', 'pct %PATH%.PL',
 	);
 	my $cwd = Path::Tiny->cwd;
 	chdir $dir or die "chdir $dir: $!";
@@ -1796,7 +1803,9 @@ subtest 'filesystem: special files are refused without blocking' => sub {
 
 		my $real = make_mf($MF_SIMPLE);
 		my $link = $dir->child('link.PL');
-		symlink "$real", "$link";
+		# Perl may support symlink() on Windows while the account lacks the
+		# privilege to create one.
+		symlink "$real", "$link" or skip "cannot create a symlink here: $!", 1;
 		like App::makefilepl2cpanfile::generate(makefile => "$link", with_develop => 0),
 			qr/^requires 'Carp';$/m, 'symlink to a regular file followed';
 	}
@@ -1888,7 +1897,7 @@ subtest 'filesystem: hostile config file locations' => sub {
 		like $_[1][0], qr/\ANo 'develop' key found in /, 'develop is a list: warned';
 	});
 	SKIP: {
-		skip 'permission bits are not enforced for root', 1 if $> == 0;
+		skip 'chmod cannot make a file unreadable here (root or Windows)', 1 unless can_revoke_read();
 		my $home = path(tempdir(CLEANUP => 1));
 		my $cfg  = $home->child('.config', 'makefilepl2cpanfile.yml');
 		$cfg->parent->mkpath;
@@ -2013,6 +2022,7 @@ subtest 'CLI: write failures are reported and leave the old cpanfile intact' => 
 		local $ENV{HOME} = tempdir(CLEANUP => 1);
 		chdir $dir or die "chdir $dir: $!";
 		my ($out, $err, $exit) = Capture::Tiny::capture(sub { system $^X, "-I$LIB_PATH", @perl_args });
+		s/\r\n/\n/g for $out, $err;		# CRLF on Windows
 		chdir $cwd or die "chdir $cwd: $!";
 		diag "STDOUT: $out\nSTDERR: $err" if $ENV{TEST_VERBOSE};
 		return ($out, $err, $exit >> 8);
@@ -2035,7 +2045,7 @@ END_PERL
 	}
 
 	SKIP: {
-		skip 'permission bits are not enforced for root', 4 if $> == 0;
+		skip 'chmod cannot make a directory read-only here (root or Windows)', 4 unless can_revoke_write();
 		my $dir = path(tempdir(CLEANUP => 1));
 		$dir->child('Makefile.PL')->spew_utf8($MF_SIMPLE);
 		$dir->child($HOSTILE{cpanfile})->spew_utf8($old);

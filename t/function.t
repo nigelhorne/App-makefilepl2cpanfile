@@ -2,6 +2,8 @@ use strict;
 use warnings;
 
 use Test::Most;
+use lib 't/lib';
+use Test::Permissions qw(can_revoke_read);
 use Test::Memory::Cycle;
 use Test::Mockingbird;
 use Test::Returns;
@@ -792,7 +794,7 @@ subtest 'generate - orchestration and error handling' => sub {
 	throws_ok { $generate->(makefile => $dir) }
 		qr/\ACannot read '\Q$dir\E'/, 'croaks when the path is a directory';
 	SKIP: {
-		skip 'root can read unreadable files', 1 if $> == 0;
+		skip 'chmod cannot make a file unreadable here (root or Windows)', 1 unless can_revoke_read();
 		my $locked = path($dir)->child('locked.PL');
 		$locked->spew_utf8("WriteMakefile();\n");
 		chmod 0, "$locked";

@@ -9,6 +9,8 @@ use warnings;
 # that cannot be reached reliably with real files.
 
 use Test::Most;
+use lib 't/lib';
+use Test::Permissions qw(can_revoke_read);
 use Test::Mockingbird;
 use Test::Returns;
 use File::Temp qw(tempdir);
@@ -221,7 +223,7 @@ subtest 'generate() - "Cannot read" croak for every unusable path' => sub {
 	covered('generate.msg.cannot_read.directory');
 
 	SKIP: {
-		skip 'permission bits are not enforced for root', 1 if $> == 0;
+		skip 'chmod cannot make a file unreadable here (root or Windows)', 1 unless can_revoke_read();
 		my $locked = make_mf($MF_SIMPLE);
 		chmod 0, "$locked";
 		throws_ok { App::makefilepl2cpanfile::generate(makefile => "$locked") }
