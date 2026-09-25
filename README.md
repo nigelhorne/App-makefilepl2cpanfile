@@ -199,6 +199,10 @@ This module is provided as-is without any warranty.
 Bugs and feature requests:
 [https://github.com/nigelhorne/App-makefilepl2cpanfile/issues](https://github.com/nigelhorne/App-makefilepl2cpanfile/issues)
 
+## See Also
+
+- [Test Dashboard](https://nigelhorne.github.io/App-makefilepl2cpanfile/coverage/)
+
 ## Author
 
 Nigel Horne <njh@nigelhorne.com>

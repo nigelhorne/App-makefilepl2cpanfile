@@ -234,8 +234,10 @@ sub generate {
 
 		# Only inject tools not already listed under any relationship.
 		for my $mod (keys %{$config}) {
+			# Test each level separately: a bare exists on the leaf would
+			# autovivify empty develop/<rel> hashes for every relationship.
 			my $already_present = any {
-				exists $deps->{develop}{$_}{$mod}
+				exists $deps->{develop}{$_} && exists $deps->{develop}{$_}{$mod}
 			} @REL_ORDER;
 
 			unless ($already_present) {
@@ -469,6 +471,10 @@ sub _parse_min_perl {
 # Effects:  Reads from disk. Croaks on YAML parse failure. Carps when the
 #           config file lacks a 'develop' key.
 sub _load_develop_config {
+	# Path::Tiny and YAML::Tiny use eval internally, which resets $@; keep the
+	# caller's value intact so an enclosing eval/$@ check is not disturbed.
+	local $@;
+
 	my $home = File::HomeDir->my_home;
 
 	# Guard against environments with no home directory (containers, chroots,
@@ -638,6 +644,14 @@ This module is provided as-is without any warranty.
 
 Bugs and feature requests:
 L<https://github.com/nigelhorne/App-makefilepl2cpanfile/issues>
+
+=head1 SEE ALSO
+
+=over 4
+
+=item * L<Test Dashboard|https://nigelhorne.github.io/App-makefilepl2cpanfile/coverage/>
+
+=back
 
 =head1 AUTHOR
 
