@@ -38,6 +38,9 @@ Revision history for App-makefilepl2cpanfile
 	  instead of silently using the defaults
 	--diff never writes the cpanfile; with no existing cpanfile it shows
 	  a diff against an empty file
+	A failed write (disk full, failed rename) no longer leaves a stray
+	  temporary file such as cpanfile164662728368918 in the project
+	  directory; the previous cpanfile is kept and nothing else remains
 
 	[ Security ]
 	Validate versions carried over from an existing cpanfile's develop

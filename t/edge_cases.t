@@ -2116,7 +2116,7 @@ subtest 'CLI: write failures are reported and leave the old cpanfile intact' => 
 use Path::Tiny;
 use POSIX qw(ENOSPC);
 use Test::Mockingbird;
-Test::Mockingbird::mock('Path::Tiny', 'spew_utf8', sub { local $! = ENOSPC; die "Error spew: $!\n" });
+Test::Mockingbird::mock('Path::Tiny', 'tempfile', sub { local $! = ENOSPC; die "Error tempfile: $!\n" });
 do $ARGV[0];
 die $@ if $@;
 END_PERL
@@ -2125,6 +2125,8 @@ END_PERL
 		like $err, qr/\Q$MSG_ENOSPC\E/, 'ENOSPC: error reported';
 		unlike $out, qr/\Q$HOSTILE{written}\E/, 'ENOSPC: no success message';
 		is $dir->child($HOSTILE{cpanfile})->slurp_utf8, $old, 'ENOSPC: previous cpanfile intact';
+		is_deeply [ sort map { $_->basename } $dir->children ], [ 'Makefile.PL', $HOSTILE{cpanfile} ],
+			'ENOSPC: no other files left behind';
 	}
 
 	SKIP: {

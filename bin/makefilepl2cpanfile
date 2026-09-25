@@ -34,7 +34,10 @@ F<cpanfile> using L<App::makefilepl2cpanfile/generate>.  Existing C<develop>
 blocks in a pre-existing F<cpanfile> are preserved and merged.
 
 By default the result is written to F<cpanfile> in the current directory and
-C<cpanfile written successfully.> is printed.
+C<cpanfile written successfully.> is printed.  The file is replaced in one
+step: if anything fails (reading, generating, a full disk, the final
+rename), the program exits with a non-zero status, the previous
+F<cpanfile> is left exactly as it was, and no temporary files remain.
 
 =over 4
 
@@ -148,7 +151,22 @@ if ($dry) {
 }
 
 croak $symlink_refusal if -l $cpanfile_path;
-$cpanfile_path->spew_utf8($out);
+
+# Write atomically and leave no debris.  The text goes to a temporary file
+# in this directory, renamed over cpanfile only once it is complete, so a
+# failed run leaves the previous cpanfile exactly as it was.  Path::Tiny's
+# spew does the same but leaves its temporary file behind when the write or
+# rename fails; this one belongs to a File::Temp object and is removed when
+# $tmp goes out of scope, whatever happened.  rename() replaces the
+# directory entry itself, so it never follows a symlink either.
+{
+	my $tmp = Path::Tiny->tempfile(TEMPLATE => '.cpanfile-XXXXXXXX', DIR => '.');
+	my $fh  = $tmp->filehandle('>', ':raw:encoding(UTF-8)');
+	print {$fh} $out or croak "Cannot write '$tmp': $!";
+	close $fh;			# autodie: reports a failed flush, e.g. disk full
+	chmod 0666 & ~umask, "$tmp";	# the permissions a new file would get
+	$tmp->move("$cpanfile_path");
+}
 print "cpanfile written successfully.\n";
 
 sub _usage {

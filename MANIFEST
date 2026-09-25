@@ -24,5 +24,6 @@ t/logic.t
 t/parse_prereqs.t
 t/path.t
 t/preserve.t
+t/transaction.t
 t/unit.t
 t/verify_prereqs.t
