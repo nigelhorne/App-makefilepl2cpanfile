@@ -70,118 +70,271 @@ the default develop-phase tools:
 
 ### Generate(%Args)
 
-Parses a `Makefile.PL` and returns a complete `cpanfile` string.
+#### Purpose
+
+Parses a `Makefile.PL` **without evaluating it** and returns the text of an
+equivalent `cpanfile`.
+
+#### Arguments
+
+Named arguments, passed either as a flat list or as a single hashref:
+
+- `makefile` (Str, optional, default `'Makefile.PL'`) - path to the
+`Makefile.PL` to read.  Relative paths are resolved against the current
+working directory.
+- `existing` (Str, optional, default `''`) - the text of an existing
+`cpanfile`.  Only its `on 'develop' => sub { ... }` block is used:
+every `requires`, `recommends` and `suggests` entry in it is carried over
+into the output.  Entries whose module name is not a valid Perl package
+name are dropped.
+- `with_develop` (Bool, optional, default true) - when true, the
+develop tools from the user configuration (see ["CONFIGURATION"](#configuration)), or the
+built-in defaults `Devel::Cover`, `Perl::Critic`, `Test::Pod` and
+`Test::Pod::Coverage`, are added to the `develop` phase as `requires`.
+A tool already listed in the develop phase under any relationship, whether
+from the `Makefile.PL` or from `existing`, is never added again or
+overwritten.
+
+#### Returns
+
+A Str containing the complete cpanfile, beginning with the line
+`# Generated from Makefile.PL using makefilepl2cpanfile` and terminated by
+exactly one newline.  When `MIN_PERL_VERSION` is declared a
+`requires 'perl', 'VERSION';` line follows the header.  Runtime
+dependencies are emitted at the top level; all other phases are emitted in
+`on 'phase' => sub { ... };` blocks in the order configure, build,
+test, develop.  Within each phase entries are grouped requires, recommends,
+suggests and sorted alphabetically.  Inline comments from the source are
+reproduced after the entry.
+
+#### Side Effects
+
+Reads `makefile` and, when `with_develop` is true, the configuration file
+`~/.config/makefilepl2cpanfile.yml`.  Never writes to disk.  May emit
+warnings via `carp` (see ["MESSAGES"](#messages)).  The caller's `$@`, `$!` and
+`$_` are left unchanged.
+
+#### Usage Example
+
+```perl
+    use App::makefilepl2cpanfile;
+    use Path::Tiny;
+
+    # Minimal usage - generate from the project's own Makefile.PL
+    my $out = App::makefilepl2cpanfile::generate();
+    path('cpanfile')->spew_utf8($out);
+
+    # Preserve hand-curated develop entries from an existing cpanfile
+    $out = App::makefilepl2cpanfile::generate({
+            makefile     => 'dist/Makefile.PL',
+            existing     => path('cpanfile')->slurp_utf8,
+            with_develop => 0,
+    });
+```
 
 #### Pseudocode
 
 ```
     1. Validate and normalise arguments; croak if makefile is unreadable.
-    2. Slurp makefile content; extract MIN_PERL_VERSION.
-    3. Call parse_prereqs() to build the phase/rel/module/entry structure.
+    2. Slurp makefile content as UTF-8; on a decoding error warn and
+       re-read as raw bytes; re-throw any other I/O error.
+    3. Extract MIN_PERL_VERSION; call parse_prereqs() on the content.
     4. If an existing cpanfile string was supplied, merge its 'develop'
        block (all relationships) without overwriting freshly-parsed entries.
     5. If with_develop: load user config (or built-in defaults) and inject
-       missing 'requires' develop tools — never overwrite explicit entries.
-    6. Delegate to _emit() and return the formatted string.
+       missing 'requires' develop tools - never overwrite explicit entries.
+    6. Format and return the cpanfile string.
 ```
 
 #### Api Specification
 
-```
-    Arguments (named hash or single hashref):
-      makefile     Str   Path to Makefile.PL.  Default: 'Makefile.PL'
-      existing     Str   Existing cpanfile text to merge.  Default: ''
-      with_develop Bool  Inject default dev tools.  Default: 1 (true)
-
-    Returns: Str — complete cpanfile text, terminated with a single newline.
-```
-
-#### Example
+##### Input
 
 ```perl
-    # Minimal usage — generate from the project's own Makefile.PL
-    my $out = App::makefilepl2cpanfile::generate();
-    path('cpanfile')->spew_utf8($out);
+    {
+            makefile     => { type => 'string',  optional => 1, default => 'Makefile.PL' },
+            existing     => { type => 'string',  optional => 1, default => '' },
+            with_develop => { type => 'boolean', optional => 1, default => 1 },
+    }
+```
 
-    # Preserve hand-curated develop entries from an existing cpanfile
-    my $out = App::makefilepl2cpanfile::generate(
-            makefile => 'dist/Makefile.PL',
-            existing => path('cpanfile')->slurp_utf8,
-    );
+##### Output
+
+```perl
+    {
+            type    => 'string',
+            matches => qr/\A# Generated from Makefile\.PL using makefilepl2cpanfile\n.*(?<!\n)\n\z/s,
+    }
+```
+
+#### Formal Specification
+
+```perl
+    Args ≙ [ makefile : Path; existing : Str; with_develop : 𝔹 ]
+
+    generate : Args ⇸ Str
+
+    pre  readable(a.makefile) ∧ is_file(a.makefile)
+         ∧ (a.with_develop ⇒ ¬ exists(cfg) ∨ parses(cfg))
+
+    generate(a) ≙
+      let content ≙ slurp(a.makefile)
+          deps    ≙ parse_prereqs(content)
+          dev     ≙ deps.develop ⊕ (extract_develop(a.existing) ⩤ deps.develop)
+          listed  ≙ ⋃ { dom(dev(r)) | r ∈ dom(dev) }
+          inject  ≙ if a.with_develop
+                    then listed ⩤ { m ↦ ⟨v, ⊥⟩ | (m ↦ v) ∈ load_config() }
+                    else ∅
+          final   ≙ deps ⊕ { develop ↦ dev ⊕ { requires ↦ dev.requires ∪ inject } }
+      in emit(final, min_perl(content))
+
+    post result ∈ Str ∧ last(result) = '\n' ∧ ¬ suffix(result, "\n\n")
+         ∧ disk′ = disk ∧ $@′ = $@ ∧ $!′ = $! ∧ $_′ = $_
 ```
 
 #### Messages
 
 ```perl
-    "Cannot read '$makefile'"
+    "Cannot read '$makefile'"  (croak)
         The supplied path does not exist, is a directory, or is not readable.
         Resolution: verify the path and filesystem permissions.
 
-    "Failed to parse $cfg_file: ..."
+    "Warning: '$makefile' contains invalid UTF-8; reading as raw bytes: $error"  (carp)
+        The file could not be decoded as UTF-8; it is re-read as raw bytes
+        and processing continues.
+        Resolution: re-save Makefile.PL as UTF-8.
+
+    Any other error raised while reading the file (die)
+        Genuine I/O failures are re-thrown unchanged rather than masked.
+
+    "Failed to parse $cfg_file: $error"  (croak)
         The user config file exists but contains invalid YAML.
         Resolution: validate the YAML syntax; or delete the file to use defaults.
 
-    "No 'develop' key found in $cfg_file; using defaults"
+    "No 'develop' key found in $cfg_file; using defaults"  (carp)
         The config file exists but lacks a 'develop' section.
         Resolution: add a develop: block, or delete the file to use defaults.
+
+    "Skipping invalid module name in $cfg_file: '$module'"  (carp)
+        A key under 'develop' is not a valid Perl package name; it is ignored
+        so it cannot inject code into the generated cpanfile.
+
+    "Skipping invalid version for '$module' in $cfg_file: '$version'"  (carp)
+        A version under 'develop' is not a version number; the module is
+        kept with no minimum version.
 ```
 
 ### Parse\_Prereqs($Content)
 
-Extracts all dependency declarations from a `Makefile.PL` string and
-returns them structured by cpanfile phase and relationship type.  Exposed
-as a public function so callers (e.g. `bin/makefilepl2cpanfile --check`)
-can reuse the parsing logic without duplicating regexes.
+#### Purpose
 
-Both the simple `PREREQ_PM => { ... }` form and the structured
-`prereqs => { phase => { rel => { ... } } }` form (including
-those nested under `META_MERGE`) are parsed, as are legacy top-level
-`recommends => { ... }` and `suggests => { ... }` blocks (mapped
-to runtime `recommends` / `suggests`).  Inline comments attached to
-module entries are captured and preserved for round-trip fidelity.
+Extracts all dependency declarations from the text of a `Makefile.PL` and
+returns them structured by cpanfile phase and relationship.  Exposed as a
+public function so callers (e.g. `bin/makefilepl2cpanfile --check`) can
+reuse the parsing logic without duplicating it.  The text is never
+evaluated.
+
+#### Arguments
+
+- `$content` (Str) - the raw text of a `Makefile.PL`.  An undefined
+value or a reference is treated as containing no dependencies.
+
+The following forms are recognised:
+
+- `PREREQ_PM`, `BUILD_REQUIRES`, `TEST_REQUIRES` and
+`CONFIGURE_REQUIRES` hashes, mapped to the `requires` relationship of the
+`runtime`, `build`, `test` and `configure` phases respectively.
+- Structured `prereqs => { phase => { rel => { ... } } }`
+blocks (CPAN Meta Spec 2), wherever they appear, including under
+`META_MERGE`.  Only the phases and relationships listed in
+["DATA STRUCTURE"](#data-structure) are used; any others are ignored.
+- Legacy (META spec 1.x style) top-level `recommends => { ... }`
+and `suggests => { ... }` hashes, typically under `META_MERGE`,
+mapped to the `runtime` phase.  Such hashes inside a `prereqs` block
+belong to that block's phase only.
+
+Only entries whose key is a quoted, valid Perl package name are used;
+commented-out lines are skipped.  When a module appears more than once in
+the same phase and relationship, the first occurrence wins, and the simple
+keys are read before `prereqs` blocks.
+
+#### Returns
+
+A HashRef as described in ["DATA STRUCTURE"](#data-structure).  Phases and relationships
+with no entries are absent.  `version` is `0` when no minimum is
+declared; `comment` holds the text of an inline `#` comment on the entry,
+or `undef` when there is none.
+
+#### Side Effects
+
+None.  No I/O, no warnings, and the caller's `$@`, `$!` and `$_` are
+left unchanged.
+
+#### Usage Example
+
+```perl
+    use App::makefilepl2cpanfile;
+    use Path::Tiny;
+
+    my $deps = App::makefilepl2cpanfile::parse_prereqs(
+            path('Makefile.PL')->slurp_utf8
+    );
+
+    for my $phase (sort keys %{$deps}) {
+            for my $rel (sort keys %{ $deps->{$phase} }) {
+                    for my $mod (sort keys %{ $deps->{$phase}{$rel} }) {
+                            my $e = $deps->{$phase}{$rel}{$mod};
+                            printf "%s %s %s => %s\n", $phase, $rel, $mod, $e->{version};
+                    }
+            }
+    }
+```
 
 #### Api Specification
 
-```perl
-    Arguments:
-      $content   Str   Raw text of a Makefile.PL
+##### Input
 
-    Returns: HashRef (see L</DATA STRUCTURE>)
-      {
-        phase => {
-          rel => {
-            'Module::Name' => { version => version_str, comment => str_or_undef },
-          },
-        },
-      }
-      Absent phases/relationships are not present in the hashref.
-      version is 0 when no minimum is declared.
-      comment is undef when no inline comment was present.
+```perl
+    {
+            content => { type => 'string', optional => 1 },
+    }
 ```
 
-#### Example
+##### Output
 
 ```perl
-    my $deps = App::makefilepl2cpanfile::parse_prereqs(
-        path('Makefile.PL')->slurp_utf8
-    );
-
-    # Iterate over all phases and relationships
-    for my $phase (sort keys %{$deps}) {
-        for my $rel (sort keys %{ $deps->{$phase} }) {
-            for my $mod (sort keys %{ $deps->{$phase}{$rel} }) {
-                my $e = $deps->{$phase}{$rel}{$mod};
-                printf "%s %s %s => %s\n", $phase, $rel, $mod, $e->{version};
-            }
-        }
+    {
+            type => 'hashref',
     }
+```
+
+#### Formal Specification
+
+```
+    Phase   ::= runtime | configure | build | test | develop
+    Rel     ::= requires | recommends | suggests
+    Entry   ≙ [ version : VersionStr; comment : Str ∪ {⊥} ]
+    DepMap  ≙ Phase ⇸ (Rel ⇸ (ModName ⇸ Entry))
+
+    parse_prereqs : Str ∪ {⊥} → DepMap
+
+    parse_prereqs(s) ≙
+      if s = ⊥ ∨ is_ref(s) then ∅
+      else simple(s) ⊕ₗ structured(s) ⊕ₗ legacy(s)
+    where
+      simple(s)     ≙ ⋃ { {PHASE_MAP(k) ↦ {requires ↦ pairs(b)}} | k ∈ dom(PHASE_MAP), b ∈ blocks(k, s) }
+      structured(s) ≙ ⋃ { {p ↦ {r ↦ pairs(b)}} | P ∈ prereqs(s), (p ↦ (r ↦ b)) ∈ P, p ∈ Phase, r ∈ Rel }
+      legacy(s)     ≙ ⋃ { {runtime ↦ {r ↦ pairs(b)}} | r ∈ {recommends, suggests},
+                          b ∈ blocks(r, s), ¬ (∃ P ∈ prereqs(s) • b ⊆ P) }
+      -- ⊕ₗ is left-biased override: the first occurrence of a module wins
+
+    post ∀ p ↦ R ∈ result • R ≠ ∅ ∧ ∀ r ↦ M ∈ R • M ≠ ∅
+         ∧ ∀ m ∈ dom(M) • m ∈ ModName
 ```
 
 #### Messages
 
-```
-    No errors or warnings — unrecognised content is silently ignored.
-```
+None.  Unrecognised content is silently ignored.
 
 ## Limitations
 
@@ -206,46 +359,6 @@ Bugs and feature requests:
 ## Author
 
 Nigel Horne <njh@nigelhorne.com>
-
-## Formal Specification
-
-### Generate
-
-```
-    -- generate maps named arguments to a cpanfile string
-    generate : Args → Str
-    where
-      Args ≙ [makefile : Path; existing : Str; with_develop : 𝔹]
-
-    generate(a) ≙
-      let content ≙ slurp(a.makefile)
-          deps    ≙ parse_prereqs(content)
-          merged  ≙ deps ⊕ {develop ↦
-                       deps.develop ∪ extract_develop(a.existing)}
-          final   ≙ if a.with_develop
-                    then merged ⊕ {develop ↦
-                           {requires ↦ load_config() ▷ merged.develop.requires}}
-                    else merged
-      in _emit(final, min_perl(content))
-    -- (▷) right-biases toward the right operand: existing entries win.
-```
-
-### Parse\_Prereqs
-
-```
-    parse_prereqs : Str → DepMap
-    where
-      DepMap    ≙ Phase ↦ (Rel ↦ (ModName ↦ Entry))
-      Entry     ≙ [version : VersionStr; comment : Str ∪ {⊥}]
-      Phase     ∈ {runtime, configure, build, test, develop}
-      Rel       ∈ {requires, recommends, suggests}
-
-    parse_prereqs(s) ≙
-      simple_deps(s) ⊕ structured_deps(s)
-    where
-      simple_deps(s)     ≙ ⋃ { extract_simple(k, s) | k ∈ dom(PHASE_MAP) }
-      structured_deps(s) ≙ ⋃ { extract_prereqs_block(b) | b ∈ prereqs_blocks(s) }
-```
 
 ## Licence and Copyright
 
