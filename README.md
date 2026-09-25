@@ -200,49 +200,6 @@ for names and versions apply.
 Names with spaces, non-ASCII letters or shell characters such as `;`
 and `|` are safe: no shell is ever used.
 
-## Common Pitfalls
-
-- **Code in Makefile.PL is not run.**  Dependencies that are built
-by code are not seen, for example `PREREQ_PM => \%deps` or a list
-returned by a function.  Entries inside a condition, such as
-`$^O eq 'MSWin32' ? ('Win32' => 0) : ()`, are seen but become
-unconditional.  Write such dependencies as plain entries, or add them to
-the `cpanfile` another way.
-- **Only the develop section of an existing cpanfile is kept.**
-Hand edits anywhere else (for example a `feature` block or an extra
-`on 'test'` line) are lost when you regenerate.  Put hand-written
-entries in `on 'develop' => sub { ... }`.
-- **Conditions inside the kept develop section are removed.**  An
-`if (...) { requires 'X' }` inside the develop block is carried over as
-a plain `requires 'X'`.  Comments in the develop block are not kept.
-- **Which entry wins.**  When the same module is listed twice in the
-same phase and relationship, the first one wins.  The simple keys
-(`PREREQ_PM` and friends) are read before `prereqs` blocks, and entries
-from `Makefile.PL` win over entries in the existing develop section.
-The same module under two different relationships (for example
-`requires` and `recommends`) is kept twice.
-- **The configuration file replaces the default tools.**  If you
-list only `My::Tool`, then `Perl::Critic` and the others are no longer
-added.  List them too if you want them.
-- **undef means "use the default".**  `makefile => undef` reads
-`Makefile.PL`; `existing => undef` is the same as `''`; and
-`with_develop => undef` means **true**.  Use `with_develop => 0`
-to turn developer tools off.
-- **parse\_prereqs(undef) is silent.**  It returns an empty hash
-reference with no warning, so a failed file read can look like "no
-dependencies".  Check that the read worked before you call it.
-- **The output depends on who runs it.**  With `with_develop` on,
-the tool list comes from the home directory of the current user.  Use
-`with_develop => 0` when every computer must produce the same file.
-- **generate() does not write any file.**  It returns the text.
-Save it yourself (see ["SYNOPSIS"](#synopsis)) or use the command-line tool.
-- **Relative paths** in `makefile` are relative to the current
-working directory, not to your script.
-- **Warnings are not errors.**  Problems such as invalid UTF-8 or a
-bad configuration entry are reported with `warn` (through [Carp](https://metacpan.org/pod/Carp)) and
-processing continues.  Catch them with `$SIG{__WARN__}` if you need to
-act on them.
-
 ## Methods
 
 ### Generate(%Args)
@@ -486,11 +443,6 @@ that block's phase; only the ones directly inside `META_MERGE` go to
 A hash reference as described in ["DATA STRUCTURE"](#data-structure).  It is empty when
 nothing is found.
 
-#### Side Effects
-
-None.  It reads no files, prints no warnings, and does not change the
-caller's `$@`, `$!` or `$_`.
-
 #### Usage Example
 
 ```perl
@@ -576,6 +528,49 @@ caller's `$@`, `$!` or `$_`.
 
 None.  Text that is not recognised is ignored without a warning.
 
+## Common Pitfalls
+
+- **Code in Makefile.PL is not run.**  Dependencies that are built
+by code are not seen, for example `PREREQ_PM => \%deps` or a list
+returned by a function.  Entries inside a condition, such as
+`$^O eq 'MSWin32' ? ('Win32' => 0) : ()`, are seen but become
+unconditional.  Write such dependencies as plain entries, or add them to
+the `cpanfile` another way.
+- **Only the develop section of an existing cpanfile is kept.**
+Hand edits anywhere else (for example a `feature` block or an extra
+`on 'test'` line) are lost when you regenerate.  Put hand-written
+entries in `on 'develop' => sub { ... }`.
+- **Conditions inside the kept develop section are removed.**  An
+`if (...) { requires 'X' }` inside the develop block is carried over as
+a plain `requires 'X'`.  Comments in the develop block are not kept.
+- **Which entry wins.**  When the same module is listed twice in the
+same phase and relationship, the first one wins.  The simple keys
+(`PREREQ_PM` and friends) are read before `prereqs` blocks, and entries
+from `Makefile.PL` win over entries in the existing develop section.
+The same module under two different relationships (for example
+`requires` and `recommends`) is kept twice.
+- **The configuration file replaces the default tools.**  If you
+list only `My::Tool`, then `Perl::Critic` and the others are no longer
+added.  List them too if you want them.
+- **undef means "use the default".**  `makefile => undef` reads
+`Makefile.PL`; `existing => undef` is the same as `''`; and
+`with_develop => undef` means **true**.  Use `with_develop => 0`
+to turn developer tools off.
+- **parse\_prereqs(undef) is silent.**  It returns an empty hash
+reference with no warning, so a failed file read can look like "no
+dependencies".  Check that the read worked before you call it.
+- **The output depends on who runs it.**  With `with_develop` on,
+the tool list comes from the home directory of the current user.  Use
+`with_develop => 0` when every computer must produce the same file.
+- **generate() does not write any file.**  It returns the text.
+Save it yourself (see ["SYNOPSIS"](#synopsis)) or use the command-line tool.
+- **Relative paths** in `makefile` are relative to the current
+working directory, not to your script.
+- **Warnings are not errors.**  Problems such as invalid UTF-8 or a
+bad configuration entry are reported with `warn` (through [Carp](https://metacpan.org/pod/Carp)) and
+processing continues.  Catch them with `$SIG{__WARN__}` if you need to
+act on them.
+
 ## Design Notes
 
 Some checks are made once, where data enters, and relied on afterwards.
@@ -595,6 +590,12 @@ printed without further checks.
 phase already lists it under any relationship.  So the set of listed
 modules is built once, and every configured tool outside that set is
 added.
+- **Speed.**  Parsing takes time proportional to the size of the
+`Makefile.PL`, however its blocks are arranged: every position test
+(is this block inside a comment, or inside a `prereqs` block?) is a
+binary search over sorted, non-overlapping ranges.  Lines without a
+`#` skip the comment checks, the four simple keys are found in one
+pass, and the patterns used on every line are compiled once.
 - **Order of checks.**  Each function stops at the first check that
 fails: an unreadable `Makefile.PL` is refused before anything is read,
 and the configuration file is only parsed once it is known to exist and

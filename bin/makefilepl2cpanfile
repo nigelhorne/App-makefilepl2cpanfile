@@ -94,12 +94,20 @@ if ($check) {
 	my $content  = path('Makefile.PL')->slurp_utf8;
 	my $expected = App::makefilepl2cpanfile::parse_prereqs($content);
 
+	# Collect the module named on every dependency line in one pass, then
+	# look each expected module up.  Searching the output once per module
+	# with /\bModule\b/ was O(modules x output), and wrong: '\b' treats
+	# '::' as a boundary, so 'Moo' was "found" inside 'Moo::Role'.
+	my %present = map { $_ => 1 } $out =~ /
+		^ [ \t]*
+		(?: requires | recommends | suggests ) [ \t]+
+		'([^'\n]++)'      # the module name
+	/mgx;
+
 	my @missing;
 	for my $phase (keys %{$expected}) {
 		for my $rel (keys %{ $expected->{$phase} }) {
-			for my $mod (sort keys %{ $expected->{$phase}{$rel} }) {
-				push @missing, $mod unless $out =~ /\b\Q$mod\E\b/;
-			}
+			push @missing, grep { !$present{$_} } sort keys %{ $expected->{$phase}{$rel} };
 		}
 	}
 

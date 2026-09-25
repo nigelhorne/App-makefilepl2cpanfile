@@ -1930,6 +1930,28 @@ subtest 'upstream: File::HomeDir returns failure values' => sub {
 	}
 };
 
+subtest 'upstream: I/O error whose path contains decoder keywords is not mistaken for bad UTF-8' => sub {
+	# Path::Tiny's I/O errors are objects whose text includes the path.
+	# Matching /decode|ill-formed|utf/ against that text treated an I/O
+	# failure in a directory named e.g. "utf8-tools" as an encoding error
+	# and hid it behind a raw re-read.  Objects must always be rethrown.
+	my $g  = empty_home();
+	my $mf = make_mf($MF_SIMPLE);
+	my $raw_reads = 0;
+	my $m = mock_scoped(
+		'Path::Tiny::slurp_utf8' => sub {
+			Path::Tiny::Error->throw('open', '/src/utf8-tools/decode/ill-formed/Makefile.PL', $MSG_EIO);
+		},
+		'Path::Tiny::slurp_raw' => sub { $raw_reads++; q{} },
+	);
+	my ($out, @w) = capture_warns(sub {
+		eval { App::makefilepl2cpanfile::generate(makefile => "$mf", with_develop => 0) }
+	});
+	isa_ok $@, 'Path::Tiny::Error', 'the I/O error reaches the caller';
+	is $raw_reads, 0, 'no raw re-read was attempted';
+	is scalar @w, 0, 'no invalid-UTF-8 warning';
+};
+
 subtest 'upstream: Path::Tiny read returns failure values' => sub {
 	my $g  = empty_home();
 	my $mf = make_mf($MF_SIMPLE);
@@ -2093,6 +2115,26 @@ subtest 'performance: pathological inputs complete in linear-ish time' => sub {
 	my $mixed = within_time_limit(sub { App::makefilepl2cpanfile::parse_prereqs($interleaved) },
 		"$n legacy blocks among $n prereqs blocks");
 	is scalar keys %{ $mixed->{runtime}{recommends} || {} }, $n, 'every legacy block found';
+
+	# Regex ReDoS regressions: each shape below was quadratic in its length
+	# (tens of seconds at these sizes) before the regex was rewritten.
+	{
+		my $g   = empty_home();
+		my $mfr = make_mf($MF_SIMPLE);
+		within_time_limit(sub {
+			App::makefilepl2cpanfile::generate(makefile => "$mfr", with_develop => 0,
+				existing => "on 'develop' => sub {\n" x $HOSTILE{bomb_depth})
+		}, 'many unclosed develop openers in the existing cpanfile');
+	}
+	my $spaces = ' ' x ($HOSTILE{bomb_depth} * 2);
+	my $blank = within_time_limit(sub { App::makefilepl2cpanfile::parse_prereqs("PREREQ_PM => {\n'A' => 0, #$spaces\n},") },
+		"'#' followed only by spaces");
+	is $blank->{runtime}{requires}{A}{comment}, undef, 'blank comment is still undef';
+	# The trim was quadratic with a smaller constant, so it needs a longer run.
+	my $run = ' ' x ($HOSTILE{bomb_depth} * 8);
+	my $inner = within_time_limit(sub { App::makefilepl2cpanfile::parse_prereqs("PREREQ_PM => {\n'A' => 0, # a${run}b \n},") },
+		'long whitespace run inside a comment');
+	is $inner->{runtime}{requires}{A}{comment}, "a${run}b", 'inner whitespace kept, outer trimmed';
 
 	within_time_limit(sub { App::makefilepl2cpanfile::parse_prereqs('recommends => {' x $HOSTILE{bomb_depth}) },
 		'unclosed legacy blocks');

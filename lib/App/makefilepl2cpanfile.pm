@@ -68,31 +68,92 @@ Readonly::Scalar my $HEADER => '# Generated from Makefile.PL using makefilepl2cp
 # A CPAN module name: ASCII only (as PAUSE requires), so look-alike
 # characters from other scripts cannot smuggle in a different module.
 # Possessive quantifiers: no backtracking on hostile input.
-Readonly::Scalar my $MODULE_NAME_RE => qr/\A[A-Za-z_]\w*+(?:::\w++)*+\z/a;
+Readonly::Scalar my $MODULE_NAME_RE => qr/
+	\A
+	[A-Za-z_] \w*+    # first part: letter or '_', then word characters
+	(?: :: \w++ )*+    # further parts, each after '::'
+	\z
+/xa;
 
 # The whole value after '=>': a single- or double-quoted string, or a bare
 # token.  The complete token is captured so that it is validated as a
 # unit - capturing only a numeric prefix would turn '1e3' into '1'.
-Readonly::Scalar my $VALUE_TOKEN_RE => qr/(?:'([^'\n]*+)'|"([^"\n]*+)"|([^\s,}#'"]++))/;
+Readonly::Scalar my $VALUE_TOKEN_RE => qr/
+	(?:
+		' ([^'\n]*+) '    # $1: single-quoted
+	|  " ([^"\n]*+) "    # $2: double-quoted
+	|  ([^\s,}\#'"]++)    # $3: bare token, up to a separator
+	)
+/x;
 
 # One dependency entry: a quoted module name (quotes must match), '=>',
 # then an optional value token.  Compiled once here: interpolating
 # $VALUE_TOKEN_RE inside the per-line loop made Perl re-check the pattern
 # on every line.
-Readonly::Scalar my $PAIR_RE => qr/(?:'([^'\n]++)'|"([^"\n]++)")\s*=>\s*$VALUE_TOKEN_RE?/;
+Readonly::Scalar my $PAIR_RE => qr/
+	(?:
+		' ([^'\n]++) '    # $1: single-quoted name
+	|  " ([^"\n]++) "    # $2: double-quoted name (quotes must match)
+	)
+	\s* => \s*
+	$VALUE_TOKEN_RE?    # $3-$5: the value, if any
+/x;
 
 # A version number: optional 'v', ASCII digits, '.' and '_', at least one
 # digit.  The lookahead finds a digit lazily and the main match is
 # possessive, so the check is linear even on long hostile strings.
-Readonly::Scalar my $VERSION_RE => qr/\Av?+(?=[0-9._]*?[0-9])[0-9._]++\z/;
+Readonly::Scalar my $VERSION_RE => qr/
+	\A
+	v?+      # optional leading 'v'
+	(?= [0-9._]*? [0-9] )  # at least one digit (found lazily: linear)
+	[0-9._]++    # nothing but digits, '.' and '_'
+	\z
+/x;
 
 # Everything on a line up to and including its first '#' that is not
 # inside a quoted string.  A quote with no partner is taken as a plain
 # character, exactly as a left-to-right scan for quoted strings would.
-Readonly::Scalar my $TO_COMMENT_RE => qr/\A(?:[^'"#]++|'[^']*+'|"[^"]*+"|['"])*+#/;
+Readonly::Scalar my $TO_COMMENT_RE => qr/
+	\A
+	(?:
+		[^'"\#]++    # ordinary text
+	|  ' [^']*+ '    # a single-quoted string (may contain '#')
+	|  " [^"]*+ "    # a double-quoted string (may contain '#')
+	|  ['"]      # a quote with no partner: an ordinary character
+	)*+
+	\#      # the first '#' outside quotes
+/x;
 
 # The four simple keys, for a single pass over the content.
-Readonly::Scalar my $SIMPLE_KEY_RE => qr/(?:BUILD_REQUIRES|CONFIGURE_REQUIRES|PREREQ_PM|TEST_REQUIRES)/;
+Readonly::Scalar my $SIMPLE_KEY_RE => qr/
+	(?: BUILD_REQUIRES | CONFIGURE_REQUIRES | PREREQ_PM | TEST_REQUIRES )
+/x;
+
+# The text of a comment without its outer whitespace: runs of whitespace
+# each followed by non-whitespace, taken possessively, so trailing
+# whitespace is left out without being rescanned.  (The usual
+# s{\s+\z}{} and (.*\S) forms retry from every position inside a long
+# whitespace run and are quadratic in its length.)
+Readonly::Scalar my $TRIMMED_RE => qr/
+	\s*+        # leading whitespace, skipped
+	( (?: \s*+ \S++ )++ )    # $1: from the first to the last non-space
+/x;
+
+# The opening of a develop block in an existing cpanfile.
+Readonly::Scalar my $DEVELOP_OPEN_RE => qr/
+	on \s+ ["']develop["'] \s* => \s* sub \s* \{
+/x;
+
+# One entry of a develop block: relationship keyword, quoted module name,
+# optional quoted version.  Quotes must match on both.
+Readonly::Scalar my $DEVELOP_ENTRY_RE => qr/
+	\b (requires|recommends|suggests) \s+  # $1: relationship
+	(?: ' ([^'\n]++) ' | " ([^"\n]++) " )  # $2 or $3: module name
+	(?:
+		\s* , \s*
+		(?: ' ([^'\n]*+) ' | " ([^"\n]*+) " )  # $4 or $5: version
+	)?
+/x;
 
 # Characters stripped from comments before they are written out: C0/C1
 # controls other than TAB (a CR can visually overwrite a line) and the
@@ -543,9 +604,14 @@ sub generate {
 		local $@;
 		eval { $content = path($makefile)->slurp_utf8 };
 		if ($@) {
-			# Only degrade gracefully for encoding errors; re-throw true I/O failures
-			# so callers can distinguish a corrupt file from an unreadable one.
-			die $@ unless $@ =~ /decode|ill-formed|utf/i;
+			# Only degrade gracefully for encoding errors; re-throw true I/O
+			# failures so callers can distinguish a corrupt file from an
+			# unreadable one.  Path::Tiny reports I/O failures as
+			# Path::Tiny::Error objects, whose text includes the file's path:
+			# matching keywords against that would misread an I/O error in,
+			# say, ~/src/utf8-tools/ as a decoding problem.  So objects are
+			# always rethrown, and only plain decoder messages are matched.
+			die $@ if ref $@ || $@ !~ /decode|ill-formed|utf/i;
 			carp "Warning: '$makefile' contains invalid UTF-8; reading as raw bytes: $@";
 			$content = path($makefile)->slurp_raw;
 		}
@@ -555,28 +621,26 @@ sub generate {
 
 	# Merge the develop block from a pre-existing cpanfile so that
 	# hand-curated entries (all relationship types) survive regeneration.
-	# The closing '}; ' is anchored to the start of a line (/m) so that
-	# an inline comment containing '}; ' does not terminate the match early,
-	# silently dropping any module entries that follow the comment.
-	if ($existing =~ /on\s+["']develop["']\s*=>\s*sub\s*\{(.*?)^[ \t]*};/ms) {
-		my $dev_block = $1;
+	#
+	# Two linear steps instead of one /(.*?)^};/ms match: that lazy match
+	# re-scanned to the end of the string from every unclosed opener, which
+	# is quadratic.  Premise: any closing line after a later opener is also
+	# after the first.  Conclusion: only the first opener needs trying.
+	# The closing '};' must start a line, so a '};' inside an inline
+	# comment does not end the block early.
+	if ($existing =~ /$DEVELOP_OPEN_RE/g) {
+		my $open_end = pos $existing;
+		if ($existing =~ /^[ \t]*\};/mg) {
+			my $dev_block = substr $existing, $open_end, $-[0] - $open_end;
 
-		# A commented-out line is not an entry.  '#' cannot occur in a valid
-		# module name or version, so stripping to end of line is safe.
-		$dev_block =~ s/#[^\n]*//g;
+			# A commented-out line is not an entry.  '#' cannot occur in a
+			# valid module name or version, so stripping to end of line is safe.
+			$dev_block =~ s/\#[^\n]*+//g;
 
-		for my $rel (@REL_ORDER) {
-			# \Q$rel\E: quote metacharacters defensively (rel is a constant word,
-			# but interpolation without quoting is a static-analysis red flag).
-			# [^'"\n]++ possessive: never cross a line boundary when capturing a
-			# module name or version, and commit immediately - no backtracking into
-			# individual chars needed once the quote is closed.
-			# Quotes must match, or "A'B" would be read as a different module.
-			while ($dev_block =~ /\b\Q$rel\E\s+(?:'([^'\n]++)'|"([^"\n]++)")(?:\s*,\s*(?:'([^'\n]*+)'|"([^"\n]*+)"))?/g) {
-				# Save immediately: the inner validation regex below has no capturing
-				# groups, so running it directly against $1 would reset $1/$2 to
-				# undef - the classic "inner match clobbers outer capture vars" bug.
-				my ($mod, $ver) = ($1 // $2, $3 // $4);
+			while ($dev_block =~ /$DEVELOP_ENTRY_RE/g) {
+				# Save immediately: the validation regexes below would reset
+				# the capture variables.
+				my ($rel, $mod, $ver) = ($1, $2 // $3, $4 // $5);
 				next unless $mod =~ $MODULE_NAME_RE;
 				# SECURITY: the version is written back inside a single-quoted
 				# literal; a value such as '\' would escape the closing quote and
@@ -880,13 +944,16 @@ sub _extract_pairs {
 		my $comment;
 		# Most lines have no '#': index() is far cheaper than the regexes.
 		if (index($line, '#') >= 0) {
-			($comment) = ($line =~ /#\s*(.*\S)/);
+			# Text after the first '#', then again after removing unsafe
+			# characters (which can expose new outer whitespace).  Both use
+			# $TRIMMED_RE, which is linear; see its definition.
+			my $after = substr $line, index($line, '#') + 1;
+			($comment) = $after =~ /\A$TRIMMED_RE/;
 			if (defined $comment) {
 				$comment =~ s/$UNSAFE_COMMENT_CHARS_RE//g;
-				$comment =~ s/\A\s+|\s+\z//g;
-				$comment = undef if $comment eq q{};
+				($comment) = $comment =~ /\A$TRIMMED_RE/;
 			}
-			$line =~ s/#.*$//;
+			$line = substr $line, 0, index($line, '#');
 		}
 
 		# A line may hold several entries ('A' => 0, 'B' => 0); take them all.
@@ -1030,7 +1097,7 @@ sub _load_develop_config {
 	my $yaml = eval { YAML::Tiny->read("$cfg_path") };
 	unless ($yaml) {
 		my $err = $@ || YAML::Tiny->errstr() // q{};
-		$err =~ s/ at \S+ line \d+\.?\n?\z//;
+		$err =~ s/ at \S++ line \d++\.?\n?\z//;
 		croak "Failed to parse $cfg_path: $err";
 	}
 
