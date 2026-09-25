@@ -1,6 +1,7 @@
 use strict;
 use warnings;
 use Test::Most;
+use File::Temp ();
 use App::makefilepl2cpanfile;
 
 # -----------------------------------------------------------------------
@@ -130,5 +131,70 @@ ok exists $dep4->{runtime}{requires}{'Moo'},         'PREREQ_PM still parsed alo
 ok exists $dep4->{runtime}{recommends}{'Moo::Role'}, 'META_MERGE prereqs recommends extracted';
 is $dep4->{runtime}{recommends}{'Moo::Role'}{version}, '2.000',
     'META_MERGE recommends version correct';
+
+# -----------------------------------------------------------------------
+# Legacy META_MERGE => { recommends/suggests => { ... } } form (META spec 1.x)
+# -----------------------------------------------------------------------
+
+my $legacy = <<'END_MF';
+WriteMakefile(
+	PREREQ_PM => { 'Moo' => 0 },
+	META_MERGE => {
+		'meta-spec' => { version => 2 },
+		recommends => {
+			# Optional backends
+			'JSON::MaybeXS' => 0,		# JSON backend
+			'XML::Simple' => '2.25',
+		},
+		'suggests' => {
+			'YAML::XS' => '0.88',	# YAML backend
+		},
+		prereqs => {
+			test => {
+				recommends => {
+					'Test::Deep' => 0,
+				},
+				suggests => {
+					'Test::Differences' => 0,
+				},
+			},
+		},
+	},
+);
+END_MF
+
+my $dep5 = App::makefilepl2cpanfile::parse_prereqs($legacy);
+ok exists $dep5->{runtime}{recommends}{'JSON::MaybeXS'},
+	'legacy top-level recommends extracted as runtime/recommends';
+is $dep5->{runtime}{recommends}{'JSON::MaybeXS'}{comment}, 'JSON backend',
+	'legacy recommends comment captured';
+is $dep5->{runtime}{recommends}{'XML::Simple'}{version}, '2.25',
+	'legacy recommends version captured';
+ok exists $dep5->{test}{recommends}{'Test::Deep'},
+	'phase-scoped recommends inside prereqs still goes to its phase';
+ok !exists $dep5->{runtime}{recommends}{'Test::Deep'},
+	'phase-scoped recommends is not duplicated into runtime';
+is $dep5->{runtime}{suggests}{'YAML::XS'}{version}, '0.88',
+	'legacy top-level suggests extracted as runtime/suggests';
+is $dep5->{runtime}{suggests}{'YAML::XS'}{comment}, 'YAML backend',
+	'legacy suggests comment captured';
+ok exists $dep5->{test}{suggests}{'Test::Differences'},
+	'phase-scoped suggests inside prereqs still goes to its phase';
+ok !exists $dep5->{runtime}{suggests}{'Test::Differences'},
+	'phase-scoped suggests is not duplicated into runtime';
+ok exists $dep5->{runtime}{requires}{'Moo'}, 'PREREQ_PM unaffected';
+
+my $gen_dir = File::Temp::tempdir(CLEANUP => 1);
+my $gen_mf  = "$gen_dir/Makefile.PL";
+open my $fh, '>', $gen_mf or die "$gen_mf: $!";
+print {$fh} $legacy;
+close $fh;
+my $out = App::makefilepl2cpanfile::generate(makefile => $gen_mf, with_develop => 0);
+like $out, qr/^recommends 'JSON::MaybeXS';\s+# JSON backend$/m,
+	'generate emits legacy recommends at top level';
+like $out, qr/^recommends 'XML::Simple', '2\.25';$/m,
+	'generate emits legacy recommends version';
+like $out, qr/^suggests 'YAML::XS', '0\.88';\s+# YAML backend$/m,
+	'generate emits legacy suggests at top level';
 
 done_testing;

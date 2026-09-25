@@ -89,6 +89,10 @@ C<TEST_REQUIRES>, C<CONFIGURE_REQUIRES>)
 blocks (CPAN Meta Spec format), including C<recommends> and C<suggests>
 relationships
 
+=item * Legacy top-level C<recommends =E<gt> { ... }> and
+C<suggests =E<gt> { ... }> blocks (META spec 1.x style, typically inside
+C<META_MERGE>), emitted as runtime C<recommends> / C<suggests>
+
 =item * Inline comments attached to dependency entries
 
 =item * Optional author/development dependencies in a C<develop> block
@@ -255,7 +259,9 @@ can reuse the parsing logic without duplicating regexes.
 
 Both the simple C<PREREQ_PM =E<gt> { ... }> form and the structured
 C<prereqs =E<gt> { phase =E<gt> { rel =E<gt> { ... } } }> form (including
-those nested under C<META_MERGE>) are parsed.  Inline comments attached to
+those nested under C<META_MERGE>) are parsed, as are legacy top-level
+C<recommends =E<gt> { ... }> and C<suggests =E<gt> { ... }> blocks (mapped
+to runtime C<recommends> / C<suggests>).  Inline comments attached to
 module entries are captured and preserved for round-trip fidelity.
 
 =head3 API SPECIFICATION
@@ -331,6 +337,9 @@ sub parse_prereqs {
 	# ---- Structured 'prereqs' blocks (CPAN Meta Spec style) ----
 	# These can appear at the top level of WriteMakefile() or nested inside
 	# META_MERGE; both are covered by searching the full content for 'prereqs'.
+	# The [start, end) offset of each block is recorded so that the legacy
+	# 'recommends'/'suggests' scan below can skip relationship blocks nested inside it.
+	my @prereqs_spans;
 	while ($content =~ /
 		\b prereqs \s*=>\s* \{
 			( (?: [^{}]++
@@ -342,6 +351,7 @@ sub parse_prereqs {
 		\}
 	/gsx) {
 		my $prereqs_block = $1;
+		push @prereqs_spans, [ $-[0], $+[0] ];
 
 		# Each direct child is a phase name mapping to a relationship hash.
 		while ($prereqs_block =~ /
@@ -364,6 +374,22 @@ sub parse_prereqs {
 				_extract_pairs($rel_block, \%deps, $phase_name, $rel);
 			}
 		}
+	}
+
+	# ---- Legacy top-level 'recommends' / 'suggests' ----
+	# e.g. META_MERGE => { recommends => { 'Mod' => 0 } }.  META spec 1.x
+	# defines a top-level 'recommends' as runtime recommendations; a
+	# top-level 'suggests' is treated the same way (runtime suggestions).
+	# Occurrences inside a 'prereqs' block are phase-scoped and have
+	# already been handled above, so skip them.
+	while ($content =~ /
+		\b (recommends|suggests) ['"]? \s*=>\s* \{
+			( (?: [^{}]++ | \{ [^}]*+ \} )* )
+		\}
+	/gsx) {
+		my ($rel, $block, $start) = ($1, $2, $-[0]);
+		next if any { $start >= $_->[0] && $start < $_->[1] } @prereqs_spans;
+		_extract_pairs($block, \%deps, 'runtime', $rel);
 	}
 
 	return \%deps;

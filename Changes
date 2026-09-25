@@ -1,5 +1,15 @@
 Revision history for App-makefilepl2cpanfile
 
+0.05
+	[ Bug Fixes ]
+	Recognise legacy top-level recommends => { ... } blocks (META spec 1.x
+	  style, e.g. directly under META_MERGE) and emit them as runtime
+	  recommends in the generated cpanfile; previously they were ignored
+	Likewise handle top-level suggests => { ... } blocks, emitted as
+	  runtime suggests
+	recommends/suggests blocks nested inside prereqs => { ... } remain
+	  phase-scoped and are not duplicated into runtime
+
 0.04	Sun Aug  2 12:59:14 PM EDT 2026
 	[ Bug Fixes ]
 	Gracefully handle Makefile.PL files containing invalid UTF-8 bytes: fall back to
