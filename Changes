@@ -1,6 +1,6 @@
 Revision history for App-makefilepl2cpanfile
 
-0.05
+0.05	Fri Sep 25 05:01:10 PM EDT 2026
 	[ Enhancements ]
 	Version ranges (e.g. '>= 1.2, < 2.0') are kept and written to the
 	  cpanfile; previously they were silently dropped, losing upper bounds
