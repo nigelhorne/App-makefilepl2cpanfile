@@ -22,15 +22,38 @@ Options:
     --with-develop    Include author/development dependencies (default)
     --no-develop      Exclude author/development dependencies
     --dry-run         Print output to STDOUT instead of writing cpanfile
-    --diff            Show diff against existing cpanfile if it exists
+    --diff            Show a unified diff against the existing cpanfile
     --check           Verify all Makefile.PL dependencies appear in output
     --help            Show this usage message
 
 =head1 DESCRIPTION
 
 Reads a F<Makefile.PL> in the current directory and generates a corresponding
-F<cpanfile>.  Existing C<develop> blocks in a pre-existing F<cpanfile> are
-preserved and merged.
+F<cpanfile> using L<App::makefilepl2cpanfile/generate>.  Existing C<develop>
+blocks in a pre-existing F<cpanfile> are preserved and merged.
+
+By default the result is written to F<cpanfile> in the current directory and
+C<cpanfile written successfully.> is printed.
+
+=over 4
+
+=item * C<--dry-run> prints the result to STDOUT and writes nothing.
+
+=item * C<--diff> prints a unified diff from the existing F<cpanfile> (or
+from an empty file when there is none) to the result, and writes nothing.
+
+=item * C<--check> additionally verifies that every module found by
+L<App::makefilepl2cpanfile/parse_prereqs> appears in the result, printing
+C<All Makefile.PL prerequisites are present in the output.> or warning with
+the list of missing modules.  It does not change what is written.
+
+=item * C<--with-develop> and C<--no-develop> select the C<with_develop>
+argument; giving both is an error (C<--with-develop and --no-develop are
+mutually exclusive>) and the program exits with a non-zero status.
+
+=item * C<--help> prints the usage message and exits with status 0.
+
+=back
 
 =cut
 
@@ -85,8 +108,9 @@ if ($check) {
 	}
 }
 
-# --diff: show unified diff against the existing file, then exit.
-if ($diff && $existing) {
+# --diff: show what would change, then exit without writing.  With no
+# existing cpanfile every generated line appears as an addition.
+if ($diff) {
 	print diff(\$existing, \$out, { STYLE => 'Unified' });
 	exit 0;
 }
@@ -108,7 +132,7 @@ Usage: $0 [options]
   --with-develop    Include author/development dependencies (default)
   --no-develop      Exclude author/development dependencies
   --dry-run         Print output instead of writing cpanfile
-  --diff            Show diff against existing cpanfile
+  --diff            Show diff against existing cpanfile (writes nothing)
   --check           Verify all Makefile.PL dependencies appear in output
   --help            Show this help message
 

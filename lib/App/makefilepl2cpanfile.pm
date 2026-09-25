@@ -259,6 +259,12 @@ C<$_> are left unchanged.
 	    and processing continues.
 	    Resolution: re-save Makefile.PL as UTF-8.
 
+	    Which decoder Path::Tiny uses depends on optional modules
+	    (Unicode::UTF8, PerlIO::utf8_strict).  Some decode invalid bytes
+	    leniently with their own warning instead of failing; in that case
+	    this message is not issued but processing still continues, so
+	    invalid UTF-8 always yields a warning and never an exception.
+
 	Any other error raised while reading the file (die)
 	    Genuine I/O failures are re-thrown unchanged rather than masked.
 

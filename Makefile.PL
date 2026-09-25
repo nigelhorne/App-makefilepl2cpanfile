@@ -27,6 +27,8 @@ WriteMakefile(
 	CONFIGURE_REQUIRES => {
 		'ExtUtils::MakeMaker' => 6.64,	# Minimum version for TEST_REQUIRES
 	}, TEST_REQUIRES => {
+		'Capture::Tiny' => 0,
+		'Module::CPANfile' => 0,
 		'Test::Carp' => 0,
 		'Test::Compile' => 0,
 		'Test::DescribeMe' => 0,
@@ -39,6 +41,7 @@ WriteMakefile(
 		'Test::Which' => 0,
 		'Test::Returns' => 0.04,
 		'Test::Warn' => 0,
+		'Test::Without::Module' => 0,
 	}, PREREQ_PM => {
 		'autodie' => 0,
 		'File::HomeDir' => 0,

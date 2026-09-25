@@ -17,7 +17,9 @@ on 'configure' => sub {
 };
 
 on 'test' => sub {
+	requires 'Capture::Tiny';
 	requires 'File::Temp';
+	requires 'Module::CPANfile';
 	requires 'Test::Carp';
 	requires 'Test::Compile';
 	requires 'Test::DescribeMe';
@@ -29,6 +31,7 @@ on 'test' => sub {
 	requires 'Test::Returns', '0.04';
 	requires 'Test::Warn';
 	requires 'Test::Which';
+	requires 'Test::Without::Module';
 };
 
 on 'develop' => sub {
