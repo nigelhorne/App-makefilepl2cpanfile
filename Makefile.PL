@@ -76,5 +76,5 @@ WriteMakefile(
 			}
 		},
 	},
-	MIN_PERL_VERSION	=> '5.014'	# s///r and the /a regex modifier
+	MIN_PERL_VERSION	=> '5.026'	# test dependencies (Params::Validate::Strict, via Test::Permissions); the code itself needs 5.14 (s///r, /a)
 );

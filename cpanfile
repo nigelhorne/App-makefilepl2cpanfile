@@ -1,6 +1,6 @@
 # Generated from Makefile.PL using makefilepl2cpanfile
 
-requires 'perl', '5.014';
+requires 'perl', '5.026';
 
 requires 'File::HomeDir';
 requires 'IPC::System::Simple';

@@ -1449,7 +1449,7 @@ sub _has_version {
 #       and close the small race between the symlink check and the write.
 # TODO: Consider a size limit for Makefile.PL and the existing cpanfile, so
 #       a huge hostile file cannot exhaust memory.
-# TODO: CI matrix: a Perl 5.14 job (the declared minimum), Windows and
+# TODO: CI matrix: a Perl 5.26 job (the declared minimum), Windows and
 #       macOS runners, and Devel::Cover for the command-line tool's
 #       subprocesses (via PERL5OPT).
 

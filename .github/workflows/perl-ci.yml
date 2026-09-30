@@ -41,7 +41,7 @@ jobs:
         include:
           # The declared minimum (MIN_PERL_VERSION in Makefile.PL).
           - os: ubuntu-latest
-            perl: '5.14'
+            perl: '5.26'
     name: Perl ${{ matrix.perl }} on ${{ matrix.os }}
     env:
       AUTOMATED_TESTING: 1
