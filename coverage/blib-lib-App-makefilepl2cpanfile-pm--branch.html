@@ -26,55 +26,55 @@ https://pjcj.net
 <table>
 <tr><th>line</th><th>%</th><th colspan="2">coverage</th><th>branch</th></tr>
 <tr><td class="h"><a id="L654">654</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">defined $args-&gt;{&#39;content&#39;} ? :</td></tr>
-<tr><td class="h"><a id="L667">667</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if ($existing =~ /$DEVELOP_OPEN_RE/g)</td></tr>
-<tr><td class="h"><a id="L669">669</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if ($existing =~ /^[ \t]*\};/gm)</td></tr>
+<tr><td class="h"><a id="L667">667</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if ($existing =~ /$DEVELOP_OPEN_RE/gx)</td></tr>
+<tr><td class="h"><a id="L669">669</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if ($existing =~ /^[ \t]*\};/gmx)</td></tr>
 <tr><td class="h"><a id="L680">680</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless $mod =~ /$MODULE_NAME_RE/</td></tr>
 <tr><td class="h"><a id="L686">686</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if (length($ver // &quot;&quot;) and not _valid_requirement($ver))</td></tr>
 <tr><td class="h"><a id="L695">695</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if ($with_dev)</td></tr>
 <tr><td class="h"><a id="L704">704</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless $dev-&gt;{$_}</td></tr>
 <tr><td class="h"><a id="L785">785</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless -f $makefile and -r _</td></tr>
 <tr><td class="h"><a id="L789">789</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if ($@)</td></tr>
-<tr><td class="h"><a id="L797">797</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if ref $@ or not $@ =~ /decode|ill-formed|utf/i</td></tr>
+<tr><td class="h"><a id="L797">797</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if ref $@ or not $@ =~ /decode|ill-formed|utf/xi</td></tr>
 <tr><td class="h"><a id="L949">949</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless defined $content and not ref $content</td></tr>
-<tr><td class="h"><a id="L971">971</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if _in_comment($comments, $-[0])</td></tr>
-<tr><td class="h"><a id="L997">997</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if _in_comment($comments, $span[0])</td></tr>
-<tr><td class="h"><a id="L1008">1008</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless $VALID_PHASE{$phase_name}</td></tr>
-<tr><td class="h"><a id="L1009">1009</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if _in_comment($comments, $phase_at)</td></tr>
-<tr><td class="h"><a id="L1019">1019</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless $VALID_REL{$rel}</td></tr>
-<tr><td class="h"><a id="L1020">1020</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if _in_comment($comments, $rel_at)</td></tr>
-<tr><td class="h"><a id="L1043">1043</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if _in_comment(\@prereqs_spans, $start)</td></tr>
-<tr><td class="h"><a id="L1044">1044</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if _in_comment($comments, $start)</td></tr>
-<tr><td class="h"><a id="L1083">1083</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if (index($line, &quot;#&quot;) != -1)</td></tr>
-<tr><td class="h"><a id="L1089">1089</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if (defined $comment)</td></tr>
-<tr><td class="h"><a id="L1116">1116</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless _valid_requirement($ver)</td></tr>
-<tr><td class="h"><a id="L1119">1119</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">$i == $#pairs ? :</td></tr>
-<tr><td class="h"><a id="L1136">1136</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if not defined $content or ref $content</td></tr>
-<tr><td class="h"><a id="L1137">1137</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless $content =~ /\bMIN_PERL_VERSION\b\s*=&gt;\s*$VALUE_TOKEN_RE/</td></tr>
-<tr><td class="h"><a id="L1139">1139</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">_valid_version($ver) ? :</td></tr>
-<tr><td class="h"><a id="L1158">1158</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if (index($line, &quot;#&quot;) != -1 and $line =~ /$TO_COMMENT_RE/x)</td></tr>
-<tr><td class="h"><a id="L1177">1177</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if ($pos &lt; $start) { }</td></tr>
+<tr><td class="h"><a id="L976">976</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if _in_comment($comments, $-[0])</td></tr>
+<tr><td class="h"><a id="L1002">1002</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if _in_comment($comments, $span[0])</td></tr>
+<tr><td class="h"><a id="L1013">1013</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless $VALID_PHASE{$phase_name}</td></tr>
+<tr><td class="h"><a id="L1014">1014</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if _in_comment($comments, $phase_at)</td></tr>
+<tr><td class="h"><a id="L1024">1024</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless $VALID_REL{$rel}</td></tr>
+<tr><td class="h"><a id="L1025">1025</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if _in_comment($comments, $rel_at)</td></tr>
+<tr><td class="h"><a id="L1048">1048</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if _in_comment(\@prereqs_spans, $start)</td></tr>
+<tr><td class="h"><a id="L1049">1049</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if _in_comment($comments, $start)</td></tr>
+<tr><td class="h"><a id="L1088">1088</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if (index($line, &quot;#&quot;) != -1)</td></tr>
+<tr><td class="h"><a id="L1094">1094</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if (defined $comment)</td></tr>
+<tr><td class="h"><a id="L1121">1121</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless _valid_requirement($ver)</td></tr>
+<tr><td class="h"><a id="L1124">1124</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">$i == $#pairs ? :</td></tr>
+<tr><td class="h"><a id="L1141">1141</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if not defined $content or ref $content</td></tr>
+<tr><td class="h"><a id="L1142">1142</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless $content =~ /\bMIN_PERL_VERSION\b\s*=&gt;\s*$VALUE_TOKEN_RE/x</td></tr>
+<tr><td class="h"><a id="L1144">1144</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">_valid_version($ver) ? :</td></tr>
+<tr><td class="h"><a id="L1163">1163</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if (index($line, &quot;#&quot;) != -1 and $line =~ /$TO_COMMENT_RE/x)</td></tr>
+<tr><td class="h"><a id="L1182">1182</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if ($pos &lt; $start) { }</td></tr>
 <tr><td class="h"></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">elsif ($pos &gt;= $end) { }</td></tr>
-<tr><td class="h"><a id="L1193">1193</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">defined $ver &amp;&amp; $ver =~ /$VERSION_RE/x ? :</td></tr>
-<tr><td class="h"><a id="L1205">1205</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">defined $req &amp;&amp; $req =~ /$REQUIREMENT_RE/x ? :</td></tr>
-<tr><td class="h"><a id="L1240">1240</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless length($home // &quot;&quot;)</td></tr>
-<tr><td class="h"><a id="L1249">1249</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless (@stat)</td></tr>
-<tr><td class="h"><a id="L1250">1250</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless $!{&#39;ENOENT&#39;} or $!{&#39;ENOTDIR&#39;}</td></tr>
-<tr><td class="h"><a id="L1257">1257</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless Fcntl::S_ISREG($stat[2])</td></tr>
-<tr><td class="h"><a id="L1264">1264</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless ($yaml)</td></tr>
-<tr><td class="h"><a id="L1273">1273</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">ref $doc eq &#39;HASH&#39; ? :</td></tr>
-<tr><td class="h"><a id="L1274">1274</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless (ref $develop eq &quot;HASH&quot;)</td></tr>
-<tr><td class="h"><a id="L1285">1285</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless ($mod =~ /$MODULE_NAME_RE/)</td></tr>
-<tr><td class="h"><a id="L1293">1293</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless ($v eq &quot;&quot; or _valid_requirement($v))</td></tr>
-<tr><td class="h"><a id="L1322">1322</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if _has_version($min_perl)</td></tr>
-<tr><td class="h"><a id="L1327">1327</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">$phase eq &#39;runtime&#39; ? :</td></tr>
-<tr><td class="h"><a id="L1331">1331</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if $body eq &quot;&quot;</td></tr>
+<tr><td class="h"><a id="L1198">1198</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">defined $ver &amp;&amp; $ver =~ /$VERSION_RE/x ? :</td></tr>
+<tr><td class="h"><a id="L1210">1210</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">defined $req &amp;&amp; $req =~ /$REQUIREMENT_RE/x ? :</td></tr>
+<tr><td class="h"><a id="L1245">1245</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless length($home // &quot;&quot;)</td></tr>
+<tr><td class="h"><a id="L1254">1254</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless (@stat)</td></tr>
+<tr><td class="h"><a id="L1255">1255</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless $!{&#39;ENOENT&#39;} or $!{&#39;ENOTDIR&#39;}</td></tr>
+<tr><td class="h"><a id="L1262">1262</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless Fcntl::S_ISREG($stat[2])</td></tr>
+<tr><td class="h"><a id="L1269">1269</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless ($yaml)</td></tr>
+<tr><td class="h"><a id="L1278">1278</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">ref $doc eq &#39;HASH&#39; ? :</td></tr>
+<tr><td class="h"><a id="L1279">1279</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless (ref $develop eq &quot;HASH&quot;)</td></tr>
+<tr><td class="h"><a id="L1290">1290</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless ($mod =~ /$MODULE_NAME_RE/)</td></tr>
+<tr><td class="h"><a id="L1298">1298</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless ($v eq &quot;&quot; or _valid_requirement($v))</td></tr>
+<tr><td class="h"><a id="L1327">1327</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if _has_version($min_perl)</td></tr>
 <tr><td class="h"><a id="L1332">1332</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">$phase eq &#39;runtime&#39; ? :</td></tr>
-<tr><td class="h"><a id="L1370">1370</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if _has_version($entry-&gt;{&#39;version&#39;})</td></tr>
-<tr><td class="h"><a id="L1376">1376</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if (defined $entry-&gt;{&#39;comment&#39;}) { }</td></tr>
-<tr><td class="h"><a id="L1402">1402</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless defined $ver</td></tr>
-<tr><td class="h"><a id="L1403">1403</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">$ver =~ /\A \s* &gt;= \s* v? [0._]* \s* \z/x ? :</td></tr>
+<tr><td class="h"><a id="L1336">1336</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if $body eq &quot;&quot;</td></tr>
+<tr><td class="h"><a id="L1337">1337</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">$phase eq &#39;runtime&#39; ? :</td></tr>
+<tr><td class="h"><a id="L1375">1375</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if _has_version($entry-&gt;{&#39;version&#39;})</td></tr>
+<tr><td class="h"><a id="L1381">1381</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if (defined $entry-&gt;{&#39;comment&#39;}) { }</td></tr>
+<tr><td class="h"><a id="L1407">1407</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">unless defined $ver</td></tr>
+<tr><td class="h"><a id="L1408">1408</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">$ver =~ /\A \s* &gt;= \s* v? [0._]* \s* \z/x ? :</td></tr>
 <tr><td class="h"></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">if $ver =~ /[&lt;&gt;=!]/x</td></tr>
-<tr><td class="h"><a id="L1404">1404</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">$ver =~ /[1-9]/ ? :</td></tr>
+<tr><td class="h"><a id="L1409">1409</a></td><td class="c3">100</td><td class="c3">T</td><td class="c3">F</td><td class="s">$ver =~ /[1-9]/x ? :</td></tr>
 </table>
 </body>
 </html>

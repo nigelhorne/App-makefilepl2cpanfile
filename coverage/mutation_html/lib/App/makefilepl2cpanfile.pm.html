@@ -531,7 +531,7 @@ Approximate LCSAJ segments: 101<br>
 </span><span class="">  190: # Unicode bidirectional controls used by &quot;Trojan Source&quot; (CVE-2021-42574)
 </span><span class="">  191: # to make text display differently from how it is read.
 </span><span class="">  192: Readonly::Scalar my $UNSAFE_COMMENT_CHARS_RE =&gt;
-</span><span class="">  193: 	qr/[\x00-\x08\x0A-\x1F\x7F-\x9F\x{061C}\x{200E}\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}]/;
+</span><span class="">  193: 	qr/[\x00-\x08\x0A-\x1F\x7F-\x9F\x{061C}\x{200E}\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}]/x;
 </span><span class="">  194: 
 </span><span class="">  195: =head1 SYNOPSIS
 </span><span class="">  196: 
@@ -986,7 +986,7 @@ Approximate LCSAJ segments: 101<br>
 </span><span class="">  645: 
 </span><span class="">  646: 	# File tests and the reads below (including the config file) change
 </span><span class="">  647: 	# errno; restore the caller&#39;s $! on every exit path.
-</span><span class="">  648: 	local $!;
+</span><span class="">  648: 	local $! = 0;
 </span><span class="">  649: 
 </span><span class="">  650: 	my $existing = $args-&gt;{existing} // &#39;&#39;;
 </span><span class="">  651: 	my $with_dev = $args-&gt;{with_develop} // 1;
@@ -1005,16 +1005,16 @@ Approximate LCSAJ segments: 101<br>
 </span><span class="">  664: 	# after the first.  Conclusion: only the first opener needs trying.
 </span><span class="">  665: 	# The closing &#39;};&#39; must start a line, so a &#39;};&#39; inside an inline
 </span><span class="">  666: 	# comment does not end the block early.
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  667: 	if ($existing =~ /$DEVELOP_OPEN_RE/g) {
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  667: 	if ($existing =~ /$DEVELOP_OPEN_RE/gx) {
 </span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  668: 		my $open_end = pos $existing;
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  669: 		if ($existing =~ /^[ \t]*\};/mg) {
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  669: 		if ($existing =~ /^[ \t]*\};/mgx) {
 </span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  670: 			my $dev_block = substr $existing, $open_end, $-[0] - $open_end;
 </span><span class="">  671: 
 </span><span class="">  672: 			# A commented-out line is not an entry.  &#39;#&#39; cannot occur in a
 </span><span class="">  673: 			# valid module name or version, so stripping to end of line is safe.
-</span><span class="">  674: 			$dev_block =~ s/\#[^\n]*+//g;
+</span><span class="">  674: 			$dev_block =~ s/\#[^\n]*+//gx;
 </span><span class="">  675: 
-</span><span class="">  676: 			while ($dev_block =~ /$DEVELOP_ENTRY_RE/g) {
+</span><span class="">  676: 			while ($dev_block =~ /$DEVELOP_ENTRY_RE/gx) {
 </span><span class="">  677: 				# Save immediately: the validation regexes below would reset
 </span><span class="">  678: 				# the capture variables.
 </span><span class="">  679: 				my ($rel, $mod, $ver) = ($1, $2 // $3, $4 // $5);
@@ -1120,8 +1120,8 @@ Approximate LCSAJ segments: 101<br>
 </span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">779 → 789 → 802</span></span>  779: 	my $makefile = &quot;@{[ $_[0] // &#39;Makefile.PL&#39; ]}&quot;;
 </span><span class="">  780: 
 </span><span class="">  781: 	# File tests and reads change errno; restore the caller&#39;s $! and $@.
-</span><span class="">  782: 	local $!;
-</span><span class="">  783: 	local $@;
+</span><span class="">  782: 	local $! = 0;
+</span><span class="">  783: 	local $@ = q{};
 </span><span class="">  784: 
 </span><span class="">  785: 	Carp::croak &quot;Cannot read &#39;&quot; . _printable($makefile) . q{&#39;} unless -f $makefile &amp;&amp; -r _;
 </span><span class="">  786: 
@@ -1135,9 +1135,9 @@ Approximate LCSAJ segments: 101<br>
 </span><span class="">  794: 		# matching keywords against that would misread an I/O error in,
 </span><span class="">  795: 		# say, ~/src/utf8-tools/ as a decoding problem.  So objects are
 </span><span class="">  796: 		# always rethrown, and only plain decoder messages are matched.
-</span><span class="">  797: 		die $@ if ref $@ || $@ !~ /decode|ill-formed|utf/i;
+</span><span class="">  797: 		die $@ if ref $@ || $@ !~ /decode|ill-formed|utf/ix;  ## no critic (RequireCarping) re-thrown unchanged, as documented; croak would append a location
 </span><span class="">  798: 		Carp::carp &quot;Warning: &#39;&quot; . _printable($makefile) . &quot;&#39; contains invalid UTF-8; reading as raw bytes: &quot;
-</span><span class="">  799: 			. _printable($@ =~ s/\n\z//r);
+</span><span class="">  799: 			. _printable($@ =~ s/\n\z//rx);
 </span><span class="">  800: 		$content = Path::Tiny::path($makefile)-&gt;slurp_raw;
 </span><span class="">  801: 	}
 </span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  802: 	return $content;
@@ -1281,7 +1281,7 @@ Approximate LCSAJ segments: 101<br>
 </span><span class="">  940: =cut
 </span><span class="">  941: 
 </span><span class="">  942: sub parse_prereqs {
-</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">943 → 962 → 980</span></span>  943: 	my $content = $_[0];
+</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">943 → 967 → 985</span></span>  943: 	my $content = $_[0];
 </span><span class="">  944: 
 </span><span class="">  945: 	# The POD contract is &quot;no errors or warnings - unrecognised content is
 </span><span class="">  946: 	# silently ignored.&quot;  Undef and references are not valid Str inputs; return
@@ -1300,133 +1300,138 @@ Approximate LCSAJ segments: 101<br>
 </span><span class="">  959: 	# The regex allows up to four levels of brace nesting so that unusual
 </span><span class="">  960: 	# Makefile.PL constructs (e.g. version objects) don&#39;t terminate the
 </span><span class="">  961: 	# block match prematurely.
-</span><span class="">  962: 	while ($content =~ /
-</span><span class="">  963: 		\b ($SIMPLE_KEY_RE) \s*=&gt;\s* \{
-</span><span class="">  964: 			( (?: [^{}]++
-</span><span class="">  965: 			    | \{ (?: [^{}]++ | \{ (?: [^{}]++ | \{ [^}]*+ \} )* \} )* \}
-</span><span class="">  966: 			  )*
-</span><span class="">  967: 			)
-</span><span class="">  968: 		\}
-</span><span class="">  969: 	/gsx) {
-</span><span class="">  970: 		my ($key, $block) = ($1, $2);
-</span><span class="">  971: 		next if _in_comment($comments, $-[0]);
-</span><span class="">  972: 		_extract_pairs($block, \%deps, $PHASE_MAP{$key}, &#39;requires&#39;);
-</span><span class="">  973: 	}
-</span><span class="">  974: 
-</span><span class="">  975: 	# ---- Structured &#39;prereqs&#39; blocks (CPAN Meta Spec style) ----
-</span><span class="">  976: 	# These can appear at the top level of WriteMakefile() or nested inside
-</span><span class="">  977: 	# META_MERGE; both are covered by searching the full content for &#39;prereqs&#39;.
-</span><span class="">  978: 	# The [start, end) offset of each block is recorded so that the legacy
-</span><span class="">  979: 	# &#39;recommends&#39;/&#39;suggests&#39; scan below can skip relationship blocks nested inside it.
-</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">980 → 981 → 1033</span></span>  980: 	my @prereqs_spans;
-</span><span class="">  981: 	while ($content =~ /
-</span><span class="">  982: 		\b prereqs \s*=&gt;\s* \{
-</span><span class="">  983: 			( (?: [^{}]++
-</span><span class="">  984: 			    | \{ (?: [^{}]++
-</span><span class="">  985: 			         | \{ (?: [^{}]++ | \{ (?: [^{}]++ | \{ [^}]*+ \} )* \} )* \}
-</span><span class="">  986: 			      )* \}
-</span><span class="">  987: 			  )*
-</span><span class="">  988: 			)
-</span><span class="">  989: 		\}
-</span><span class="">  990: 	/gsx) {
-</span><span class="">  991: 		my $prereqs_block = $1;
-</span><span class="">  992: 		my @span = ($-[0], $+[0]);
-</span><span class="">  993: 		# Offset of the block&#39;s text in $content: nested matches below are
-</span><span class="">  994: 		# made on substrings, so their positions must be shifted by this
-</span><span class="">  995: 		# before they can be looked up in the comment map.
-</span><span class="">  996: 		my $prereqs_base = $-[1];
-</span><span class="">  997: 		next if _in_comment($comments, $span[0]);
-</span><span class="">  998: 		push @prereqs_spans, \@span;
-</span><span class="">  999: 
-</span><span class=""> 1000: 		# Each direct child is a phase name mapping to a relationship hash.
-</span><span class=""> 1001: 		while ($prereqs_block =~ /
-</span><span class=""> 1002: 			\b (\w+) \s*=&gt;\s* \{
-</span><span class=""> 1003: 				( (?: [^{}]++ | \{ (?: [^{}]++ | \{ [^}]*+ \} )* \} )* )
-</span><span class=""> 1004: 			\}
-</span><span class=""> 1005: 		/gsx) {
-</span><span class=""> 1006: 			my ($phase_name, $phase_block) = ($1, $2);
-</span><span class=""> 1007: 			my ($phase_at, $phase_base) = ($prereqs_base + $-[0], $prereqs_base + $-[2]);
-</span><span class=""> 1008: 			next unless $VALID_PHASE{$phase_name};
-</span><span class=""> 1009: 			next if _in_comment($comments, $phase_at);
-</span><span class=""> 1010: 
-</span><span class=""> 1011: 			# Each child of the phase block is a relationship name.
-</span><span class=""> 1012: 			while ($phase_block =~ /
-</span><span class=""> 1013: 				\b (\w+) \s*=&gt;\s* \{
-</span><span class=""> 1014: 					( (?: [^{}]++ | \{ [^}]*+ \} )* )
-</span><span class=""> 1015: 				\}
-</span><span class=""> 1016: 			/gsx) {
-</span><span class=""> 1017: 				my ($rel, $rel_block) = ($1, $2);
-</span><span class=""> 1018: 				my $rel_at = $phase_base + $-[0];
-</span><span class=""> 1019: 				next unless $VALID_REL{$rel};
-</span><span class=""> 1020: 				next if _in_comment($comments, $rel_at);
-</span><span class=""> 1021: 
-</span><span class=""> 1022: 				_extract_pairs($rel_block, \%deps, $phase_name, $rel);
-</span><span class=""> 1023: 			}
-</span><span class=""> 1024: 		}
-</span><span class=""> 1025: 	}
+</span><span class="">  962: 	#
+</span><span class="">  963: 	# In this and every block regex below, the innermost level is
+</span><span class="">  964: 	# [^{}]*+, never [^}]*+: a failed attempt must stop at the next brace.
+</span><span class="">  965: 	# Scanning on to the next &#39;}&#39; made each unclosed opener read to the
+</span><span class="">  966: 	# end of the input, so many openers were quadratic.
+</span><span class="">  967: 	while ($content =~ /
+</span><span class="">  968: 		\b ($SIMPLE_KEY_RE) \s*=&gt;\s* \{
+</span><span class="">  969: 			( (?: [^{}]++
+</span><span class="">  970: 			    | \{ (?: [^{}]++ | \{ (?: [^{}]++ | \{ [^{}]*+ \} )* \} )* \}
+</span><span class="">  971: 			  )*
+</span><span class="">  972: 			)
+</span><span class="">  973: 		\}
+</span><span class="">  974: 	/gsx) {
+</span><span class="">  975: 		my ($key, $block) = ($1, $2);
+</span><span class="">  976: 		next if _in_comment($comments, $-[0]);
+</span><span class="">  977: 		_extract_pairs($block, \%deps, $PHASE_MAP{$key}, &#39;requires&#39;);
+</span><span class="">  978: 	}
+</span><span class="">  979: 
+</span><span class="">  980: 	# ---- Structured &#39;prereqs&#39; blocks (CPAN Meta Spec style) ----
+</span><span class="">  981: 	# These can appear at the top level of WriteMakefile() or nested inside
+</span><span class="">  982: 	# META_MERGE; both are covered by searching the full content for &#39;prereqs&#39;.
+</span><span class="">  983: 	# The [start, end) offset of each block is recorded so that the legacy
+</span><span class="">  984: 	# &#39;recommends&#39;/&#39;suggests&#39; scan below can skip relationship blocks nested inside it.
+</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">985 → 986 → 1038</span></span>  985: 	my @prereqs_spans;
+</span><span class="">  986: 	while ($content =~ /
+</span><span class="">  987: 		\b prereqs \s*=&gt;\s* \{
+</span><span class="">  988: 			( (?: [^{}]++
+</span><span class="">  989: 			    | \{ (?: [^{}]++
+</span><span class="">  990: 			         | \{ (?: [^{}]++ | \{ (?: [^{}]++ | \{ [^{}]*+ \} )* \} )* \}
+</span><span class="">  991: 			      )* \}
+</span><span class="">  992: 			  )*
+</span><span class="">  993: 			)
+</span><span class="">  994: 		\}
+</span><span class="">  995: 	/gsx) {
+</span><span class="">  996: 		my $prereqs_block = $1;
+</span><span class="">  997: 		my @span = ($-[0], $+[0]);
+</span><span class="">  998: 		# Offset of the block&#39;s text in $content: nested matches below are
+</span><span class="">  999: 		# made on substrings, so their positions must be shifted by this
+</span><span class=""> 1000: 		# before they can be looked up in the comment map.
+</span><span class=""> 1001: 		my $prereqs_base = $-[1];
+</span><span class=""> 1002: 		next if _in_comment($comments, $span[0]);
+</span><span class=""> 1003: 		push @prereqs_spans, \@span;
+</span><span class=""> 1004: 
+</span><span class=""> 1005: 		# Each direct child is a phase name mapping to a relationship hash.
+</span><span class=""> 1006: 		while ($prereqs_block =~ /
+</span><span class=""> 1007: 			\b (\w+) \s*=&gt;\s* \{
+</span><span class=""> 1008: 				( (?: [^{}]++ | \{ (?: [^{}]++ | \{ [^{}]*+ \} )* \} )* )
+</span><span class=""> 1009: 			\}
+</span><span class=""> 1010: 		/gsx) {
+</span><span class=""> 1011: 			my ($phase_name, $phase_block) = ($1, $2);
+</span><span class=""> 1012: 			my ($phase_at, $phase_base) = ($prereqs_base + $-[0], $prereqs_base + $-[2]);
+</span><span class=""> 1013: 			next unless $VALID_PHASE{$phase_name};
+</span><span class=""> 1014: 			next if _in_comment($comments, $phase_at);
+</span><span class=""> 1015: 
+</span><span class=""> 1016: 			# Each child of the phase block is a relationship name.
+</span><span class=""> 1017: 			while ($phase_block =~ /
+</span><span class=""> 1018: 				\b (\w+) \s*=&gt;\s* \{
+</span><span class=""> 1019: 					( (?: [^{}]++ | \{ [^{}]*+ \} )* )
+</span><span class=""> 1020: 				\}
+</span><span class=""> 1021: 			/gsx) {
+</span><span class=""> 1022: 				my ($rel, $rel_block) = ($1, $2);
+</span><span class=""> 1023: 				my $rel_at = $phase_base + $-[0];
+</span><span class=""> 1024: 				next unless $VALID_REL{$rel};
+</span><span class=""> 1025: 				next if _in_comment($comments, $rel_at);
 </span><span class=""> 1026: 
-</span><span class=""> 1027: 	# ---- Legacy top-level &#39;recommends&#39; / &#39;suggests&#39; ----
-</span><span class=""> 1028: 	# e.g. META_MERGE =&gt; { recommends =&gt; { &#39;Mod&#39; =&gt; 0 } }.  META spec 1.x
-</span><span class=""> 1029: 	# defines a top-level &#39;recommends&#39; as runtime recommendations; a
-</span><span class=""> 1030: 	# top-level &#39;suggests&#39; is treated the same way (runtime suggestions).
-</span><span class=""> 1031: 	# Occurrences inside a &#39;prereqs&#39; block are phase-scoped and have
-</span><span class=""> 1032: 	# already been handled above, so skip them.
-</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">1033 → 1033 → 1048</span></span> 1033: 	while ($content =~ /
-</span><span class=""> 1034: 		\b (requires|build_requires|configure_requires|recommends|suggests|conflicts) [&#39;&quot;]? \s*=&gt;\s* \{
-</span><span class=""> 1035: 			( (?: [^{}]++ | \{ [^}]*+ \} )* )
-</span><span class=""> 1036: 		\}
-</span><span class=""> 1037: 	/gsx) {
-</span><span class=""> 1038: 		my ($key, $block, $start) = ($1, $2, $-[0]);
-</span><span class=""> 1039: 		# The spans come from successive /g matches, so they are sorted and
-</span><span class=""> 1040: 		# do not overlap: the same binary search as for comments applies,
-</span><span class=""> 1041: 		# O(log P) per block instead of a linear scan (which made many
-</span><span class=""> 1042: 		# legacy blocks times many prereqs blocks quadratic).
-</span><span class=""> 1043: 		next if _in_comment(\@prereqs_spans, $start);
-</span><span class=""> 1044: 		next if _in_comment($comments, $start);
-</span><span class=""> 1045: 		_extract_pairs($block, \%deps, @{ $LEGACY_KEY{$key} });
-</span><span class=""> 1046: 	}
-</span><span class=""> 1047: 
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1048: 	return \%deps;
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1049: }
-</span><span class=""> 1050: 
-</span><span class=""> 1051: # -----------------------------------------------------------------------
-</span><span class=""> 1052: # Private helpers
-</span><span class=""> 1053: # -----------------------------------------------------------------------
-</span><span class=""> 1054: 
-</span><span class=""> 1055: # _extract_pairs
-</span><span class=""> 1056: #
-</span><span class=""> 1057: # Purpose:  Parse a raw block of text (the content between the outermost
-</span><span class=""> 1058: #           braces of a dependency hash) into module/version/comment triples
-</span><span class=""> 1059: #           and store them in the deps structure.  Processes line-by-line
-</span><span class=""> 1060: #           so that trailing inline comments can be captured before the
-</span><span class=""> 1061: #           comment text is discarded.
-</span><span class=""> 1062: # Entry:    $_[0] - raw block text (between the outer braces).
-</span><span class=""> 1063: #           $_[1] - hashref to populate (the top-level %deps).
-</span><span class=""> 1064: #           $_[2] - phase name string (e.g. &#39;runtime&#39;).
-</span><span class=""> 1065: #           $_[3] - relationship string (e.g. &#39;requires&#39;).
-</span><span class=""> 1066: # Exit:     Returns nothing - mutates $_[1] in place.
-</span><span class=""> 1067: # Effects:  Modifies the deps hashref; no I/O.
-</span><span class=""> 1068: #
-</span><span class=""> 1069: # First-occurrence-wins: if the same module appears multiple times (e.g.
-</span><span class=""> 1070: # once in PREREQ_PM and once in a prereqs block), the first parsed entry
-</span><span class=""> 1071: # is kept.
-</span><span class=""> 1072: sub _extract_pairs {
-</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">1073 → 1075 → 1126</span></span> 1073: 	my ($block, $deps, $phase, $rel) = @_;
-</span><span class=""> 1074: 
-</span><span class=""> 1075: 	for my $line (split /\n/, $block) {
-</span><span class=""> 1076: 		# Capture any trailing inline comment before stripping it.
-</span><span class=""> 1077: 		# (.*\S) is O(N): greedy .* scans to end, then gives back trailing
-</span><span class=""> 1078: 		# spaces one by one until \S anchors on the last non-space char.
-</span><span class=""> 1079: 		# Avoids the super-linear behaviour of (.+?)\s*$ which re-evaluates
-</span><span class=""> 1080: 		# \s*$ at every expanded position of the lazy quantifier.
-</span><span class=""> 1081: 		my $comment;
-</span><span class=""> 1082: 		# Most lines have no &#39;#&#39;: index() is far cheaper than the regexes.
-</span><span class="survived-3 tooltip" data-tooltip="Boundary mutation survived. Add tests around edge values (e.g. min, max, off-by-one)."> 1083: 		if (index($line, &#39;#&#39;) &gt;= 0) {
+</span><span class=""> 1027: 				_extract_pairs($rel_block, \%deps, $phase_name, $rel);
+</span><span class=""> 1028: 			}
+</span><span class=""> 1029: 		}
+</span><span class=""> 1030: 	}
+</span><span class=""> 1031: 
+</span><span class=""> 1032: 	# ---- Legacy top-level &#39;recommends&#39; / &#39;suggests&#39; ----
+</span><span class=""> 1033: 	# e.g. META_MERGE =&gt; { recommends =&gt; { &#39;Mod&#39; =&gt; 0 } }.  META spec 1.x
+</span><span class=""> 1034: 	# defines a top-level &#39;recommends&#39; as runtime recommendations; a
+</span><span class=""> 1035: 	# top-level &#39;suggests&#39; is treated the same way (runtime suggestions).
+</span><span class=""> 1036: 	# Occurrences inside a &#39;prereqs&#39; block are phase-scoped and have
+</span><span class=""> 1037: 	# already been handled above, so skip them.
+</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">1038 → 1038 → 1053</span></span> 1038: 	while ($content =~ /
+</span><span class=""> 1039: 		\b (requires|build_requires|configure_requires|recommends|suggests|conflicts) [&#39;&quot;]? \s*=&gt;\s* \{
+</span><span class=""> 1040: 			( (?: [^{}]++ | \{ [^{}]*+ \} )* )
+</span><span class=""> 1041: 		\}
+</span><span class=""> 1042: 	/gsx) {
+</span><span class=""> 1043: 		my ($key, $block, $start) = ($1, $2, $-[0]);
+</span><span class=""> 1044: 		# The spans come from successive /g matches, so they are sorted and
+</span><span class=""> 1045: 		# do not overlap: the same binary search as for comments applies,
+</span><span class=""> 1046: 		# O(log P) per block instead of a linear scan (which made many
+</span><span class=""> 1047: 		# legacy blocks times many prereqs blocks quadratic).
+</span><span class=""> 1048: 		next if _in_comment(\@prereqs_spans, $start);
+</span><span class=""> 1049: 		next if _in_comment($comments, $start);
+</span><span class=""> 1050: 		_extract_pairs($block, \%deps, @{ $LEGACY_KEY{$key} });
+</span><span class=""> 1051: 	}
+</span><span class=""> 1052: 
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1053: 	return \%deps;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1054: }
+</span><span class=""> 1055: 
+</span><span class=""> 1056: # -----------------------------------------------------------------------
+</span><span class=""> 1057: # Private helpers
+</span><span class=""> 1058: # -----------------------------------------------------------------------
+</span><span class=""> 1059: 
+</span><span class=""> 1060: # _extract_pairs
+</span><span class=""> 1061: #
+</span><span class=""> 1062: # Purpose:  Parse a raw block of text (the content between the outermost
+</span><span class=""> 1063: #           braces of a dependency hash) into module/version/comment triples
+</span><span class=""> 1064: #           and store them in the deps structure.  Processes line-by-line
+</span><span class=""> 1065: #           so that trailing inline comments can be captured before the
+</span><span class=""> 1066: #           comment text is discarded.
+</span><span class=""> 1067: # Entry:    $_[0] - raw block text (between the outer braces).
+</span><span class=""> 1068: #           $_[1] - hashref to populate (the top-level %deps).
+</span><span class=""> 1069: #           $_[2] - phase name string (e.g. &#39;runtime&#39;).
+</span><span class=""> 1070: #           $_[3] - relationship string (e.g. &#39;requires&#39;).
+</span><span class=""> 1071: # Exit:     Returns nothing - mutates $_[1] in place.
+</span><span class=""> 1072: # Effects:  Modifies the deps hashref; no I/O.
+</span><span class=""> 1073: #
+</span><span class=""> 1074: # First-occurrence-wins: if the same module appears multiple times (e.g.
+</span><span class=""> 1075: # once in PREREQ_PM and once in a prereqs block), the first parsed entry
+</span><span class=""> 1076: # is kept.
+</span><span class=""> 1077: sub _extract_pairs {
+</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">1078 → 1080 → 1131</span></span> 1078: 	my ($block, $deps, $phase, $rel) = @_;
+</span><span class=""> 1079: 
+</span><span class=""> 1080: 	for my $line (split /\n/x, $block) {
+</span><span class=""> 1081: 		# Capture any trailing inline comment before stripping it.
+</span><span class=""> 1082: 		# (.*\S) is O(N): greedy .* scans to end, then gives back trailing
+</span><span class=""> 1083: 		# spaces one by one until \S anchors on the last non-space char.
+</span><span class=""> 1084: 		# Avoids the super-linear behaviour of (.+?)\s*$ which re-evaluates
+</span><span class=""> 1085: 		# \s*$ at every expanded position of the lazy quantifier.
+</span><span class=""> 1086: 		my $comment;
+</span><span class=""> 1087: 		# Most lines have no &#39;#&#39;: index() is far cheaper than the regexes.
+</span><span class="survived-3 tooltip" data-tooltip="Boundary mutation survived. Add tests around edge values (e.g. min, max, off-by-one)."> 1088: 		if (index($line, &#39;#&#39;) &gt;= 0) {
 </span>
 					<details class="mutant-details">
 					<summary>Mutants (Total: 4, Killed: 1, Survived: 3)</summary>
 					<ul>
-				<li><b>NUM_BOUNDARY_1083_25_&gt;: Numeric boundary flip &gt;= to &gt;</b><br>HIGH: Likely missing edge-case test (boundary value)
+				<li><b>NUM_BOUNDARY_1088_25_&gt;: Numeric boundary flip &gt;= to &gt;</b><br>HIGH: Likely missing edge-case test (boundary value)
 
 								<div class="suggested-test">
 								<div class="suggest-label">🧪 Suggested Test</div>
@@ -1434,7 +1439,7 @@ Approximate LCSAJ segments: 101<br>
 is( func(VALUE_AT_BOUNDARY), EXPECTED, &#39;Test boundary behaviour&#39; );
 </pre>
 								</div>
-							</li><li><b>NUM_BOUNDARY_1083_25_&lt;: Numeric boundary flip &gt;= to &lt;</b><br>HIGH: Likely missing edge-case test (boundary value)
+							</li><li><b>NUM_BOUNDARY_1088_25_&lt;: Numeric boundary flip &gt;= to &lt;</b><br>HIGH: Likely missing edge-case test (boundary value)
 
 								<div class="suggested-test">
 								<div class="suggest-label">🧪 Suggested Test</div>
@@ -1442,7 +1447,7 @@ is( func(VALUE_AT_BOUNDARY), EXPECTED, &#39;Test boundary behaviour&#39; );
 is( func(VALUE_AT_BOUNDARY), EXPECTED, &#39;Test boundary behaviour&#39; );
 </pre>
 								</div>
-							</li><li><b>NUM_BOUNDARY_1083_25_&lt;=: Numeric boundary flip &gt;= to &lt;=</b><br>HIGH: Likely missing edge-case test (boundary value)
+							</li><li><b>NUM_BOUNDARY_1088_25_&lt;=: Numeric boundary flip &gt;= to &lt;=</b><br>HIGH: Likely missing edge-case test (boundary value)
 
 								<div class="suggested-test">
 								<div class="suggest-label">🧪 Suggested Test</div>
@@ -1451,722 +1456,722 @@ is( func(VALUE_AT_BOUNDARY), EXPECTED, &#39;Test boundary behaviour&#39; );
 </pre>
 								</div>
 							</li></ul></details>
-<span class=""> 1084: 			# Text after the first &#39;#&#39;, then again after removing unsafe
-</span><span class=""> 1085: 			# characters (which can expose new outer whitespace).  Both use
-</span><span class=""> 1086: 			# $TRIMMED_RE, which is linear; see its definition.
-</span><span class=""> 1087: 			my $after = substr $line, index($line, &#39;#&#39;) + 1;
-</span><span class=""> 1088: 			($comment) = $after =~ /\A$TRIMMED_RE/;
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1089: 			if (defined $comment) {
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1090: 				$comment =~ s/$UNSAFE_COMMENT_CHARS_RE//g;
-</span><span class=""> 1091: 				($comment) = $comment =~ /\A$TRIMMED_RE/;
-</span><span class=""> 1092: 			}
-</span><span class=""> 1093: 			$line = substr $line, 0, index($line, &#39;#&#39;);
-</span><span class=""> 1094: 		}
-</span><span class=""> 1095: 
-</span><span class=""> 1096: 		# A line may hold several entries (&#39;A&#39; =&gt; 0, &#39;B&#39; =&gt; 0); take them all.
-</span><span class=""> 1097: 		my @pairs;
-</span><span class=""> 1098: 		# Opening and closing quotes must match: with [&#39;&quot;]...[&#39;&quot;] the key
-</span><span class=""> 1099: 		# &quot;A&#39;B&quot; was read as &#39;B&quot; and recorded as a different module, B.
-</span><span class=""> 1100: 		while ($line =~ /$PAIR_RE/g) {
-</span><span class=""> 1101: 			push @pairs, [ $1 // $2, $3 // $4 // $5 ];
-</span><span class=""> 1102: 		}
-</span><span class=""> 1103: 
-</span><span class=""> 1104: 		# Defense-in-depth: [^&#39;&quot;]+ already excludes quote characters, but it
-</span><span class=""> 1105: 		# would accept spaces, &#39;;&#39; and non-ASCII look-alikes.  Only a real
-</span><span class=""> 1106: 		# module name may reach the generated cpanfile.  Invalid names are
-</span><span class=""> 1107: 		# dropped first, so that the line&#39;s comment goes to the last entry
-</span><span class=""> 1108: 		# that is actually kept.
-</span><span class=""> 1109: 		@pairs = grep { $_-&gt;[0] =~ $MODULE_NAME_RE } @pairs;
-</span><span class=""> 1110: 
-</span><span class=""> 1111: 		for my $i (0 .. $#pairs) {
-</span><span class=""> 1112: 			my ($mod, $ver) = @{ $pairs[$i] };
-</span><span class=""> 1113: 			# Anything that is not a version or version range (&#39;.&#39;, &#39;_&#39;,
-</span><span class=""> 1114: 			# $VERSION, ...) means &quot;no minimum&quot;; emitting it would produce a
-</span><span class=""> 1115: 			# cpanfile that CPAN::Meta::Requirements rejects.
-</span><span class=""> 1116: 			$ver = 0 unless _valid_requirement($ver);
-</span><span class=""> 1117: 			# First occurrence wins - do not overwrite already-parsed entries.
-</span><span class=""> 1118: 			# A trailing comment belongs to the entry it follows: the last.
-</span><span class=""> 1119: 			$deps-&gt;{$phase}{$rel}{$mod} //= {
-</span><span class=""> 1120: 				version =&gt; $ver,
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1121: 				comment =&gt; $i == $#pairs ? $comment : undef,
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1122: 			};
-</span><span class=""> 1123: 		}
-</span><span class=""> 1124: 	}
-</span><span class=""> 1125: 
-</span><span class=""> 1126: 	return;
-</span><span class=""> 1127: }
-</span><span class=""> 1128: 
-</span><span class=""> 1129: # _parse_min_perl
-</span><span class=""> 1130: #
-</span><span class=""> 1131: # Purpose:  Extract the MIN_PERL_VERSION value from Makefile.PL text.
-</span><span class=""> 1132: # Entry:    $_[0] - raw Makefile.PL content string.
-</span><span class=""> 1133: # Exit:     The version string (e.g. &#39;5.010&#39;), or undef if not declared.
-</span><span class=""> 1134: sub _parse_min_perl {
-</span><span class=""> 1135: 	my $content = $_[0];
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1136: 	return undef if !defined $content || ref $content;	## no critic (ProhibitExplicitReturnUndef)
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1137: 	return undef unless $content =~ /\bMIN_PERL_VERSION\b\s*=&gt;\s*$VALUE_TOKEN_RE/;	## no critic (ProhibitExplicitReturnUndef)
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1138: 	my $ver = $1 // $2 // $3;
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1139: 	return _valid_version($ver) ? $ver : undef;
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1140: }
-</span><span class=""> 1141: 
-</span><span class=""> 1142: # _comment_spans
-</span><span class=""> 1143: #
-</span><span class=""> 1144: # Purpose:  Find every &#39;#&#39; comment in the content, so that a commented-out
-</span><span class=""> 1145: #           one-line dependency hash is not parsed as live.  One linear pass;
-</span><span class=""> 1146: #           the result is queried with _in_comment for each candidate block.
-</span><span class=""> 1147: # Entry:    $_[0] - content string.
-</span><span class=""> 1148: # Exit:     ArrayRef of [start, end) offsets, ascending and non-overlapping,
-</span><span class=""> 1149: #           each running from an unquoted &#39;#&#39; to the end of its line.
-</span><span class=""> 1150: sub _comment_spans {
-</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">1151 → 1154 → 1163</span></span> 1151: 	my $content = $_[0];
-</span><span class=""> 1152: 	my @spans;
-</span><span class=""> 1153: 	my $offset = 0;
-</span><span class=""> 1154: 	for my $line (split /\n/, $content, -1) {
-</span><span class=""> 1155: 		# Most lines have no &#39;#&#39; at all; only the rest need the quote-aware
-</span><span class=""> 1156: 		# scan, which finds the first &#39;#&#39; outside quoted strings (so that
-</span><span class=""> 1157: 		# e.g. &#39;C#&#39; is not mistaken for a comment) without building a copy.
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1158: 		if (index($line, &#39;#&#39;) &gt;= 0 &amp;&amp; $line =~ $TO_COMMENT_RE) {
-</span><p> <b> Mutants (Total: 4, Killed: 4, Survived: 0)</b><p><span class=""> 1159: 			push @spans, [ $offset + $+[0] - 1, $offset + length $line ];
-</span><span class=""> 1160: 		}
-</span><span class=""> 1161: 		$offset += length($line) + 1;
-</span><span class=""> 1162: 	}
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1163: 	return \@spans;
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1164: }
-</span><span class=""> 1165: 
-</span><span class=""> 1166: # _in_comment
-</span><span class=""> 1167: #
-</span><span class=""> 1168: # Purpose:  Decide whether an offset lies inside one of the comment spans.
-</span><span class=""> 1169: # Entry:    $_[0] - ArrayRef from _comment_spans; $_[1] - offset.
-</span><span class=""> 1170: # Exit:     Boolean.  Binary search, so O(log n) per query.
-</span><span class=""> 1171: sub _in_comment {
-</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">1172 → 1174 → 1181</span></span> 1172: 	my ($spans, $pos) = @_;
-</span><span class=""> 1173: 	my ($lo, $hi) = (0, $#{$spans});
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1174: 	while ($lo &lt;= $hi) {
-</span><p> <b> Mutants (Total: 3, Killed: 3, Survived: 0)</b><p><span class=""> 1175: 		my $mid = int(($lo + $hi) / 2);
-</span><span class=""> 1176: 		my ($start, $end) = @{ $spans-&gt;[$mid] };
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1177: 		if ($pos &lt; $start) { $hi = $mid - 1 }
-</span><p> <b> Mutants (Total: 4, Killed: 4, Survived: 0)</b><p><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1178: 		elsif ($pos &gt;= $end) { $lo = $mid + 1 }
-</span><p> <b> Mutants (Total: 3, Killed: 3, Survived: 0)</b><p><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1179: 		else { return 1 }
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1180: 	}
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1181: 	return 0;
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1182: }
-</span><span class=""> 1183: 
-</span><span class=""> 1184: # _valid_version
-</span><span class=""> 1185: #
-</span><span class=""> 1186: # Purpose:  Decide whether a string is a plausible version number that is
-</span><span class=""> 1187: #           safe to write inside a single-quoted cpanfile literal.
-</span><span class=""> 1188: # Entry:    $_[0] - candidate version string.
-</span><span class=""> 1189: # Exit:     Boolean: an optional leading &#39;v&#39; followed only by ASCII digits,
-</span><span class=""> 1190: #           dots and underscores, with at least one digit.
-</span><span class=""> 1191: sub _valid_version {
-</span><span class=""> 1192: 	my $ver = $_[0];
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1193: 	return defined $ver &amp;&amp; $ver =~ $VERSION_RE ? 1 : 0;
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1194: }
-</span><span class=""> 1195: 
-</span><span class=""> 1196: # _valid_requirement
-</span><span class=""> 1197: #
-</span><span class=""> 1198: # Purpose:  Decide whether a string is a module version requirement that is
-</span><span class=""> 1199: #           safe to write inside a single-quoted cpanfile literal: a single
-</span><span class=""> 1200: #           version (see _valid_version) or a CPAN::Meta version range.
-</span><span class=""> 1201: # Entry:    $_[0] - candidate string.
-</span><span class=""> 1202: # Exit:     Boolean.
-</span><span class=""> 1203: sub _valid_requirement {
-</span><span class=""> 1204: 	my $req = $_[0];
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1205: 	return defined $req &amp;&amp; $req =~ $REQUIREMENT_RE ? 1 : 0;
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1206: }
-</span><span class=""> 1207: 
-</span><span class=""> 1208: # _printable
-</span><span class=""> 1209: #
-</span><span class=""> 1210: # Purpose:  Make text from a file or the environment safe to put in an
-</span><span class=""> 1211: #           error or warning.  SECURITY: such text is printed to the user&#39;s
-</span><span class=""> 1212: #           terminal, where escape sequences (e.g. ESC ] 0 ; ... to retitle
-</span><span class=""> 1213: #           the window, or CR and ESC [ 2 K to erase the line and print
-</span><span class=""> 1214: #           something else) could hide or forge messages.
-</span><span class=""> 1215: # Entry:    $_[0] - any value (stringified).
-</span><span class=""> 1216: # Exit:     The string with control characters and bidirectional-override
-</span><span class=""> 1217: #           characters replaced by \x{..} escapes; everything else as is.
-</span><span class=""> 1218: sub _printable {
-</span><span class=""> 1219: 	my $text = &quot;$_[0]&quot;;
-</span><span class=""> 1220: 	$text =~ s/($UNSAFE_COMMENT_CHARS_RE)/sprintf &#39;\\x{%X}&#39;, ord $1/ge;
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1221: 	return $text;
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1222: }
-</span><span class=""> 1223: 
-</span><span class=""> 1224: # _load_develop_config
-</span><span class=""> 1225: #
-</span><span class=""> 1226: # Return the develop-tools hash from the user&#39;s YAML config file,
-</span><span class=""> 1227: #   or %DEFAULT_DEVELOP when no config file exists.
-</span><span class=""> 1228: # Entry:    None - reads from the filesystem at a well-known path.
-</span><span class=""> 1229: # Exit:     HashRef { Module::Name =&gt; minimum_version_or_0 }.
-</span><span class=""> 1230: # Effects:  Reads from disk. Croaks on YAML parse failure. Carps when the
-</span><span class=""> 1231: #           config file lacks a &#39;develop&#39; key.
-</span><span class=""> 1232: sub _load_develop_config {
-</span><span class=""> 1233: 	# Path::Tiny and YAML::Tiny use eval internally, which resets $@; keep the
-</span><span class=""> 1234: 	# caller&#39;s value intact so an enclosing eval/$@ check is not disturbed.
-</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">1235 → 1249 → 1257</span></span> 1235: 	local $@;
-</span><span class=""> 1236: 
-</span><span class=""> 1237: 	# Guard: no usable home directory (containers, chroots, CI).  length()
-</span><span class=""> 1238: 	# of undef is undef, so one test rejects both undef and &#39;&#39;.
-</span><span class=""> 1239: 	my $home = File::HomeDir-&gt;my_home;
-</span><span class=""> 1240: 	return {%DEFAULT_DEVELOP} unless length($home // q{});
+<span class=""> 1089: 			# Text after the first &#39;#&#39;, then again after removing unsafe
+</span><span class=""> 1090: 			# characters (which can expose new outer whitespace).  Both use
+</span><span class=""> 1091: 			# $TRIMMED_RE, which is linear; see its definition.
+</span><span class=""> 1092: 			my $after = substr $line, index($line, &#39;#&#39;) + 1;
+</span><span class=""> 1093: 			($comment) = $after =~ /\A$TRIMMED_RE/x;
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1094: 			if (defined $comment) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1095: 				$comment =~ s/$UNSAFE_COMMENT_CHARS_RE//gx;
+</span><span class=""> 1096: 				($comment) = $comment =~ /\A$TRIMMED_RE/x;
+</span><span class=""> 1097: 			}
+</span><span class=""> 1098: 			$line = substr $line, 0, index($line, &#39;#&#39;);
+</span><span class=""> 1099: 		}
+</span><span class=""> 1100: 
+</span><span class=""> 1101: 		# A line may hold several entries (&#39;A&#39; =&gt; 0, &#39;B&#39; =&gt; 0); take them all.
+</span><span class=""> 1102: 		my @pairs;
+</span><span class=""> 1103: 		# Opening and closing quotes must match: with [&#39;&quot;]...[&#39;&quot;] the key
+</span><span class=""> 1104: 		# &quot;A&#39;B&quot; was read as &#39;B&quot; and recorded as a different module, B.
+</span><span class=""> 1105: 		while ($line =~ /$PAIR_RE/gx) {
+</span><span class=""> 1106: 			push @pairs, [ $1 // $2, $3 // $4 // $5 ];
+</span><span class=""> 1107: 		}
+</span><span class=""> 1108: 
+</span><span class=""> 1109: 		# Defense-in-depth: [^&#39;&quot;]+ already excludes quote characters, but it
+</span><span class=""> 1110: 		# would accept spaces, &#39;;&#39; and non-ASCII look-alikes.  Only a real
+</span><span class=""> 1111: 		# module name may reach the generated cpanfile.  Invalid names are
+</span><span class=""> 1112: 		# dropped first, so that the line&#39;s comment goes to the last entry
+</span><span class=""> 1113: 		# that is actually kept.
+</span><span class=""> 1114: 		@pairs = grep { $_-&gt;[0] =~ $MODULE_NAME_RE } @pairs;
+</span><span class=""> 1115: 
+</span><span class=""> 1116: 		for my $i (0 .. $#pairs) {
+</span><span class=""> 1117: 			my ($mod, $ver) = @{ $pairs[$i] };
+</span><span class=""> 1118: 			# Anything that is not a version or version range (&#39;.&#39;, &#39;_&#39;,
+</span><span class=""> 1119: 			# $VERSION, ...) means &quot;no minimum&quot;; emitting it would produce a
+</span><span class=""> 1120: 			# cpanfile that CPAN::Meta::Requirements rejects.
+</span><span class=""> 1121: 			$ver = 0 unless _valid_requirement($ver);
+</span><span class=""> 1122: 			# First occurrence wins - do not overwrite already-parsed entries.
+</span><span class=""> 1123: 			# A trailing comment belongs to the entry it follows: the last.
+</span><span class=""> 1124: 			$deps-&gt;{$phase}{$rel}{$mod} //= {
+</span><span class=""> 1125: 				version =&gt; $ver,
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1126: 				comment =&gt; $i == $#pairs ? $comment : undef,
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1127: 			};
+</span><span class=""> 1128: 		}
+</span><span class=""> 1129: 	}
+</span><span class=""> 1130: 
+</span><span class=""> 1131: 	return;
+</span><span class=""> 1132: }
+</span><span class=""> 1133: 
+</span><span class=""> 1134: # _parse_min_perl
+</span><span class=""> 1135: #
+</span><span class=""> 1136: # Purpose:  Extract the MIN_PERL_VERSION value from Makefile.PL text.
+</span><span class=""> 1137: # Entry:    $_[0] - raw Makefile.PL content string.
+</span><span class=""> 1138: # Exit:     The version string (e.g. &#39;5.010&#39;), or undef if not declared.
+</span><span class=""> 1139: sub _parse_min_perl {
+</span><span class=""> 1140: 	my $content = $_[0];
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1141: 	return undef if !defined $content || ref $content;	## no critic (ProhibitExplicitReturnUndef)
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1142: 	return undef unless $content =~ /\bMIN_PERL_VERSION\b\s*=&gt;\s*$VALUE_TOKEN_RE/x;	## no critic (ProhibitExplicitReturnUndef)
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1143: 	my $ver = $1 // $2 // $3;
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1144: 	return _valid_version($ver) ? $ver : undef;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1145: }
+</span><span class=""> 1146: 
+</span><span class=""> 1147: # _comment_spans
+</span><span class=""> 1148: #
+</span><span class=""> 1149: # Purpose:  Find every &#39;#&#39; comment in the content, so that a commented-out
+</span><span class=""> 1150: #           one-line dependency hash is not parsed as live.  One linear pass;
+</span><span class=""> 1151: #           the result is queried with _in_comment for each candidate block.
+</span><span class=""> 1152: # Entry:    $_[0] - content string.
+</span><span class=""> 1153: # Exit:     ArrayRef of [start, end) offsets, ascending and non-overlapping,
+</span><span class=""> 1154: #           each running from an unquoted &#39;#&#39; to the end of its line.
+</span><span class=""> 1155: sub _comment_spans {
+</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">1156 → 1159 → 1168</span></span> 1156: 	my $content = $_[0];
+</span><span class=""> 1157: 	my @spans;
+</span><span class=""> 1158: 	my $offset = 0;
+</span><span class=""> 1159: 	for my $line (split /\n/x, $content, -1) {
+</span><span class=""> 1160: 		# Most lines have no &#39;#&#39; at all; only the rest need the quote-aware
+</span><span class=""> 1161: 		# scan, which finds the first &#39;#&#39; outside quoted strings (so that
+</span><span class=""> 1162: 		# e.g. &#39;C#&#39; is not mistaken for a comment) without building a copy.
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1163: 		if (index($line, &#39;#&#39;) &gt;= 0 &amp;&amp; $line =~ $TO_COMMENT_RE) {
+</span><p> <b> Mutants (Total: 4, Killed: 4, Survived: 0)</b><p><span class=""> 1164: 			push @spans, [ $offset + $+[0] - 1, $offset + length $line ];
+</span><span class=""> 1165: 		}
+</span><span class=""> 1166: 		$offset += length($line) + 1;
+</span><span class=""> 1167: 	}
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1168: 	return \@spans;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1169: }
+</span><span class=""> 1170: 
+</span><span class=""> 1171: # _in_comment
+</span><span class=""> 1172: #
+</span><span class=""> 1173: # Purpose:  Decide whether an offset lies inside one of the comment spans.
+</span><span class=""> 1174: # Entry:    $_[0] - ArrayRef from _comment_spans; $_[1] - offset.
+</span><span class=""> 1175: # Exit:     Boolean.  Binary search, so O(log n) per query.
+</span><span class=""> 1176: sub _in_comment {
+</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">1177 → 1179 → 1186</span></span> 1177: 	my ($spans, $pos) = @_;
+</span><span class=""> 1178: 	my ($lo, $hi) = (0, $#{$spans});
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1179: 	while ($lo &lt;= $hi) {
+</span><p> <b> Mutants (Total: 3, Killed: 3, Survived: 0)</b><p><span class=""> 1180: 		my $mid = int(($lo + $hi) / 2);
+</span><span class=""> 1181: 		my ($start, $end) = @{ $spans-&gt;[$mid] };
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1182: 		if ($pos &lt; $start) { $hi = $mid - 1 }
+</span><p> <b> Mutants (Total: 4, Killed: 4, Survived: 0)</b><p><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1183: 		elsif ($pos &gt;= $end) { $lo = $mid + 1 }
+</span><p> <b> Mutants (Total: 3, Killed: 3, Survived: 0)</b><p><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1184: 		else { return 1 }
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1185: 	}
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1186: 	return 0;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1187: }
+</span><span class=""> 1188: 
+</span><span class=""> 1189: # _valid_version
+</span><span class=""> 1190: #
+</span><span class=""> 1191: # Purpose:  Decide whether a string is a plausible version number that is
+</span><span class=""> 1192: #           safe to write inside a single-quoted cpanfile literal.
+</span><span class=""> 1193: # Entry:    $_[0] - candidate version string.
+</span><span class=""> 1194: # Exit:     Boolean: an optional leading &#39;v&#39; followed only by ASCII digits,
+</span><span class=""> 1195: #           dots and underscores, with at least one digit.
+</span><span class=""> 1196: sub _valid_version {
+</span><span class=""> 1197: 	my $ver = $_[0];
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1198: 	return defined $ver &amp;&amp; $ver =~ $VERSION_RE ? 1 : 0;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1199: }
+</span><span class=""> 1200: 
+</span><span class=""> 1201: # _valid_requirement
+</span><span class=""> 1202: #
+</span><span class=""> 1203: # Purpose:  Decide whether a string is a module version requirement that is
+</span><span class=""> 1204: #           safe to write inside a single-quoted cpanfile literal: a single
+</span><span class=""> 1205: #           version (see _valid_version) or a CPAN::Meta version range.
+</span><span class=""> 1206: # Entry:    $_[0] - candidate string.
+</span><span class=""> 1207: # Exit:     Boolean.
+</span><span class=""> 1208: sub _valid_requirement {
+</span><span class=""> 1209: 	my $req = $_[0];
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1210: 	return defined $req &amp;&amp; $req =~ $REQUIREMENT_RE ? 1 : 0;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1211: }
+</span><span class=""> 1212: 
+</span><span class=""> 1213: # _printable
+</span><span class=""> 1214: #
+</span><span class=""> 1215: # Purpose:  Make text from a file or the environment safe to put in an
+</span><span class=""> 1216: #           error or warning.  SECURITY: such text is printed to the user&#39;s
+</span><span class=""> 1217: #           terminal, where escape sequences (e.g. ESC ] 0 ; ... to retitle
+</span><span class=""> 1218: #           the window, or CR and ESC [ 2 K to erase the line and print
+</span><span class=""> 1219: #           something else) could hide or forge messages.
+</span><span class=""> 1220: # Entry:    $_[0] - any value (stringified).
+</span><span class=""> 1221: # Exit:     The string with control characters and bidirectional-override
+</span><span class=""> 1222: #           characters replaced by \x{..} escapes; everything else as is.
+</span><span class=""> 1223: sub _printable {
+</span><span class=""> 1224: 	my $text = &quot;$_[0]&quot;;
+</span><span class=""> 1225: 	$text =~ s/($UNSAFE_COMMENT_CHARS_RE)/sprintf &#39;\\x{%X}&#39;, ord $1/gex;
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1226: 	return $text;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1227: }
+</span><span class=""> 1228: 
+</span><span class=""> 1229: # _load_develop_config
+</span><span class=""> 1230: #
+</span><span class=""> 1231: # Return the develop-tools hash from the user&#39;s YAML config file,
+</span><span class=""> 1232: #   or %DEFAULT_DEVELOP when no config file exists.
+</span><span class=""> 1233: # Entry:    None - reads from the filesystem at a well-known path.
+</span><span class=""> 1234: # Exit:     HashRef { Module::Name =&gt; minimum_version_or_0 }.
+</span><span class=""> 1235: # Effects:  Reads from disk. Croaks on YAML parse failure. Carps when the
+</span><span class=""> 1236: #           config file lacks a &#39;develop&#39; key.
+</span><span class=""> 1237: sub _load_develop_config {
+</span><span class=""> 1238: 	# Path::Tiny and YAML::Tiny use eval internally, which resets $@; keep the
+</span><span class=""> 1239: 	# caller&#39;s value intact so an enclosing eval/$@ check is not disturbed.
+</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">1240 → 1254 → 1262</span></span> 1240: 	local $@ = q{};
 </span><span class=""> 1241: 
-</span><span class=""> 1242: 	my $cfg_path = Path::Tiny::path($home)-&gt;child(&#39;.config&#39;, &#39;makefilepl2cpanfile.yml&#39;);
-</span><span class=""> 1243: 	my $cfg_shown = _printable($cfg_path);
-</span><span class=""> 1244: 
-</span><span class=""> 1245: 	# Guard: the path cannot be examined.  A missing file means &quot;use the
-</span><span class=""> 1246: 	# defaults&quot;; any other stat failure (EACCES, ELOOP, stale NFS...) must not
-</span><span class=""> 1247: 	# silently change the output.
-</span><span class=""> 1248: 	my @stat = stat &quot;$cfg_path&quot;;
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1249: 	unless (@stat) {
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1250: 		Carp::croak &quot;Failed to parse $cfg_shown: $!&quot; unless $!{ENOENT} || $!{ENOTDIR};
-</span><span class=""> 1251: 		return {%DEFAULT_DEVELOP};
-</span><span class=""> 1252: 	}
-</span><span class=""> 1253: 
-</span><span class=""> 1254: 	# Guard: not a regular file.  A FIFO would block the read forever and a
-</span><span class=""> 1255: 	# device could stream without end.  The mode bits come from @stat, not
-</span><span class=""> 1256: 	# from Perl&#39;s implicit &#39;_&#39; buffer, which another stat could replace.
-</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">1257 → 1264 → 1272</span></span> 1257: 	return {%DEFAULT_DEVELOP} unless Fcntl::S_ISREG($stat[2]);
+</span><span class=""> 1242: 	# Guard: no usable home directory (containers, chroots, CI).  length()
+</span><span class=""> 1243: 	# of undef is undef, so one test rejects both undef and &#39;&#39;.
+</span><span class=""> 1244: 	my $home = File::HomeDir-&gt;my_home;
+</span><span class=""> 1245: 	return {%DEFAULT_DEVELOP} unless length($home // q{});
+</span><span class=""> 1246: 
+</span><span class=""> 1247: 	my $cfg_path = Path::Tiny::path($home)-&gt;child(&#39;.config&#39;, &#39;makefilepl2cpanfile.yml&#39;);
+</span><span class=""> 1248: 	my $cfg_shown = _printable($cfg_path);
+</span><span class=""> 1249: 
+</span><span class=""> 1250: 	# Guard: the path cannot be examined.  A missing file means &quot;use the
+</span><span class=""> 1251: 	# defaults&quot;; any other stat failure (EACCES, ELOOP, stale NFS...) must not
+</span><span class=""> 1252: 	# silently change the output.
+</span><span class=""> 1253: 	my @stat = stat &quot;$cfg_path&quot;;
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1254: 	unless (@stat) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1255: 		Carp::croak &quot;Failed to parse $cfg_shown: $!&quot; unless $!{ENOENT} || $!{ENOTDIR};
+</span><span class=""> 1256: 		return {%DEFAULT_DEVELOP};
+</span><span class=""> 1257: 	}
 </span><span class=""> 1258: 
-</span><span class=""> 1259: 	# Guard: unreadable or invalid YAML.  YAML::Tiny reports failure by dying
-</span><span class=""> 1260: 	# (current versions) or by returning false with errstr set (older ones);
-</span><span class=""> 1261: 	# both become the single documented message, without YAML::Tiny&#39;s own
-</span><span class=""> 1262: 	# location.
-</span><span class=""> 1263: 	my $yaml = eval { YAML::Tiny-&gt;read(&quot;$cfg_path&quot;) };
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1264: 	unless ($yaml) {
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1265: 		my $err = $@ || YAML::Tiny-&gt;errstr() // q{};
-</span><span class=""> 1266: 		$err =~ s/ at \S++ line \d++\.?\n?\z//;
-</span><span class=""> 1267: 		Carp::croak &quot;Failed to parse $cfg_shown: &quot; . _printable($err);
-</span><span class=""> 1268: 	}
-</span><span class=""> 1269: 
-</span><span class=""> 1270: 	# Guard: no develop hash.  Checking the document&#39;s type first means a
-</span><span class=""> 1271: 	# document that is not a hash is never dereferenced.
-</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">1272 → 1274 → 1283</span></span> 1272: 	my $doc     = $yaml-&gt;[0];
-</span><span class=""> 1273: 	my $develop = ref $doc eq &#39;HASH&#39; ? $doc-&gt;{develop} : undef;
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1274: 	unless (ref $develop eq &#39;HASH&#39;) {
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1275: 		Carp::carp &quot;No &#39;develop&#39; key found in $cfg_shown; using defaults&quot;;
-</span><span class=""> 1276: 		return {%DEFAULT_DEVELOP};
-</span><span class=""> 1277: 	}
-</span><span class=""> 1278: 
-</span><span class=""> 1279: 	# SECURITY: validate every key (module name) and value (version) before
-</span><span class=""> 1280: 	# use.  Keys are arbitrary strings: without this guard a key such as
-</span><span class=""> 1281: 	# &quot;Safe&#39;; system(&#39;evil&#39;); requires &#39;X&quot; would close the quoted literal in
-</span><span class=""> 1282: 	# _fmt_dep and inject code into the generated cpanfile, which cpanm runs.
-</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">1283 → 1284 → 1299</span></span> 1283: 	my %clean;
-</span><span class=""> 1284: 	for my $mod (keys %{$develop}) {
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1285: 		unless ($mod =~ $MODULE_NAME_RE) {
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1286: 			Carp::carp &quot;Skipping invalid module name in $cfg_shown: &#39;&quot; . _printable($mod) . q{&#39;};
-</span><span class=""> 1287: 			next;
-</span><span class=""> 1288: 		}
-</span><span class=""> 1289: 		# Premise 1: a null value means &quot;any version&quot;, i.e. 0.
-</span><span class=""> 1290: 		# Premise 2: _valid_requirement accepts &#39;0&#39; (it contains a digit).
-</span><span class=""> 1291: 		# Conclusion: &#39;&#39; is the only extra value that needs allowing.
-</span><span class=""> 1292: 		my $v = $develop-&gt;{$mod} // 0;
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1293: 		unless ($v eq q{} || _valid_requirement($v)) {
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1294: 			Carp::carp &quot;Skipping invalid version for &#39;$mod&#39; in $cfg_shown: &#39;&quot; . _printable($v) . q{&#39;};
-</span><span class=""> 1295: 			$v = 0;
-</span><span class=""> 1296: 		}
-</span><span class=""> 1297: 		$clean{$mod} = $v;
-</span><span class=""> 1298: 	}
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1299: 	return \%clean;
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1300: }
-</span><span class=""> 1301: 
-</span><span class=""> 1302: # _emit
-</span><span class=""> 1303: #
-</span><span class=""> 1304: # Purpose:  Pure formatter - converts the structured dependency hash and an
-</span><span class=""> 1305: #           optional minimum Perl version into a valid cpanfile string.
-</span><span class=""> 1306: # Entry:    $_[0] - HashRef (see DATA STRUCTURE section in POD)
-</span><span class=""> 1307: #           $_[1] - optional Str minimum Perl version (e.g. &#39;5.010&#39;)
-</span><span class=""> 1308: # Exit:     Scalar string; always terminated with exactly one newline.
-</span><span class=""> 1309: #           Never returns undef.
-</span><span class=""> 1310: #
-</span><span class=""> 1311: # Runtime deps are emitted at the top level (no &#39;on&#39; block) per cpanfile
-</span><span class=""> 1312: # convention. All other phases get &#39;on phase =&gt; sub { ... }&#39; blocks.
-</span><span class=""> 1313: # Within each phase, relationships are emitted in @REL_ORDER order;
-</span><span class=""> 1314: # modules within each relationship are sorted alphabetically.
-</span><span class=""> 1315: # Inline comments are re-emitted after the semicolon on the same line.
-</span><span class=""> 1316: # A version of 0 or &#39;&#39; means &quot;any version&quot; and is omitted.
-</span><span class=""> 1317: sub _emit {
-</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">1318 → 1326 → 1337</span></span> 1318: 	my ($deps, $min_perl) = @_;
-</span><span class=""> 1319: 
-</span><span class=""> 1320: 	# Build the output as a list of sections joined by blank lines.
-</span><span class=""> 1321: 	my @sections = ($HEADER);
-</span><span class=""> 1322: 	push @sections, &quot;requires &#39;perl&#39;, &#39;$min_perl&#39;;&quot; if _has_version($min_perl);
-</span><span class=""> 1323: 
-</span><span class=""> 1324: 	# Runtime is emitted at the top level; every other phase in an &#39;on&#39;
-</span><span class=""> 1325: 	# block, in @PHASE_ORDER.  Both use the same line builder.
-</span><span class=""> 1326: 	for my $phase (&#39;runtime&#39;, @PHASE_ORDER) {
-</span><span class=""> 1327: 		my $indent = $phase eq &#39;runtime&#39; ? q{} : &quot;\t&quot;;
-</span><span class=""> 1328: 		my $body = join q{}, map { _fmt_dep(@{$_}, $indent) } @{ _phase_entries($deps-&gt;{$phase}) };
-</span><span class=""> 1329: 		# Premise: an absent phase, or one whose relationships are all
-</span><span class=""> 1330: 		# empty, yields no entries.  Conclusion: it yields no section.
-</span><span class=""> 1331: 		next if $body eq q{};
-</span><span class=""> 1332: 		push @sections, $phase eq &#39;runtime&#39;
-</span><span class=""> 1333: 			? $body =~ s/\n\z//r		# the blank-line separator is added by join
-</span><span class=""> 1334: 			: &quot;on &#39;$phase&#39; =&gt; sub {\n$body};&quot;;
-</span><span class=""> 1335: 	}
-</span><span class=""> 1336: 
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1337: 	return join(&quot;\n\n&quot;, @sections) . &quot;\n&quot;;
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1338: }
-</span><span class=""> 1339: 
-</span><span class=""> 1340: # _phase_entries
-</span><span class=""> 1341: #
-</span><span class=""> 1342: # Purpose:  List one phase&#39;s entries in output order: relationships in
-</span><span class=""> 1343: #           @REL_ORDER, modules alphabetically within each.
-</span><span class=""> 1344: # Entry:    $_[0] - the phase&#39;s hashref ({ rel =&gt; { module =&gt; entry } }),
-</span><span class=""> 1345: #           or undef when the phase is absent.
-</span><span class=""> 1346: # Exit:     ArrayRef of [ rel, module, entry ] triples; empty when none.
-</span><span class=""> 1347: sub _phase_entries {
-</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">1348 → 1350 → 1354</span></span> 1348: 	my $phase = $_[0] || {};
-</span><span class=""> 1349: 	my @entries;
-</span><span class=""> 1350: 	for my $rel (@REL_ORDER) {
-</span><span class=""> 1351: 		my $mods = $phase-&gt;{$rel} || {};
-</span><span class=""> 1352: 		push @entries, [ $rel, $_, $mods-&gt;{$_} ] for sort keys %{$mods};
-</span><span class=""> 1353: 	}
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1354: 	return \@entries;
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1355: }
-</span><span class=""> 1356: 
-</span><span class=""> 1357: # _fmt_dep
-</span><span class=""> 1358: #
-</span><span class=""> 1359: # Purpose:  Format a single dependency line for cpanfile output, including
-</span><span class=""> 1360: #           the optional version constraint and inline comment.
-</span><span class=""> 1361: # Entry:    $_[0] - relationship keyword (e.g. &#39;requires&#39;, &#39;recommends&#39;).
-</span><span class=""> 1362: #           $_[1] - module name string.
-</span><span class=""> 1363: #           $_[2] - entry hashref { version =&gt; ..., comment =&gt; ... }.
-</span><span class=""> 1364: #           $_[3] - indentation prefix (&#39;&#39; for runtime, &quot;\t&quot; for phase blocks).
-</span><span class=""> 1365: # Exit:     A complete formatted line, including trailing newline.
-</span><span class=""> 1366: sub _fmt_dep {
-</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">1367 → 1376 → 1382</span></span> 1367: 	my ($rel, $mod, $entry, $indent) = @_;
-</span><span class=""> 1368: 
-</span><span class=""> 1369: 	my $line = &quot;${indent}$rel &#39;$mod&#39;&quot;;
-</span><span class=""> 1370: 	$line .= &quot;, &#39;$entry-&gt;{version}&#39;&quot; if _has_version($entry-&gt;{version});
-</span><span class=""> 1371: 
-</span><span class=""> 1372: 	# Premise 1: every producer of entries stores a comment that is undef
-</span><span class=""> 1373: 	# or non-empty (_extract_pairs turns an empty comment into undef; merged
-</span><span class=""> 1374: 	# and configured entries have none).  Premise 2: _fmt_dep is only called
-</span><span class=""> 1375: 	# by _emit on such entries.  Conclusion: defined() is sufficient.
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1376: 	if (defined $entry-&gt;{comment}) {
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1377: 		$line .= &quot;;   # $entry-&gt;{comment}\n&quot;;
-</span><span class=""> 1378: 	} else {
-</span><span class=""> 1379: 		$line .= &quot;;\n&quot;;
-</span><span class=""> 1380: 	}
-</span><span class=""> 1381: 
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1382: 	return $line;
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1383: }
-</span><span class=""> 1384: 
-</span><span class=""> 1385: # _has_version
-</span><span class=""> 1386: #
-</span><span class=""> 1387: # Decide whether a version value represents a real minimum version
-</span><span class=""> 1388: #	constraint that should be written into the cpanfile output.
-</span><span class=""> 1389: # Entry:    $_[0] - version value (scalar, possibly undef or numeric &#39;0&#39;).
-</span><span class=""> 1390: # Exit:     Boolean: true if the version should be emitted; false if it
-</span><span class=""> 1391: #           means &quot;any version&quot; (undef, empty string, or numeric zero).
-</span><span class=""> 1392: sub _has_version {
-</span><span class=""> 1393: 	my $ver = $_[0];
-</span><span class=""> 1394: 
-</span><span class=""> 1395: 	# Premise 1: every version that reaches here is undef, 0, &#39;&#39; or a string
-</span><span class=""> 1396: 	# accepted by _valid_requirement: a single version (ASCII digits, &#39;.&#39;,
-</span><span class=""> 1397: 	# &#39;_&#39;, optional &#39;v&#39;) or a range, which always contains an operator.
-</span><span class=""> 1398: 	# Premise 2: a single version is zero exactly when none of its digits is
-</span><span class=""> 1399: 	# 1-9 (&#39;0&#39;, &#39;0.000&#39;, &#39;v0.0.0&#39;, &#39;0_0&#39;); a range means &quot;any version&quot; only
-</span><span class=""> 1400: 	# when it is &#39;&gt;=&#39; a zero version.
-</span><span class=""> 1401: 	# Conclusion: two tests decide it.
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1402: 	return 0 unless defined $ver;
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1403: 	return $ver =~ /\A \s* &gt;= \s* v? [0._]* \s* \z/x ? 0 : 1 if $ver =~ /[&lt;&gt;=!]/x;
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1404: 	return $ver =~ /[1-9]/ ? 1 : 0;
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1405: }
-</span><span class=""> 1406: 
-</span><span class=""> 1407: 
-</span><span class=""> 1408: # -----------------------------------------------------------------------
-</span><span class=""> 1409: # Post-release roadmap (from the 0.05 gap analysis)
-</span><span class=""> 1410: # -----------------------------------------------------------------------
-</span><span class=""> 1411: #
-</span><span class=""> 1412: # Features
-</span><span class=""> 1413: # TODO: Write CPAN::Meta optional_features as cpanfile &#39;feature&#39; blocks,
-</span><span class=""> 1414: #       and carry x_* custom phases through instead of dropping them.
-</span><span class=""> 1415: # TODO: Command line: --diff should exit non-zero when the cpanfile would
-</span><span class=""> 1416: #       change (like &#39;git diff --exit-code&#39;); add --makefile FILE,
-</span><span class=""> 1417: #       --output FILE, --quiet, and &#39;-&#39; to read Makefile.PL from stdin.
-</span><span class=""> 1418: # TODO: Read other build files: Build.PL (Module::Build requires,
-</span><span class=""> 1419: #       build_requires, test_requires, configure_requires, recommends) and
-</span><span class=""> 1420: #       possibly dist.ini; consider the reverse direction (cpanfile to a
-</span><span class=""> 1421: #       PREREQ_PM snippet).
-</span><span class=""> 1422: # TODO: Keep more of a hand-written cpanfile than its develop block:
-</span><span class=""> 1423: #       feature blocks, extra &#39;on test&#39; entries, and comments inside the
-</span><span class=""> 1424: #       develop block.
-</span><span class=""> 1425: # TODO: Optional, never default, mode that runs Makefile.PL in an isolated
-</span><span class=""> 1426: #       sandbox to capture dependencies computed by code.
-</span><span class=""> 1427: # TODO: Translatable messages (e.g. Locale::TextDomain); all messages are
-</span><span class=""> 1428: #       English only.
-</span><span class=""> 1429: #
-</span><span class=""> 1430: # Technical debt
-</span><span class=""> 1431: # TODO: Replace the brace-counting regexes with PPI: parses Perl without
-</span><span class=""> 1432: #       running it, handles any nesting depth, quoting and heredocs, and
-</span><span class=""> 1433: #       could flag conditional dependencies instead of making them
-</span><span class=""> 1434: #       unconditional.
-</span><span class=""> 1435: # TODO: Move bin/makefilepl2cpanfile&#39;s logic into a module
-</span><span class=""> 1436: #       (e.g. App::makefilepl2cpanfile::CLI-&gt;run(\@ARGV) returning an exit
-</span><span class=""> 1437: #       code) for in-process tests, real coverage, and fewer subprocess
-</span><span class=""> 1438: #       tests (slow, and fragile on Windows).
-</span><span class=""> 1439: # TODO: Consolidate the test suite: move duplicated helpers (empty_home,
-</span><span class=""> 1440: #       make_mf, use_home, run_cli) into t/lib, and merge the overlap
-</span><span class=""> 1441: #       between function.t, unit.t and extended_tests.t.
-</span><span class=""> 1442: # TODO: Readonly hashes and arrays (%PHASE_MAP, %VALID_PHASE, %VALID_REL,
-</span><span class=""> 1443: #       %LEGACY_KEY, @REL_ORDER, @PHASE_ORDER, %DEFAULT_DEVELOP) are tied,
-</span><span class=""> 1444: #       adding overhead to every access; use plain lexicals or constant
-</span><span class=""> 1445: #       lists.
-</span><span class=""> 1446: # TODO: In the command-line tool, rename the temporary file directly
-</span><span class=""> 1447: #       instead of Path::Tiny&#39;s move (File::Copy::move moves INTO a
-</span><span class=""> 1448: #       directory; only the non-regular-file guard prevents that today),
-</span><span class=""> 1449: #       and close the small race between the symlink check and the write.
-</span><span class=""> 1450: # TODO: Consider a size limit for Makefile.PL and the existing cpanfile, so
-</span><span class=""> 1451: #       a huge hostile file cannot exhaust memory.
-</span><span class=""> 1452: # TODO: CI matrix: a Perl 5.26 job (the declared minimum), Windows and
-</span><span class=""> 1453: #       macOS runners, and Devel::Cover for the command-line tool&#39;s
-</span><span class=""> 1454: #       subprocesses (via PERL5OPT).
-</span><span class=""> 1455: 
-</span><span class=""> 1456: 1;
-</span><span class=""> 1457: 
-</span><span class=""> 1458: __END__
-</span><span class=""> 1459: 
-</span><span class=""> 1460: =head1 COMMON PITFALLS
-</span><span class=""> 1461: 
-</span><span class=""> 1462: =over 4
-</span><span class=""> 1463: 
-</span><span class=""> 1464: =item * B&lt;Code in Makefile.PL is not run.&gt;  Dependencies that are built
-</span><span class=""> 1465: by code are not seen, for example C&lt;PREREQ_PM =E&lt;gt&gt; \%deps&gt; or a list
-</span><span class=""> 1466: returned by a function.  Entries inside a condition, such as
-</span><span class=""> 1467: C&lt;$^O eq &#39;MSWin32&#39; ? (&#39;Win32&#39; =E&lt;gt&gt; 0) : ()&gt;, are seen but become
-</span><span class=""> 1468: unconditional.  Write such dependencies as plain entries, or add them to
-</span><span class=""> 1469: the F&lt;cpanfile&gt; another way.
-</span><span class=""> 1470: 
-</span><span class=""> 1471: =item * B&lt;Only the develop section of an existing cpanfile is kept.&gt;
-</span><span class=""> 1472: Hand edits anywhere else (for example a C&lt;feature&gt; block or an extra
-</span><span class=""> 1473: C&lt;on &#39;test&#39;&gt; line) are lost when you regenerate.  Put hand-written
-</span><span class=""> 1474: entries in C&lt;on &#39;develop&#39; =E&lt;gt&gt; sub { ... }&gt;.
+</span><span class=""> 1259: 	# Guard: not a regular file.  A FIFO would block the read forever and a
+</span><span class=""> 1260: 	# device could stream without end.  The mode bits come from @stat, not
+</span><span class=""> 1261: 	# from Perl&#39;s implicit &#39;_&#39; buffer, which another stat could replace.
+</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">1262 → 1269 → 1277</span></span> 1262: 	return {%DEFAULT_DEVELOP} unless Fcntl::S_ISREG($stat[2]);
+</span><span class=""> 1263: 
+</span><span class=""> 1264: 	# Guard: unreadable or invalid YAML.  YAML::Tiny reports failure by dying
+</span><span class=""> 1265: 	# (current versions) or by returning false with errstr set (older ones);
+</span><span class=""> 1266: 	# both become the single documented message, without YAML::Tiny&#39;s own
+</span><span class=""> 1267: 	# location.
+</span><span class=""> 1268: 	my $yaml = eval { YAML::Tiny-&gt;read(&quot;$cfg_path&quot;) };
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1269: 	unless ($yaml) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1270: 		my $err = $@ || YAML::Tiny-&gt;errstr() // q{};
+</span><span class=""> 1271: 		$err =~ s/[ ]at[ ]\S++[ ]line[ ]\d++\.?\n?\z//x;
+</span><span class=""> 1272: 		Carp::croak &quot;Failed to parse $cfg_shown: &quot; . _printable($err);
+</span><span class=""> 1273: 	}
+</span><span class=""> 1274: 
+</span><span class=""> 1275: 	# Guard: no develop hash.  Checking the document&#39;s type first means a
+</span><span class=""> 1276: 	# document that is not a hash is never dereferenced.
+</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">1277 → 1279 → 1288</span></span> 1277: 	my $doc     = $yaml-&gt;[0];
+</span><span class=""> 1278: 	my $develop = ref $doc eq &#39;HASH&#39; ? $doc-&gt;{develop} : undef;
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1279: 	unless (ref $develop eq &#39;HASH&#39;) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1280: 		Carp::carp &quot;No &#39;develop&#39; key found in $cfg_shown; using defaults&quot;;
+</span><span class=""> 1281: 		return {%DEFAULT_DEVELOP};
+</span><span class=""> 1282: 	}
+</span><span class=""> 1283: 
+</span><span class=""> 1284: 	# SECURITY: validate every key (module name) and value (version) before
+</span><span class=""> 1285: 	# use.  Keys are arbitrary strings: without this guard a key such as
+</span><span class=""> 1286: 	# &quot;Safe&#39;; system(&#39;evil&#39;); requires &#39;X&quot; would close the quoted literal in
+</span><span class=""> 1287: 	# _fmt_dep and inject code into the generated cpanfile, which cpanm runs.
+</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">1288 → 1289 → 1304</span></span> 1288: 	my %clean;
+</span><span class=""> 1289: 	for my $mod (keys %{$develop}) {
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1290: 		unless ($mod =~ $MODULE_NAME_RE) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1291: 			Carp::carp &quot;Skipping invalid module name in $cfg_shown: &#39;&quot; . _printable($mod) . q{&#39;};
+</span><span class=""> 1292: 			next;
+</span><span class=""> 1293: 		}
+</span><span class=""> 1294: 		# Premise 1: a null value means &quot;any version&quot;, i.e. 0.
+</span><span class=""> 1295: 		# Premise 2: _valid_requirement accepts &#39;0&#39; (it contains a digit).
+</span><span class=""> 1296: 		# Conclusion: &#39;&#39; is the only extra value that needs allowing.
+</span><span class=""> 1297: 		my $v = $develop-&gt;{$mod} // 0;
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1298: 		unless ($v eq q{} || _valid_requirement($v)) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1299: 			Carp::carp &quot;Skipping invalid version for &#39;$mod&#39; in $cfg_shown: &#39;&quot; . _printable($v) . q{&#39;};
+</span><span class=""> 1300: 			$v = 0;
+</span><span class=""> 1301: 		}
+</span><span class=""> 1302: 		$clean{$mod} = $v;
+</span><span class=""> 1303: 	}
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1304: 	return \%clean;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1305: }
+</span><span class=""> 1306: 
+</span><span class=""> 1307: # _emit
+</span><span class=""> 1308: #
+</span><span class=""> 1309: # Purpose:  Pure formatter - converts the structured dependency hash and an
+</span><span class=""> 1310: #           optional minimum Perl version into a valid cpanfile string.
+</span><span class=""> 1311: # Entry:    $_[0] - HashRef (see DATA STRUCTURE section in POD)
+</span><span class=""> 1312: #           $_[1] - optional Str minimum Perl version (e.g. &#39;5.010&#39;)
+</span><span class=""> 1313: # Exit:     Scalar string; always terminated with exactly one newline.
+</span><span class=""> 1314: #           Never returns undef.
+</span><span class=""> 1315: #
+</span><span class=""> 1316: # Runtime deps are emitted at the top level (no &#39;on&#39; block) per cpanfile
+</span><span class=""> 1317: # convention. All other phases get &#39;on phase =&gt; sub { ... }&#39; blocks.
+</span><span class=""> 1318: # Within each phase, relationships are emitted in @REL_ORDER order;
+</span><span class=""> 1319: # modules within each relationship are sorted alphabetically.
+</span><span class=""> 1320: # Inline comments are re-emitted after the semicolon on the same line.
+</span><span class=""> 1321: # A version of 0 or &#39;&#39; means &quot;any version&quot; and is omitted.
+</span><span class=""> 1322: sub _emit {
+</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">1323 → 1331 → 1342</span></span> 1323: 	my ($deps, $min_perl) = @_;
+</span><span class=""> 1324: 
+</span><span class=""> 1325: 	# Build the output as a list of sections joined by blank lines.
+</span><span class=""> 1326: 	my @sections = ($HEADER);
+</span><span class=""> 1327: 	push @sections, &quot;requires &#39;perl&#39;, &#39;$min_perl&#39;;&quot; if _has_version($min_perl);
+</span><span class=""> 1328: 
+</span><span class=""> 1329: 	# Runtime is emitted at the top level; every other phase in an &#39;on&#39;
+</span><span class=""> 1330: 	# block, in @PHASE_ORDER.  Both use the same line builder.
+</span><span class=""> 1331: 	for my $phase (&#39;runtime&#39;, @PHASE_ORDER) {
+</span><span class=""> 1332: 		my $indent = $phase eq &#39;runtime&#39; ? q{} : &quot;\t&quot;;
+</span><span class=""> 1333: 		my $body = join q{}, map { _fmt_dep(@{$_}, $indent) } @{ _phase_entries($deps-&gt;{$phase}) };
+</span><span class=""> 1334: 		# Premise: an absent phase, or one whose relationships are all
+</span><span class=""> 1335: 		# empty, yields no entries.  Conclusion: it yields no section.
+</span><span class=""> 1336: 		next if $body eq q{};
+</span><span class=""> 1337: 		push @sections, $phase eq &#39;runtime&#39;
+</span><span class=""> 1338: 			? $body =~ s/\n\z//rx		# the blank-line separator is added by join
+</span><span class=""> 1339: 			: &quot;on &#39;$phase&#39; =&gt; sub {\n$body};&quot;;
+</span><span class=""> 1340: 	}
+</span><span class=""> 1341: 
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1342: 	return join(&quot;\n\n&quot;, @sections) . &quot;\n&quot;;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1343: }
+</span><span class=""> 1344: 
+</span><span class=""> 1345: # _phase_entries
+</span><span class=""> 1346: #
+</span><span class=""> 1347: # Purpose:  List one phase&#39;s entries in output order: relationships in
+</span><span class=""> 1348: #           @REL_ORDER, modules alphabetically within each.
+</span><span class=""> 1349: # Entry:    $_[0] - the phase&#39;s hashref ({ rel =&gt; { module =&gt; entry } }),
+</span><span class=""> 1350: #           or undef when the phase is absent.
+</span><span class=""> 1351: # Exit:     ArrayRef of [ rel, module, entry ] triples; empty when none.
+</span><span class=""> 1352: sub _phase_entries {
+</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">1353 → 1355 → 1359</span></span> 1353: 	my $phase = $_[0] || {};
+</span><span class=""> 1354: 	my @entries;
+</span><span class=""> 1355: 	for my $rel (@REL_ORDER) {
+</span><span class=""> 1356: 		my $mods = $phase-&gt;{$rel} || {};
+</span><span class=""> 1357: 		push @entries, [ $rel, $_, $mods-&gt;{$_} ] for sort keys %{$mods};
+</span><span class=""> 1358: 	}
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1359: 	return \@entries;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1360: }
+</span><span class=""> 1361: 
+</span><span class=""> 1362: # _fmt_dep
+</span><span class=""> 1363: #
+</span><span class=""> 1364: # Purpose:  Format a single dependency line for cpanfile output, including
+</span><span class=""> 1365: #           the optional version constraint and inline comment.
+</span><span class=""> 1366: # Entry:    $_[0] - relationship keyword (e.g. &#39;requires&#39;, &#39;recommends&#39;).
+</span><span class=""> 1367: #           $_[1] - module name string.
+</span><span class=""> 1368: #           $_[2] - entry hashref { version =&gt; ..., comment =&gt; ... }.
+</span><span class=""> 1369: #           $_[3] - indentation prefix (&#39;&#39; for runtime, &quot;\t&quot; for phase blocks).
+</span><span class=""> 1370: # Exit:     A complete formatted line, including trailing newline.
+</span><span class=""> 1371: sub _fmt_dep {
+</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">1372 → 1381 → 1387</span></span> 1372: 	my ($rel, $mod, $entry, $indent) = @_;
+</span><span class=""> 1373: 
+</span><span class=""> 1374: 	my $line = &quot;${indent}$rel &#39;$mod&#39;&quot;;
+</span><span class=""> 1375: 	$line .= &quot;, &#39;$entry-&gt;{version}&#39;&quot; if _has_version($entry-&gt;{version});
+</span><span class=""> 1376: 
+</span><span class=""> 1377: 	# Premise 1: every producer of entries stores a comment that is undef
+</span><span class=""> 1378: 	# or non-empty (_extract_pairs turns an empty comment into undef; merged
+</span><span class=""> 1379: 	# and configured entries have none).  Premise 2: _fmt_dep is only called
+</span><span class=""> 1380: 	# by _emit on such entries.  Conclusion: defined() is sufficient.
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1381: 	if (defined $entry-&gt;{comment}) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1382: 		$line .= &quot;;   # $entry-&gt;{comment}\n&quot;;
+</span><span class=""> 1383: 	} else {
+</span><span class=""> 1384: 		$line .= &quot;;\n&quot;;
+</span><span class=""> 1385: 	}
+</span><span class=""> 1386: 
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1387: 	return $line;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1388: }
+</span><span class=""> 1389: 
+</span><span class=""> 1390: # _has_version
+</span><span class=""> 1391: #
+</span><span class=""> 1392: # Decide whether a version value represents a real minimum version
+</span><span class=""> 1393: #	constraint that should be written into the cpanfile output.
+</span><span class=""> 1394: # Entry:    $_[0] - version value (scalar, possibly undef or numeric &#39;0&#39;).
+</span><span class=""> 1395: # Exit:     Boolean: true if the version should be emitted; false if it
+</span><span class=""> 1396: #           means &quot;any version&quot; (undef, empty string, or numeric zero).
+</span><span class=""> 1397: sub _has_version {
+</span><span class=""> 1398: 	my $ver = $_[0];
+</span><span class=""> 1399: 
+</span><span class=""> 1400: 	# Premise 1: every version that reaches here is undef, 0, &#39;&#39; or a string
+</span><span class=""> 1401: 	# accepted by _valid_requirement: a single version (ASCII digits, &#39;.&#39;,
+</span><span class=""> 1402: 	# &#39;_&#39;, optional &#39;v&#39;) or a range, which always contains an operator.
+</span><span class=""> 1403: 	# Premise 2: a single version is zero exactly when none of its digits is
+</span><span class=""> 1404: 	# 1-9 (&#39;0&#39;, &#39;0.000&#39;, &#39;v0.0.0&#39;, &#39;0_0&#39;); a range means &quot;any version&quot; only
+</span><span class=""> 1405: 	# when it is &#39;&gt;=&#39; a zero version.
+</span><span class=""> 1406: 	# Conclusion: two tests decide it.
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1407: 	return 0 unless defined $ver;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1408: 	return $ver =~ /\A \s* &gt;= \s* v? [0._]* \s* \z/x ? 0 : 1 if $ver =~ /[&lt;&gt;=!]/x;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1409: 	return $ver =~ /[1-9]/x ? 1 : 0;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1410: }
+</span><span class=""> 1411: 
+</span><span class=""> 1412: 
+</span><span class=""> 1413: # -----------------------------------------------------------------------
+</span><span class=""> 1414: # Post-release roadmap (from the 0.05 gap analysis)
+</span><span class=""> 1415: # -----------------------------------------------------------------------
+</span><span class=""> 1416: #
+</span><span class=""> 1417: # Features
+</span><span class=""> 1418: # TODO: Write CPAN::Meta optional_features as cpanfile &#39;feature&#39; blocks,
+</span><span class=""> 1419: #       and carry x_* custom phases through instead of dropping them.
+</span><span class=""> 1420: # TODO: Command line: --diff should exit non-zero when the cpanfile would
+</span><span class=""> 1421: #       change (like &#39;git diff --exit-code&#39;); add --makefile FILE,
+</span><span class=""> 1422: #       --output FILE, --quiet, and &#39;-&#39; to read Makefile.PL from stdin.
+</span><span class=""> 1423: # TODO: Read other build files: Build.PL (Module::Build requires,
+</span><span class=""> 1424: #       build_requires, test_requires, configure_requires, recommends) and
+</span><span class=""> 1425: #       possibly dist.ini; consider the reverse direction (cpanfile to a
+</span><span class=""> 1426: #       PREREQ_PM snippet).
+</span><span class=""> 1427: # TODO: Keep more of a hand-written cpanfile than its develop block:
+</span><span class=""> 1428: #       feature blocks, extra &#39;on test&#39; entries, and comments inside the
+</span><span class=""> 1429: #       develop block.
+</span><span class=""> 1430: # TODO: Optional, never default, mode that runs Makefile.PL in an isolated
+</span><span class=""> 1431: #       sandbox to capture dependencies computed by code.
+</span><span class=""> 1432: # TODO: Translatable messages (e.g. Locale::TextDomain); all messages are
+</span><span class=""> 1433: #       English only.
+</span><span class=""> 1434: #
+</span><span class=""> 1435: # Technical debt
+</span><span class=""> 1436: # TODO: Replace the brace-counting regexes with PPI: parses Perl without
+</span><span class=""> 1437: #       running it, handles any nesting depth, quoting and heredocs, and
+</span><span class=""> 1438: #       could flag conditional dependencies instead of making them
+</span><span class=""> 1439: #       unconditional.
+</span><span class=""> 1440: # TODO: Move bin/makefilepl2cpanfile&#39;s logic into a module
+</span><span class=""> 1441: #       (e.g. App::makefilepl2cpanfile::CLI-&gt;run(\@ARGV) returning an exit
+</span><span class=""> 1442: #       code) for in-process tests, real coverage, and fewer subprocess
+</span><span class=""> 1443: #       tests (slow, and fragile on Windows).
+</span><span class=""> 1444: # TODO: Consolidate the test suite: move duplicated helpers (empty_home,
+</span><span class=""> 1445: #       make_mf, use_home, run_cli) into t/lib, and merge the overlap
+</span><span class=""> 1446: #       between function.t, unit.t and extended_tests.t.
+</span><span class=""> 1447: # TODO: Readonly hashes and arrays (%PHASE_MAP, %VALID_PHASE, %VALID_REL,
+</span><span class=""> 1448: #       %LEGACY_KEY, @REL_ORDER, @PHASE_ORDER, %DEFAULT_DEVELOP) are tied,
+</span><span class=""> 1449: #       adding overhead to every access; use plain lexicals or constant
+</span><span class=""> 1450: #       lists.
+</span><span class=""> 1451: # TODO: In the command-line tool, rename the temporary file directly
+</span><span class=""> 1452: #       instead of Path::Tiny&#39;s move (File::Copy::move moves INTO a
+</span><span class=""> 1453: #       directory; only the non-regular-file guard prevents that today),
+</span><span class=""> 1454: #       and close the small race between the symlink check and the write.
+</span><span class=""> 1455: # TODO: Consider a size limit for Makefile.PL and the existing cpanfile, so
+</span><span class=""> 1456: #       a huge hostile file cannot exhaust memory.
+</span><span class=""> 1457: # TODO: CI matrix: a Perl 5.26 job (the declared minimum), Windows and
+</span><span class=""> 1458: #       macOS runners, and Devel::Cover for the command-line tool&#39;s
+</span><span class=""> 1459: #       subprocesses (via PERL5OPT).
+</span><span class=""> 1460: 
+</span><span class=""> 1461: 1;
+</span><span class=""> 1462: 
+</span><span class=""> 1463: __END__
+</span><span class=""> 1464: 
+</span><span class=""> 1465: =head1 COMMON PITFALLS
+</span><span class=""> 1466: 
+</span><span class=""> 1467: =over 4
+</span><span class=""> 1468: 
+</span><span class=""> 1469: =item * B&lt;Code in Makefile.PL is not run.&gt;  Dependencies that are built
+</span><span class=""> 1470: by code are not seen, for example C&lt;PREREQ_PM =E&lt;gt&gt; \%deps&gt; or a list
+</span><span class=""> 1471: returned by a function.  Entries inside a condition, such as
+</span><span class=""> 1472: C&lt;$^O eq &#39;MSWin32&#39; ? (&#39;Win32&#39; =E&lt;gt&gt; 0) : ()&gt;, are seen but become
+</span><span class=""> 1473: unconditional.  Write such dependencies as plain entries, or add them to
+</span><span class=""> 1474: the F&lt;cpanfile&gt; another way.
 </span><span class=""> 1475: 
-</span><span class=""> 1476: =item * B&lt;Conditions inside the kept develop section are removed.&gt;  An
-</span><span class=""> 1477: C&lt;if (...) { requires &#39;X&#39; }&gt; inside the develop block is carried over as
-</span><span class=""> 1478: a plain C&lt;requires &#39;X&#39;&gt;.  Comments in the develop block are not kept.
-</span><span class=""> 1479: 
-</span><span class=""> 1480: =item * B&lt;Which entry wins.&gt;  When the same module is listed twice in the
-</span><span class=""> 1481: same phase and relationship, the first one wins.  The simple keys
-</span><span class=""> 1482: (C&lt;PREREQ_PM&gt; and friends) are read before C&lt;prereqs&gt; blocks, and entries
-</span><span class=""> 1483: from F&lt;Makefile.PL&gt; win over entries in the existing develop section.
-</span><span class=""> 1484: The same module under two different relationships (for example
-</span><span class=""> 1485: C&lt;requires&gt; and C&lt;recommends&gt;) is kept twice.
-</span><span class=""> 1486: 
-</span><span class=""> 1487: =item * B&lt;The configuration file replaces the default tools.&gt;  If you
-</span><span class=""> 1488: list only C&lt;My::Tool&gt;, then C&lt;Perl::Critic&gt; and the others are no longer
-</span><span class=""> 1489: added.  List them too if you want them.
-</span><span class=""> 1490: 
-</span><span class=""> 1491: =item * B&lt;undef means &quot;use the default&quot;.&gt;  C&lt;makefile =E&lt;gt&gt; undef&gt; reads
-</span><span class=""> 1492: F&lt;Makefile.PL&gt;; C&lt;existing =E&lt;gt&gt; undef&gt; is the same as C&lt;&#39;&#39;&gt;; and
-</span><span class=""> 1493: C&lt;with_develop =E&lt;gt&gt; undef&gt; means B&lt;true&gt;.  Use C&lt;with_develop =E&lt;gt&gt; 0&gt;
-</span><span class=""> 1494: to turn developer tools off.
+</span><span class=""> 1476: =item * B&lt;Only the develop section of an existing cpanfile is kept.&gt;
+</span><span class=""> 1477: Hand edits anywhere else (for example a C&lt;feature&gt; block or an extra
+</span><span class=""> 1478: C&lt;on &#39;test&#39;&gt; line) are lost when you regenerate.  Put hand-written
+</span><span class=""> 1479: entries in C&lt;on &#39;develop&#39; =E&lt;gt&gt; sub { ... }&gt;.
+</span><span class=""> 1480: 
+</span><span class=""> 1481: =item * B&lt;Conditions inside the kept develop section are removed.&gt;  An
+</span><span class=""> 1482: C&lt;if (...) { requires &#39;X&#39; }&gt; inside the develop block is carried over as
+</span><span class=""> 1483: a plain C&lt;requires &#39;X&#39;&gt;.  Comments in the develop block are not kept.
+</span><span class=""> 1484: 
+</span><span class=""> 1485: =item * B&lt;Which entry wins.&gt;  When the same module is listed twice in the
+</span><span class=""> 1486: same phase and relationship, the first one wins.  The simple keys
+</span><span class=""> 1487: (C&lt;PREREQ_PM&gt; and friends) are read before C&lt;prereqs&gt; blocks, and entries
+</span><span class=""> 1488: from F&lt;Makefile.PL&gt; win over entries in the existing develop section.
+</span><span class=""> 1489: The same module under two different relationships (for example
+</span><span class=""> 1490: C&lt;requires&gt; and C&lt;recommends&gt;) is kept twice.
+</span><span class=""> 1491: 
+</span><span class=""> 1492: =item * B&lt;The configuration file replaces the default tools.&gt;  If you
+</span><span class=""> 1493: list only C&lt;My::Tool&gt;, then C&lt;Perl::Critic&gt; and the others are no longer
+</span><span class=""> 1494: added.  List them too if you want them.
 </span><span class=""> 1495: 
-</span><span class=""> 1496: =item * B&lt;parse_prereqs(undef) is silent.&gt;  It returns an empty hash
-</span><span class=""> 1497: reference with no warning, so a failed file read can look like &quot;no
-</span><span class=""> 1498: dependencies&quot;.  Check that the read worked before you call it.
-</span><span class=""> 1499: 
-</span><span class=""> 1500: =item * B&lt;The output depends on who runs it.&gt;  With C&lt;with_develop&gt; on,
-</span><span class=""> 1501: the tool list comes from the home directory of the current user.  Use
-</span><span class=""> 1502: C&lt;with_develop =E&lt;gt&gt; 0&gt; when every computer must produce the same file.
-</span><span class=""> 1503: 
-</span><span class=""> 1504: =item * B&lt;generate() does not write any file.&gt;  It returns the text.
-</span><span class=""> 1505: Save it yourself (see L&lt;/SYNOPSIS&gt;) or use the command-line tool.
-</span><span class=""> 1506: 
-</span><span class=""> 1507: =item * B&lt;Relative paths&gt; in C&lt;makefile&gt; are relative to the current
-</span><span class=""> 1508: working directory, not to your script.
-</span><span class=""> 1509: 
-</span><span class=""> 1510: =item * B&lt;Warnings are not errors.&gt;  Problems such as invalid UTF-8 or a
-</span><span class=""> 1511: bad configuration entry are reported with C&lt;warn&gt; (through L&lt;Carp&gt;) and
-</span><span class=""> 1512: processing continues.  Catch them with C&lt;$SIG{__WARN__}&gt; if you need to
-</span><span class=""> 1513: act on them.
+</span><span class=""> 1496: =item * B&lt;undef means &quot;use the default&quot;.&gt;  C&lt;makefile =E&lt;gt&gt; undef&gt; reads
+</span><span class=""> 1497: F&lt;Makefile.PL&gt;; C&lt;existing =E&lt;gt&gt; undef&gt; is the same as C&lt;&#39;&#39;&gt;; and
+</span><span class=""> 1498: C&lt;with_develop =E&lt;gt&gt; undef&gt; means B&lt;true&gt;.  Use C&lt;with_develop =E&lt;gt&gt; 0&gt;
+</span><span class=""> 1499: to turn developer tools off.
+</span><span class=""> 1500: 
+</span><span class=""> 1501: =item * B&lt;parse_prereqs(undef) is silent.&gt;  It returns an empty hash
+</span><span class=""> 1502: reference with no warning, so a failed file read can look like &quot;no
+</span><span class=""> 1503: dependencies&quot;.  Check that the read worked before you call it.
+</span><span class=""> 1504: 
+</span><span class=""> 1505: =item * B&lt;The output depends on who runs it.&gt;  With C&lt;with_develop&gt; on,
+</span><span class=""> 1506: the tool list comes from the home directory of the current user.  Use
+</span><span class=""> 1507: C&lt;with_develop =E&lt;gt&gt; 0&gt; when every computer must produce the same file.
+</span><span class=""> 1508: 
+</span><span class=""> 1509: =item * B&lt;generate() does not write any file.&gt;  It returns the text.
+</span><span class=""> 1510: Save it yourself (see L&lt;/SYNOPSIS&gt;) or use the command-line tool.
+</span><span class=""> 1511: 
+</span><span class=""> 1512: =item * B&lt;Relative paths&gt; in C&lt;makefile&gt; are relative to the current
+</span><span class=""> 1513: working directory, not to your script.
 </span><span class=""> 1514: 
-</span><span class=""> 1515: =back
-</span><span class=""> 1516: 
-</span><span class=""> 1517: =head1 DESIGN NOTES
-</span><span class=""> 1518: 
-</span><span class=""> 1519: Some checks are made once, where data enters, and relied on afterwards.
-</span><span class=""> 1520: Each rule below is proved by F&lt;t/logic.t&gt;.
+</span><span class=""> 1515: =item * B&lt;Warnings are not errors.&gt;  Problems such as invalid UTF-8 or a
+</span><span class=""> 1516: bad configuration entry are reported with C&lt;warn&gt; (through L&lt;Carp&gt;) and
+</span><span class=""> 1517: processing continues.  Catch them with C&lt;$SIG{__WARN__}&gt; if you need to
+</span><span class=""> 1518: act on them.
+</span><span class=""> 1519: 
+</span><span class=""> 1520: =back
 </span><span class=""> 1521: 
-</span><span class=""> 1522: =over 4
+</span><span class=""> 1522: =head1 DESIGN NOTES
 </span><span class=""> 1523: 
-</span><span class=""> 1524: =item * B&lt;Versions.&gt;  Every version is checked when it is read (from the
-</span><span class=""> 1525: F&lt;Makefile.PL&gt;, the existing F&lt;cpanfile&gt; or the configuration file) and
-</span><span class=""> 1526: replaced by C&lt;0&gt; if it is not a version number or version range.  A
-</span><span class=""> 1527: version number is zero exactly when none of its digits is 1 to 9, and a
-</span><span class=""> 1528: range means &quot;any version&quot; only when it is C&lt;E&lt;gt&gt;=&gt; a zero version.  So,
-</span><span class=""> 1529: when the output is written, those two tests decide whether to print a
-</span><span class=""> 1530: requirement.
-</span><span class=""> 1531: 
-</span><span class=""> 1532: =item * B&lt;Comments.&gt;  An empty comment is stored as &quot;no comment&quot; when it
-</span><span class=""> 1533: is read, and entries from other sources have no comment.  So, when the
-</span><span class=""> 1534: output is written, a comment that exists is never empty and can be
-</span><span class=""> 1535: printed without further checks.
+</span><span class=""> 1524: Some checks are made once, where data enters, and relied on afterwards.
+</span><span class=""> 1525: Each rule below is proved by F&lt;t/logic.t&gt;.
+</span><span class=""> 1526: 
+</span><span class=""> 1527: =over 4
+</span><span class=""> 1528: 
+</span><span class=""> 1529: =item * B&lt;Versions.&gt;  Every version is checked when it is read (from the
+</span><span class=""> 1530: F&lt;Makefile.PL&gt;, the existing F&lt;cpanfile&gt; or the configuration file) and
+</span><span class=""> 1531: replaced by C&lt;0&gt; if it is not a version number or version range.  A
+</span><span class=""> 1532: version number is zero exactly when none of its digits is 1 to 9, and a
+</span><span class=""> 1533: range means &quot;any version&quot; only when it is C&lt;E&lt;gt&gt;=&gt; a zero version.  So,
+</span><span class=""> 1534: when the output is written, those two tests decide whether to print a
+</span><span class=""> 1535: requirement.
 </span><span class=""> 1536: 
-</span><span class=""> 1537: =item * B&lt;Developer tools.&gt;  A tool must not be added if the develop
-</span><span class=""> 1538: phase already lists it under any relationship.  So the set of listed
-</span><span class=""> 1539: modules is built once, and every configured tool outside that set is
-</span><span class=""> 1540: added.
+</span><span class=""> 1537: =item * B&lt;Comments.&gt;  An empty comment is stored as &quot;no comment&quot; when it
+</span><span class=""> 1538: is read, and entries from other sources have no comment.  So, when the
+</span><span class=""> 1539: output is written, a comment that exists is never empty and can be
+</span><span class=""> 1540: printed without further checks.
 </span><span class=""> 1541: 
-</span><span class=""> 1542: =item * B&lt;Speed.&gt;  Parsing takes time proportional to the size of the
-</span><span class=""> 1543: F&lt;Makefile.PL&gt;, however its blocks are arranged: every position test
-</span><span class=""> 1544: (is this block inside a comment, or inside a C&lt;prereqs&gt; block?) is a
-</span><span class=""> 1545: binary search over sorted, non-overlapping ranges.  Lines without a
-</span><span class=""> 1546: C&lt;#&gt; skip the comment checks, the four simple keys are found in one
-</span><span class=""> 1547: pass, and the patterns used on every line are compiled once.
-</span><span class=""> 1548: 
-</span><span class=""> 1549: =item * B&lt;Order of checks.&gt;  Each function stops at the first check that
-</span><span class=""> 1550: fails: an unreadable F&lt;Makefile.PL&gt; is refused before anything is read,
-</span><span class=""> 1551: and the configuration file is only parsed once it is known to exist and
-</span><span class=""> 1552: to be a regular file.
+</span><span class=""> 1542: =item * B&lt;Developer tools.&gt;  A tool must not be added if the develop
+</span><span class=""> 1543: phase already lists it under any relationship.  So the set of listed
+</span><span class=""> 1544: modules is built once, and every configured tool outside that set is
+</span><span class=""> 1545: added.
+</span><span class=""> 1546: 
+</span><span class=""> 1547: =item * B&lt;Speed.&gt;  Parsing takes time proportional to the size of the
+</span><span class=""> 1548: F&lt;Makefile.PL&gt;, however its blocks are arranged: every position test
+</span><span class=""> 1549: (is this block inside a comment, or inside a C&lt;prereqs&gt; block?) is a
+</span><span class=""> 1550: binary search over sorted, non-overlapping ranges.  Lines without a
+</span><span class=""> 1551: C&lt;#&gt; skip the comment checks, the four simple keys are found in one
+</span><span class=""> 1552: pass, and the patterns used on every line are compiled once.
 </span><span class=""> 1553: 
-</span><span class=""> 1554: =back
-</span><span class=""> 1555: 
-</span><span class=""> 1556: =head1 LIMITATIONS
-</span><span class=""> 1557: 
-</span><span class=""> 1558: =over 4
-</span><span class=""> 1559: 
-</span><span class=""> 1560: =item * The F&lt;Makefile.PL&gt; is read with patterns, not run, so dependencies
-</span><span class=""> 1561: that are computed by code cannot be found (see L&lt;/COMMON PITFALLS&gt;).
+</span><span class=""> 1554: =item * B&lt;Order of checks.&gt;  Each function stops at the first check that
+</span><span class=""> 1555: fails: an unreadable F&lt;Makefile.PL&gt; is refused before anything is read,
+</span><span class=""> 1556: and the configuration file is only parsed once it is known to exist and
+</span><span class=""> 1557: to be a regular file.
+</span><span class=""> 1558: 
+</span><span class=""> 1559: =back
+</span><span class=""> 1560: 
+</span><span class=""> 1561: =head1 LIMITATIONS
 </span><span class=""> 1562: 
-</span><span class=""> 1563: =item * Dependency lists nested more than four braces deep inside a
-</span><span class=""> 1564: single entry are not fully read.  Normal F&lt;Makefile.PL&gt; files never
-</span><span class=""> 1565: come close to this.
-</span><span class=""> 1566: 
-</span><span class=""> 1567: =item * Only one C&lt;on &#39;develop&#39;&gt; section of an existing F&lt;cpanfile&gt; is
-</span><span class=""> 1568: used: the first one.
-</span><span class=""> 1569: 
-</span><span class=""> 1570: =back
+</span><span class=""> 1563: =over 4
+</span><span class=""> 1564: 
+</span><span class=""> 1565: =item * The F&lt;Makefile.PL&gt; is read with patterns, not run, so dependencies
+</span><span class=""> 1566: that are computed by code cannot be found (see L&lt;/COMMON PITFALLS&gt;).
+</span><span class=""> 1567: 
+</span><span class=""> 1568: =item * Dependency lists nested more than four braces deep inside a
+</span><span class=""> 1569: single entry are not fully read.  Normal F&lt;Makefile.PL&gt; files never
+</span><span class=""> 1570: come close to this.
 </span><span class=""> 1571: 
-</span><span class=""> 1572: =head1 SEE ALSO
-</span><span class=""> 1573: 
-</span><span class=""> 1574: =over 4
-</span><span class=""> 1575: 
-</span><span class=""> 1576: =item * L&lt;makefilepl2cpanfile&gt; - the command-line tool
-</span><span class=""> 1577: 
-</span><span class=""> 1578: =item * L&lt;Module::CPANfile&gt;, L&lt;cpanfile&gt; - the F&lt;cpanfile&gt; format
-</span><span class=""> 1579: 
-</span><span class=""> 1580: =item * L&lt;CPAN::Meta::Spec&gt; - the meaning of phases and relationships
-</span><span class=""> 1581: 
-</span><span class=""> 1582: =item * L&lt;ExtUtils::MakeMaker&gt; - the F&lt;Makefile.PL&gt; format
-</span><span class=""> 1583: 
-</span><span class=""> 1584: =item * L&lt;Test Dashboard|https://nigelhorne.github.io/App-makefilepl2cpanfile/coverage/&gt;
-</span><span class=""> 1585: 
-</span><span class=""> 1586: =back
-</span><span class=""> 1587: 
-</span><span class=""> 1588: =head1 SUPPORT
-</span><span class=""> 1589: 
-</span><span class=""> 1590: This module is provided as-is without any warranty.
-</span><span class=""> 1591: 
-</span><span class=""> 1592: Please report bugs and feature requests at
-</span><span class=""> 1593: L&lt;https://github.com/nigelhorne/App-makefilepl2cpanfile/issues&gt;.
+</span><span class=""> 1572: =item * Only one C&lt;on &#39;develop&#39;&gt; section of an existing F&lt;cpanfile&gt; is
+</span><span class=""> 1573: used: the first one.
+</span><span class=""> 1574: 
+</span><span class=""> 1575: =back
+</span><span class=""> 1576: 
+</span><span class=""> 1577: =head1 SEE ALSO
+</span><span class=""> 1578: 
+</span><span class=""> 1579: =over 4
+</span><span class=""> 1580: 
+</span><span class=""> 1581: =item * L&lt;makefilepl2cpanfile&gt; - the command-line tool
+</span><span class=""> 1582: 
+</span><span class=""> 1583: =item * L&lt;Module::CPANfile&gt;, L&lt;cpanfile&gt; - the F&lt;cpanfile&gt; format
+</span><span class=""> 1584: 
+</span><span class=""> 1585: =item * L&lt;CPAN::Meta::Spec&gt; - the meaning of phases and relationships
+</span><span class=""> 1586: 
+</span><span class=""> 1587: =item * L&lt;ExtUtils::MakeMaker&gt; - the F&lt;Makefile.PL&gt; format
+</span><span class=""> 1588: 
+</span><span class=""> 1589: =item * L&lt;Test Dashboard|https://nigelhorne.github.io/App-makefilepl2cpanfile/coverage/&gt;
+</span><span class=""> 1590: 
+</span><span class=""> 1591: =back
+</span><span class=""> 1592: 
+</span><span class=""> 1593: =head1 SUPPORT
 </span><span class=""> 1594: 
-</span><span class=""> 1595: =head1 AUTHOR
+</span><span class=""> 1595: This module is provided as-is without any warranty.
 </span><span class=""> 1596: 
-</span><span class=""> 1597: Nigel Horne E&lt;lt&gt;njh@nigelhorne.comE&lt;gt&gt;
-</span><span class=""> 1598: 
-</span><span class=""> 1599: =head1 FORMAL SPECIFICATION
-</span><span class=""> 1600: 
-</span><span class=""> 1601: The specifications below use Z notation.  They describe what each
-</span><span class=""> 1602: function computes; the English sections above are the normative
-</span><span class=""> 1603: description for everyday use.
-</span><span class=""> 1604: 
-</span><span class=""> 1605: =head2 Basic types and helpers
-</span><span class=""> 1606: 
-</span><span class=""> 1607: 	[CHAR, PATH]
-</span><span class=""> 1608: 	Str       == seq CHAR
-</span><span class=""> 1609: 	ModName   == { s : Str | s matches [A-Za-z_][A-Za-z0-9_]*(::[A-Za-z0-9_]+)* }
-</span><span class=""> 1610: 	VersionStr == { s : Str | s matches v?[0-9._]+ &acirc;&#136;&sect; (&acirc;&#136;&#131; c &acirc;&#136;&#136; ran s &acirc;&#128;&cent; c &acirc;&#136;&#136; &#39;0&#39;..&#39;9&#39;) }
-</span><span class=""> 1611: 	Op        ::= &gt;= | &lt;= | == | != | &gt; | &lt;
-</span><span class=""> 1612: 	Requirement == VersionStr &acirc;&#136;&ordf; { &acirc;&#129;&#128;/ &acirc;&#159;&uml; o&acirc;&#130;&#129; &acirc;&#129;&#128; v&acirc;&#130;&#129;, &quot;, &quot; &acirc;&#129;&#128; o&acirc;&#130;&#130; &acirc;&#129;&#128; v&acirc;&#130;&#130;, &acirc;&#128;&brvbar; &acirc;&#159;&copy; | o&aacute;&micro;&cent; &acirc;&#136;&#136; Op, v&aacute;&micro;&cent; &acirc;&#136;&#136; VersionStr }
-</span><span class=""> 1613: 	Phase     ::= runtime | configure | build | test | develop
-</span><span class=""> 1614: 	Rel       ::= requires | recommends | suggests | conflicts
-</span><span class=""> 1615: 	Entry     == [ version : Requirement &acirc;&#136;&ordf; {0}; comment : Str &acirc;&#136;&ordf; {&acirc;&#138;&yen;} ]
-</span><span class=""> 1616: 	LEGACY    == { requires &acirc;&#134;&brvbar; (runtime, requires), build_requires &acirc;&#134;&brvbar; (build, requires),
-</span><span class=""> 1617: 	               configure_requires &acirc;&#134;&brvbar; (configure, requires), recommends &acirc;&#134;&brvbar; (runtime, recommends),
-</span><span class=""> 1618: 	               suggests &acirc;&#134;&brvbar; (runtime, suggests), conflicts &acirc;&#134;&brvbar; (runtime, conflicts) }
-</span><span class=""> 1619: 	DepMap    == Phase &acirc;&#135;&cedil; (Rel &acirc;&#135;&cedil; (ModName &acirc;&#135;&cedil; Entry))
-</span><span class=""> 1620: 
-</span><span class=""> 1621: 	-- Left-biased merge: entries already present win.
-</span><span class=""> 1622: 	_&acirc;&#138;&#149;&acirc;&#130;&#151;_ : DepMap &Atilde;&#151; DepMap -&gt; DepMap
-</span><span class=""> 1623: 	a &acirc;&#138;&#149;&acirc;&#130;&#151; b == a &acirc;&#136;&ordf; { p &acirc;&#134;&brvbar; (r &acirc;&#134;&brvbar; (m &acirc;&#134;&brvbar; e)) &acirc;&#136;&#136; b | m &acirc;&#136;&#137; dom(a(p)(r)) }
-</span><span class=""> 1624: 
-</span><span class=""> 1625: 	-- Environment read by generate (it is never modified).
-</span><span class=""> 1626: 	Env &acirc;&#137;&#153; [ fs : PATH &acirc;&#135;&cedil; seq BYTE; home : PATH &acirc;&#136;&ordf; {&acirc;&#138;&yen;} ]
-</span><span class=""> 1627: 	cfg(E) == E.home &acirc;&#129;&#128; &quot;/.config/makefilepl2cpanfile.yml&quot;
-</span><span class=""> 1628: 
-</span><span class=""> 1629: =head2 parse_prereqs
-</span><span class=""> 1630: 
-</span><span class=""> 1631: 	parse_prereqs : (Str &acirc;&#136;&ordf; {&acirc;&#138;&yen;}) -&gt; DepMap
-</span><span class=""> 1632: 
-</span><span class=""> 1633: 	parse_prereqs(s) ==
-</span><span class=""> 1634: 	  if s = &acirc;&#138;&yen; &acirc;&#136;&uml; is_ref(s) then &acirc;&#136;&#133;
-</span><span class=""> 1635: 	  else simple(s&#39;) &acirc;&#138;&#149;&acirc;&#130;&#151; structured(s&#39;) &acirc;&#138;&#149;&acirc;&#130;&#151; legacy(s&#39;)
-</span><span class=""> 1636: 	  where s&#39; == s with every &#39;#&#39; comment removed
+</span><span class=""> 1597: Please report bugs and feature requests at
+</span><span class=""> 1598: L&lt;https://github.com/nigelhorne/App-makefilepl2cpanfile/issues&gt;.
+</span><span class=""> 1599: 
+</span><span class=""> 1600: =head1 AUTHOR
+</span><span class=""> 1601: 
+</span><span class=""> 1602: Nigel Horne E&lt;lt&gt;njh@nigelhorne.comE&lt;gt&gt;
+</span><span class=""> 1603: 
+</span><span class=""> 1604: =head1 FORMAL SPECIFICATION
+</span><span class=""> 1605: 
+</span><span class=""> 1606: The specifications below use Z notation.  They describe what each
+</span><span class=""> 1607: function computes; the English sections above are the normative
+</span><span class=""> 1608: description for everyday use.
+</span><span class=""> 1609: 
+</span><span class=""> 1610: =head2 Basic types and helpers
+</span><span class=""> 1611: 
+</span><span class=""> 1612: 	[CHAR, PATH]
+</span><span class=""> 1613: 	Str       == seq CHAR
+</span><span class=""> 1614: 	ModName   == { s : Str | s matches [A-Za-z_][A-Za-z0-9_]*(::[A-Za-z0-9_]+)* }
+</span><span class=""> 1615: 	VersionStr == { s : Str | s matches v?[0-9._]+ &acirc;&#136;&sect; (&acirc;&#136;&#131; c &acirc;&#136;&#136; ran s &acirc;&#128;&cent; c &acirc;&#136;&#136; &#39;0&#39;..&#39;9&#39;) }
+</span><span class=""> 1616: 	Op        ::= &gt;= | &lt;= | == | != | &gt; | &lt;
+</span><span class=""> 1617: 	Requirement == VersionStr &acirc;&#136;&ordf; { &acirc;&#129;&#128;/ &acirc;&#159;&uml; o&acirc;&#130;&#129; &acirc;&#129;&#128; v&acirc;&#130;&#129;, &quot;, &quot; &acirc;&#129;&#128; o&acirc;&#130;&#130; &acirc;&#129;&#128; v&acirc;&#130;&#130;, &acirc;&#128;&brvbar; &acirc;&#159;&copy; | o&aacute;&micro;&cent; &acirc;&#136;&#136; Op, v&aacute;&micro;&cent; &acirc;&#136;&#136; VersionStr }
+</span><span class=""> 1618: 	Phase     ::= runtime | configure | build | test | develop
+</span><span class=""> 1619: 	Rel       ::= requires | recommends | suggests | conflicts
+</span><span class=""> 1620: 	Entry     == [ version : Requirement &acirc;&#136;&ordf; {0}; comment : Str &acirc;&#136;&ordf; {&acirc;&#138;&yen;} ]
+</span><span class=""> 1621: 	LEGACY    == { requires &acirc;&#134;&brvbar; (runtime, requires), build_requires &acirc;&#134;&brvbar; (build, requires),
+</span><span class=""> 1622: 	               configure_requires &acirc;&#134;&brvbar; (configure, requires), recommends &acirc;&#134;&brvbar; (runtime, recommends),
+</span><span class=""> 1623: 	               suggests &acirc;&#134;&brvbar; (runtime, suggests), conflicts &acirc;&#134;&brvbar; (runtime, conflicts) }
+</span><span class=""> 1624: 	DepMap    == Phase &acirc;&#135;&cedil; (Rel &acirc;&#135;&cedil; (ModName &acirc;&#135;&cedil; Entry))
+</span><span class=""> 1625: 
+</span><span class=""> 1626: 	-- Left-biased merge: entries already present win.
+</span><span class=""> 1627: 	_&acirc;&#138;&#149;&acirc;&#130;&#151;_ : DepMap &Atilde;&#151; DepMap -&gt; DepMap
+</span><span class=""> 1628: 	a &acirc;&#138;&#149;&acirc;&#130;&#151; b == a &acirc;&#136;&ordf; { p &acirc;&#134;&brvbar; (r &acirc;&#134;&brvbar; (m &acirc;&#134;&brvbar; e)) &acirc;&#136;&#136; b | m &acirc;&#136;&#137; dom(a(p)(r)) }
+</span><span class=""> 1629: 
+</span><span class=""> 1630: 	-- Environment read by generate (it is never modified).
+</span><span class=""> 1631: 	Env &acirc;&#137;&#153; [ fs : PATH &acirc;&#135;&cedil; seq BYTE; home : PATH &acirc;&#136;&ordf; {&acirc;&#138;&yen;} ]
+</span><span class=""> 1632: 	cfg(E) == E.home &acirc;&#129;&#128; &quot;/.config/makefilepl2cpanfile.yml&quot;
+</span><span class=""> 1633: 
+</span><span class=""> 1634: =head2 parse_prereqs
+</span><span class=""> 1635: 
+</span><span class=""> 1636: 	parse_prereqs : (Str &acirc;&#136;&ordf; {&acirc;&#138;&yen;}) -&gt; DepMap
 </span><span class=""> 1637: 
-</span><span class=""> 1638: 	simple(s)     == &acirc;&#139;&#131; { {PHASE_MAP(k) &acirc;&#134;&brvbar; {requires &acirc;&#134;&brvbar; pairs(b)}}
-</span><span class=""> 1639: 	                     | k &acirc;&#136;&#136; {PREREQ_PM, BUILD_REQUIRES, TEST_REQUIRES, CONFIGURE_REQUIRES},
-</span><span class=""> 1640: 	                       b &acirc;&#136;&#136; blocks(k, s) }
-</span><span class=""> 1641: 	structured(s) == &acirc;&#139;&#131; { {p &acirc;&#134;&brvbar; {r &acirc;&#134;&brvbar; pairs(b)}}
-</span><span class=""> 1642: 	                     | P &acirc;&#136;&#136; blocks(prereqs, s), (p &acirc;&#134;&brvbar; (r &acirc;&#134;&brvbar; b)) &acirc;&#136;&#136; P, p &acirc;&#136;&#136; Phase, r &acirc;&#136;&#136; Rel }
-</span><span class=""> 1643: 	legacy(s)     == &acirc;&#139;&#131; { {first(LEGACY(k)) &acirc;&#134;&brvbar; {second(LEGACY(k)) &acirc;&#134;&brvbar; pairs(b)}}
-</span><span class=""> 1644: 	                     | k &acirc;&#136;&#136; dom LEGACY, b &acirc;&#136;&#136; blocks(k, s),
-</span><span class=""> 1645: 	                       &Acirc;&not; (&acirc;&#136;&#131; P &acirc;&#136;&#136; blocks(prereqs, s) &acirc;&#128;&cent; b &acirc;&#138;&#134; P) }
-</span><span class=""> 1646: 	pairs(b)      == { m &acirc;&#134;&brvbar; &acirc;&#159;&uml; if v &acirc;&#136;&#136; Requirement then v else 0, comment(m, b) &acirc;&#159;&copy;
-</span><span class=""> 1647: 	                     | (&#39;m&#39; =&gt; v) &acirc;&#136;&#136; b, m &acirc;&#136;&#136; ModName }
-</span><span class=""> 1648: 	-- comment(m, b): the line&#39;s comment if m is the last valid entry on it
-</span><span class=""> 1649: 
-</span><span class=""> 1650: 	post  &acirc;&#136;&#128; p &acirc;&#134;&brvbar; R &acirc;&#136;&#136; result &acirc;&#128;&cent; R &acirc;&#137;&nbsp; &acirc;&#136;&#133; &acirc;&#136;&sect; (&acirc;&#136;&#128; r &acirc;&#134;&brvbar; M &acirc;&#136;&#136; R &acirc;&#128;&cent; M &acirc;&#137;&nbsp; &acirc;&#136;&#133;)
-</span><span class=""> 1651: 	      &acirc;&#136;&sect; no I/O &acirc;&#136;&sect; no warnings
-</span><span class=""> 1652: 
-</span><span class=""> 1653: =head2 generate
+</span><span class=""> 1638: 	parse_prereqs(s) ==
+</span><span class=""> 1639: 	  if s = &acirc;&#138;&yen; &acirc;&#136;&uml; is_ref(s) then &acirc;&#136;&#133;
+</span><span class=""> 1640: 	  else simple(s&#39;) &acirc;&#138;&#149;&acirc;&#130;&#151; structured(s&#39;) &acirc;&#138;&#149;&acirc;&#130;&#151; legacy(s&#39;)
+</span><span class=""> 1641: 	  where s&#39; == s with every &#39;#&#39; comment removed
+</span><span class=""> 1642: 
+</span><span class=""> 1643: 	simple(s)     == &acirc;&#139;&#131; { {PHASE_MAP(k) &acirc;&#134;&brvbar; {requires &acirc;&#134;&brvbar; pairs(b)}}
+</span><span class=""> 1644: 	                     | k &acirc;&#136;&#136; {PREREQ_PM, BUILD_REQUIRES, TEST_REQUIRES, CONFIGURE_REQUIRES},
+</span><span class=""> 1645: 	                       b &acirc;&#136;&#136; blocks(k, s) }
+</span><span class=""> 1646: 	structured(s) == &acirc;&#139;&#131; { {p &acirc;&#134;&brvbar; {r &acirc;&#134;&brvbar; pairs(b)}}
+</span><span class=""> 1647: 	                     | P &acirc;&#136;&#136; blocks(prereqs, s), (p &acirc;&#134;&brvbar; (r &acirc;&#134;&brvbar; b)) &acirc;&#136;&#136; P, p &acirc;&#136;&#136; Phase, r &acirc;&#136;&#136; Rel }
+</span><span class=""> 1648: 	legacy(s)     == &acirc;&#139;&#131; { {first(LEGACY(k)) &acirc;&#134;&brvbar; {second(LEGACY(k)) &acirc;&#134;&brvbar; pairs(b)}}
+</span><span class=""> 1649: 	                     | k &acirc;&#136;&#136; dom LEGACY, b &acirc;&#136;&#136; blocks(k, s),
+</span><span class=""> 1650: 	                       &Acirc;&not; (&acirc;&#136;&#131; P &acirc;&#136;&#136; blocks(prereqs, s) &acirc;&#128;&cent; b &acirc;&#138;&#134; P) }
+</span><span class=""> 1651: 	pairs(b)      == { m &acirc;&#134;&brvbar; &acirc;&#159;&uml; if v &acirc;&#136;&#136; Requirement then v else 0, comment(m, b) &acirc;&#159;&copy;
+</span><span class=""> 1652: 	                     | (&#39;m&#39; =&gt; v) &acirc;&#136;&#136; b, m &acirc;&#136;&#136; ModName }
+</span><span class=""> 1653: 	-- comment(m, b): the line&#39;s comment if m is the last valid entry on it
 </span><span class=""> 1654: 
-</span><span class=""> 1655: 	Args &acirc;&#137;&#153; [ content : Str &acirc;&#136;&ordf; {&acirc;&#138;&yen;}; makefile : Str; existing : Str; with_develop : &eth;&#157;&#148;&sup1; ]
-</span><span class=""> 1656: 
-</span><span class=""> 1657: 	generate : Args &Atilde;&#151; Env &acirc;&#135;&cedil; Str
-</span><span class=""> 1658: 
-</span><span class=""> 1659: 	pre   (a.content &acirc;&#137;&nbsp; &acirc;&#138;&yen; &acirc;&#136;&uml; string(a.makefile) &acirc;&#136;&#136; dom E.fs &acirc;&#136;&sect; regular(a.makefile) &acirc;&#136;&sect; readable(a.makefile))
-</span><span class=""> 1660: 	      &acirc;&#136;&sect; (a.with_develop &acirc;&#135;&#146; cfg(E) &acirc;&#136;&#137; dom E.fs &acirc;&#136;&uml; &Acirc;&not; regular(cfg(E)) &acirc;&#136;&uml; yaml_ok(cfg(E)))
+</span><span class=""> 1655: 	post  &acirc;&#136;&#128; p &acirc;&#134;&brvbar; R &acirc;&#136;&#136; result &acirc;&#128;&cent; R &acirc;&#137;&nbsp; &acirc;&#136;&#133; &acirc;&#136;&sect; (&acirc;&#136;&#128; r &acirc;&#134;&brvbar; M &acirc;&#136;&#136; R &acirc;&#128;&cent; M &acirc;&#137;&nbsp; &acirc;&#136;&#133;)
+</span><span class=""> 1656: 	      &acirc;&#136;&sect; no I/O &acirc;&#136;&sect; no warnings
+</span><span class=""> 1657: 
+</span><span class=""> 1658: =head2 generate
+</span><span class=""> 1659: 
+</span><span class=""> 1660: 	Args &acirc;&#137;&#153; [ content : Str &acirc;&#136;&ordf; {&acirc;&#138;&yen;}; makefile : Str; existing : Str; with_develop : &eth;&#157;&#148;&sup1; ]
 </span><span class=""> 1661: 
-</span><span class=""> 1662: 	generate(a, E) ==
-</span><span class=""> 1663: 	  let content == if a.content &acirc;&#137;&nbsp; &acirc;&#138;&yen; then a.content else decode_utf8_or_raw(E.fs(a.makefile))
-</span><span class=""> 1664: 	      deps    == parse_prereqs(content)
-</span><span class=""> 1665: 	      kept    == { r &acirc;&#134;&brvbar; { m &acirc;&#134;&brvbar; &acirc;&#159;&uml; if v &acirc;&#136;&#136; Requirement then v else 0, &acirc;&#138;&yen; &acirc;&#159;&copy; }
-</span><span class=""> 1666: 	                   | (r m v) &acirc;&#136;&#136; develop_entries(a.existing) \ comments, m &acirc;&#136;&#136; ModName }
-</span><span class=""> 1667: 	      dev     == deps &acirc;&#138;&#149;&acirc;&#130;&#151; {develop &acirc;&#134;&brvbar; kept}
-</span><span class=""> 1668: 	      listed  == &acirc;&#139;&#131; { dom(dev(develop)(r)) | r &acirc;&#136;&#136; Rel }
-</span><span class=""> 1669: 	      tools   == if E.home = &acirc;&#138;&yen; &acirc;&#136;&uml; E.home = &quot;&quot; &acirc;&#136;&uml; &Acirc;&not; regular(cfg(E)) then DEFAULT_DEVELOP
-</span><span class=""> 1670: 	                 else valid_entries(yaml(cfg(E)).develop)
-</span><span class=""> 1671: 	      final   == if a.with_develop
-</span><span class=""> 1672: 	                 then dev &acirc;&#138;&#149;&acirc;&#130;&#151; {develop &acirc;&#134;&brvbar; {requires &acirc;&#134;&brvbar; { m &acirc;&#134;&brvbar; &acirc;&#159;&uml;v, &acirc;&#138;&yen;&acirc;&#159;&copy; | (m &acirc;&#134;&brvbar; v) &acirc;&#136;&#136; tools, m &acirc;&#136;&#137; listed }}}
-</span><span class=""> 1673: 	                 else dev
-</span><span class=""> 1674: 	  in  emit(final, min_perl(content))
-</span><span class=""> 1675: 
-</span><span class=""> 1676: 	post  result &acirc;&#136;&#136; Str
-</span><span class=""> 1677: 	      &acirc;&#136;&sect; prefix(result, HEADER &acirc;&#129;&#128; &quot;\n&quot;) &acirc;&#136;&sect; last(result) = &#39;\n&#39; &acirc;&#136;&sect; &Acirc;&not; suffix(result, &quot;\n\n&quot;)
-</span><span class=""> 1678: 	      &acirc;&#136;&sect; E&acirc;&#128;&sup2; = E                           -- nothing is written
-</span><span class=""> 1679: 	      &acirc;&#136;&sect; $@&acirc;&#128;&sup2; = $@ &acirc;&#136;&sect; $!&acirc;&#128;&sup2; = $! &acirc;&#136;&sect; $_&acirc;&#128;&sup2; = $_
-</span><span class=""> 1680: 	      -- every value from a file or the environment in a message is
-</span><span class=""> 1681: 	      -- printable(v): control and bidi characters as \x{..}
-</span><span class=""> 1682: 
-</span><span class=""> 1683: 	-- Failure cases (the function dies):
-</span><span class=""> 1684: 	a.content = &acirc;&#138;&yen; &acirc;&#136;&sect; (&Acirc;&not; regular(a.makefile) &acirc;&#136;&uml; &Acirc;&not; readable(a.makefile))  &acirc;&#135;&#146;  croak(&quot;Cannot read &#39;&quot; &acirc;&#129;&#128; a.makefile &acirc;&#129;&#128; &quot;&#39;&quot;)
-</span><span class=""> 1685: 	a.with_develop &acirc;&#136;&sect; regular(cfg(E)) &acirc;&#136;&sect; &Acirc;&not; yaml_ok(cfg(E))  &acirc;&#135;&#146;  croak(&quot;Failed to parse &quot; &acirc;&#129;&#128; cfg(E) &acirc;&#129;&#128; &quot;: &quot; &acirc;&#129;&#128; err)
-</span><span class=""> 1686: 	a.with_develop &acirc;&#136;&sect; stat(cfg(E)) fails with errno &acirc;&#136;&#137; {ENOENT, ENOTDIR}  &acirc;&#135;&#146;  croak(&quot;Failed to parse &quot; &acirc;&#129;&#128; cfg(E) &acirc;&#129;&#128; &quot;: &quot; &acirc;&#129;&#128; errno)
+</span><span class=""> 1662: 	generate : Args &Atilde;&#151; Env &acirc;&#135;&cedil; Str
+</span><span class=""> 1663: 
+</span><span class=""> 1664: 	pre   (a.content &acirc;&#137;&nbsp; &acirc;&#138;&yen; &acirc;&#136;&uml; string(a.makefile) &acirc;&#136;&#136; dom E.fs &acirc;&#136;&sect; regular(a.makefile) &acirc;&#136;&sect; readable(a.makefile))
+</span><span class=""> 1665: 	      &acirc;&#136;&sect; (a.with_develop &acirc;&#135;&#146; cfg(E) &acirc;&#136;&#137; dom E.fs &acirc;&#136;&uml; &Acirc;&not; regular(cfg(E)) &acirc;&#136;&uml; yaml_ok(cfg(E)))
+</span><span class=""> 1666: 
+</span><span class=""> 1667: 	generate(a, E) ==
+</span><span class=""> 1668: 	  let content == if a.content &acirc;&#137;&nbsp; &acirc;&#138;&yen; then a.content else decode_utf8_or_raw(E.fs(a.makefile))
+</span><span class=""> 1669: 	      deps    == parse_prereqs(content)
+</span><span class=""> 1670: 	      kept    == { r &acirc;&#134;&brvbar; { m &acirc;&#134;&brvbar; &acirc;&#159;&uml; if v &acirc;&#136;&#136; Requirement then v else 0, &acirc;&#138;&yen; &acirc;&#159;&copy; }
+</span><span class=""> 1671: 	                   | (r m v) &acirc;&#136;&#136; develop_entries(a.existing) \ comments, m &acirc;&#136;&#136; ModName }
+</span><span class=""> 1672: 	      dev     == deps &acirc;&#138;&#149;&acirc;&#130;&#151; {develop &acirc;&#134;&brvbar; kept}
+</span><span class=""> 1673: 	      listed  == &acirc;&#139;&#131; { dom(dev(develop)(r)) | r &acirc;&#136;&#136; Rel }
+</span><span class=""> 1674: 	      tools   == if E.home = &acirc;&#138;&yen; &acirc;&#136;&uml; E.home = &quot;&quot; &acirc;&#136;&uml; &Acirc;&not; regular(cfg(E)) then DEFAULT_DEVELOP
+</span><span class=""> 1675: 	                 else valid_entries(yaml(cfg(E)).develop)
+</span><span class=""> 1676: 	      final   == if a.with_develop
+</span><span class=""> 1677: 	                 then dev &acirc;&#138;&#149;&acirc;&#130;&#151; {develop &acirc;&#134;&brvbar; {requires &acirc;&#134;&brvbar; { m &acirc;&#134;&brvbar; &acirc;&#159;&uml;v, &acirc;&#138;&yen;&acirc;&#159;&copy; | (m &acirc;&#134;&brvbar; v) &acirc;&#136;&#136; tools, m &acirc;&#136;&#137; listed }}}
+</span><span class=""> 1678: 	                 else dev
+</span><span class=""> 1679: 	  in  emit(final, min_perl(content))
+</span><span class=""> 1680: 
+</span><span class=""> 1681: 	post  result &acirc;&#136;&#136; Str
+</span><span class=""> 1682: 	      &acirc;&#136;&sect; prefix(result, HEADER &acirc;&#129;&#128; &quot;\n&quot;) &acirc;&#136;&sect; last(result) = &#39;\n&#39; &acirc;&#136;&sect; &Acirc;&not; suffix(result, &quot;\n\n&quot;)
+</span><span class=""> 1683: 	      &acirc;&#136;&sect; E&acirc;&#128;&sup2; = E                           -- nothing is written
+</span><span class=""> 1684: 	      &acirc;&#136;&sect; $@&acirc;&#128;&sup2; = $@ &acirc;&#136;&sect; $!&acirc;&#128;&sup2; = $! &acirc;&#136;&sect; $_&acirc;&#128;&sup2; = $_
+</span><span class=""> 1685: 	      -- every value from a file or the environment in a message is
+</span><span class=""> 1686: 	      -- printable(v): control and bidi characters as \x{..}
 </span><span class=""> 1687: 
-</span><span class=""> 1688: =head1 STATE DIAGRAM
-</span><span class=""> 1689: 
-</span><span class=""> 1690: The module keeps no state between calls: every call starts at START and
-</span><span class=""> 1691: ends at RETURN or at an error.  The diagram shows the states that one
-</span><span class=""> 1692: call to C&lt;generate()&gt; passes through.  C&lt;parse_prereqs()&gt; is the single
-</span><span class=""> 1693: step PARSE.
+</span><span class=""> 1688: 	-- Failure cases (the function dies):
+</span><span class=""> 1689: 	a.content = &acirc;&#138;&yen; &acirc;&#136;&sect; (&Acirc;&not; regular(a.makefile) &acirc;&#136;&uml; &Acirc;&not; readable(a.makefile))  &acirc;&#135;&#146;  croak(&quot;Cannot read &#39;&quot; &acirc;&#129;&#128; a.makefile &acirc;&#129;&#128; &quot;&#39;&quot;)
+</span><span class=""> 1690: 	a.with_develop &acirc;&#136;&sect; regular(cfg(E)) &acirc;&#136;&sect; &Acirc;&not; yaml_ok(cfg(E))  &acirc;&#135;&#146;  croak(&quot;Failed to parse &quot; &acirc;&#129;&#128; cfg(E) &acirc;&#129;&#128; &quot;: &quot; &acirc;&#129;&#128; err)
+</span><span class=""> 1691: 	a.with_develop &acirc;&#136;&sect; stat(cfg(E)) fails with errno &acirc;&#136;&#137; {ENOENT, ENOTDIR}  &acirc;&#135;&#146;  croak(&quot;Failed to parse &quot; &acirc;&#129;&#128; cfg(E) &acirc;&#129;&#128; &quot;: &quot; &acirc;&#129;&#128; errno)
+</span><span class=""> 1692: 
+</span><span class=""> 1693: =head1 STATE DIAGRAM
 </span><span class=""> 1694: 
-</span><span class=""> 1695: 	+-------+
-</span><span class=""> 1696: 	| START |  generate(%args) is called
-</span><span class=""> 1697: 	+-------+
-</span><span class=""> 1698: 	    |
-</span><span class=""> 1699: 	    | makefile is a readable regular file?
-</span><span class=""> 1700: 	    |---- no ------------------------------------&gt; [DIE] croak &quot;Cannot read &#39;...&#39;&quot;
-</span><span class=""> 1701: 	    | yes
-</span><span class=""> 1702: 	    v
-</span><span class=""> 1703: 	+------------+  read as UTF-8
-</span><span class=""> 1704: 	| READ_UTF8  |---- decode error --&gt; +-----------+  carp &quot;invalid UTF-8&quot;
-</span><span class=""> 1705: 	+------------+                      | READ_RAW  |  (read the raw bytes)
-</span><span class=""> 1706: 	    |     \                         +-----------+
-</span><span class=""> 1707: 	    |      \                             |---- raw read fails --&gt; [DIE] error passed on
-</span><span class=""> 1708: 	    |       \---- other I/O error --------------------------&gt; [DIE] error passed on
-</span><span class=""> 1709: 	    | ok                                 |
-</span><span class=""> 1710: 	    v                                    |
-</span><span class=""> 1711: 	+------------+ &lt;-------------------------+
-</span><span class=""> 1712: 	|   PARSE    |  parse_prereqs(content); find MIN_PERL_VERSION
-</span><span class=""> 1713: 	+------------+  (pure: no I/O, no warnings)
-</span><span class=""> 1714: 	    |
-</span><span class=""> 1715: 	    | existing has an on &#39;develop&#39; section?
-</span><span class=""> 1716: 	    |---- no ----------------------------+
-</span><span class=""> 1717: 	    | yes                                |
-</span><span class=""> 1718: 	    v                                    |
-</span><span class=""> 1719: 	+------------+  copy entries; drop       |
-</span><span class=""> 1720: 	|   MERGE    |  bad names; carp and      |
-</span><span class=""> 1721: 	+------------+  drop bad versions        |
-</span><span class=""> 1722: 	    |                                    |
-</span><span class=""> 1723: 	    +&lt;-----------------------------------+
-</span><span class=""> 1724: 	    |
-</span><span class=""> 1725: 	    | with_develop true?
-</span><span class=""> 1726: 	    |---- no ----------------------------------------------+
-</span><span class=""> 1727: 	    | yes                                                  |
-</span><span class=""> 1728: 	    v                                                      |
-</span><span class=""> 1729: 	+------------+  no home dir, or config path missing        |
-</span><span class=""> 1730: 	| CONFIG     |  or not a regular file -------&gt; DEFAULTS    |
-</span><span class=""> 1731: 	+------------+                                   |         |
-</span><span class=""> 1732: 	    | config is a regular file                   |         |
-</span><span class=""> 1733: 	    |---- stat/read/YAML error --&gt; [DIE] croak &quot;Failed to parse ...&quot;
-</span><span class=""> 1734: 	    v                                            |         |
-</span><span class=""> 1735: 	+------------+  no develop: key --&gt; carp --&gt; DEFAULTS      |
-</span><span class=""> 1736: 	| VALIDATE   |  bad name    --&gt; carp, skip entry           |
-</span><span class=""> 1737: 	+------------+  bad version --&gt; carp, version 0            |
-</span><span class=""> 1738: 	    |                                            |         |
-</span><span class=""> 1739: 	    v                                            v         |
-</span><span class=""> 1740: 	+------------+ &lt;---------------------------------+         |
-</span><span class=""> 1741: 	|   INJECT   |  add tools not already in develop           |
-</span><span class=""> 1742: 	+------------+                                             |
-</span><span class=""> 1743: 	    |                                                      |
-</span><span class=""> 1744: 	    v                                                      |
-</span><span class=""> 1745: 	+------------+ &lt;-------------------------------------------+
-</span><span class=""> 1746: 	|    EMIT    |  format the text (sorted, fixed order)
-</span><span class=""> 1747: 	+------------+
-</span><span class=""> 1748: 	    |
-</span><span class=""> 1749: 	    v
-</span><span class=""> 1750: 	+--------+
-</span><span class=""> 1751: 	| RETURN |  the cpanfile text; no file written;
-</span><span class=""> 1752: 	+--------+  caller&#39;s $@, $! and $_ unchanged
-</span><span class=""> 1753: 
-</span><span class=""> 1754: With the C&lt;content&gt; argument, START goes straight to PARSE: nothing is
-</span><span class=""> 1755: read, so neither C&lt;Cannot read&gt; nor the READ states can occur.
-</span><span class=""> 1756: 
-</span><span class=""> 1757: The command-line tool wraps this machine:
+</span><span class=""> 1695: The module keeps no state between calls: every call starts at START and
+</span><span class=""> 1696: ends at RETURN or at an error.  The diagram shows the states that one
+</span><span class=""> 1697: call to C&lt;generate()&gt; passes through.  C&lt;parse_prereqs()&gt; is the single
+</span><span class=""> 1698: step PARSE.
+</span><span class=""> 1699: 
+</span><span class=""> 1700: 	+-------+
+</span><span class=""> 1701: 	| START |  generate(%args) is called
+</span><span class=""> 1702: 	+-------+
+</span><span class=""> 1703: 	    |
+</span><span class=""> 1704: 	    | makefile is a readable regular file?
+</span><span class=""> 1705: 	    |---- no ------------------------------------&gt; [DIE] croak &quot;Cannot read &#39;...&#39;&quot;
+</span><span class=""> 1706: 	    | yes
+</span><span class=""> 1707: 	    v
+</span><span class=""> 1708: 	+------------+  read as UTF-8
+</span><span class=""> 1709: 	| READ_UTF8  |---- decode error --&gt; +-----------+  carp &quot;invalid UTF-8&quot;
+</span><span class=""> 1710: 	+------------+                      | READ_RAW  |  (read the raw bytes)
+</span><span class=""> 1711: 	    |     \                         +-----------+
+</span><span class=""> 1712: 	    |      \                             |---- raw read fails --&gt; [DIE] error passed on
+</span><span class=""> 1713: 	    |       \---- other I/O error --------------------------&gt; [DIE] error passed on
+</span><span class=""> 1714: 	    | ok                                 |
+</span><span class=""> 1715: 	    v                                    |
+</span><span class=""> 1716: 	+------------+ &lt;-------------------------+
+</span><span class=""> 1717: 	|   PARSE    |  parse_prereqs(content); find MIN_PERL_VERSION
+</span><span class=""> 1718: 	+------------+  (pure: no I/O, no warnings)
+</span><span class=""> 1719: 	    |
+</span><span class=""> 1720: 	    | existing has an on &#39;develop&#39; section?
+</span><span class=""> 1721: 	    |---- no ----------------------------+
+</span><span class=""> 1722: 	    | yes                                |
+</span><span class=""> 1723: 	    v                                    |
+</span><span class=""> 1724: 	+------------+  copy entries; drop       |
+</span><span class=""> 1725: 	|   MERGE    |  bad names; carp and      |
+</span><span class=""> 1726: 	+------------+  drop bad versions        |
+</span><span class=""> 1727: 	    |                                    |
+</span><span class=""> 1728: 	    +&lt;-----------------------------------+
+</span><span class=""> 1729: 	    |
+</span><span class=""> 1730: 	    | with_develop true?
+</span><span class=""> 1731: 	    |---- no ----------------------------------------------+
+</span><span class=""> 1732: 	    | yes                                                  |
+</span><span class=""> 1733: 	    v                                                      |
+</span><span class=""> 1734: 	+------------+  no home dir, or config path missing        |
+</span><span class=""> 1735: 	| CONFIG     |  or not a regular file -------&gt; DEFAULTS    |
+</span><span class=""> 1736: 	+------------+                                   |         |
+</span><span class=""> 1737: 	    | config is a regular file                   |         |
+</span><span class=""> 1738: 	    |---- stat/read/YAML error --&gt; [DIE] croak &quot;Failed to parse ...&quot;
+</span><span class=""> 1739: 	    v                                            |         |
+</span><span class=""> 1740: 	+------------+  no develop: key --&gt; carp --&gt; DEFAULTS      |
+</span><span class=""> 1741: 	| VALIDATE   |  bad name    --&gt; carp, skip entry           |
+</span><span class=""> 1742: 	+------------+  bad version --&gt; carp, version 0            |
+</span><span class=""> 1743: 	    |                                            |         |
+</span><span class=""> 1744: 	    v                                            v         |
+</span><span class=""> 1745: 	+------------+ &lt;---------------------------------+         |
+</span><span class=""> 1746: 	|   INJECT   |  add tools not already in develop           |
+</span><span class=""> 1747: 	+------------+                                             |
+</span><span class=""> 1748: 	    |                                                      |
+</span><span class=""> 1749: 	    v                                                      |
+</span><span class=""> 1750: 	+------------+ &lt;-------------------------------------------+
+</span><span class=""> 1751: 	|    EMIT    |  format the text (sorted, fixed order)
+</span><span class=""> 1752: 	+------------+
+</span><span class=""> 1753: 	    |
+</span><span class=""> 1754: 	    v
+</span><span class=""> 1755: 	+--------+
+</span><span class=""> 1756: 	| RETURN |  the cpanfile text; no file written;
+</span><span class=""> 1757: 	+--------+  caller&#39;s $@, $! and $_ unchanged
 </span><span class=""> 1758: 
-</span><span class=""> 1759: 	+-----------+  conflicting --with-develop/--no-develop --&gt; [EXIT 255]
-</span><span class=""> 1760: 	| OPTIONS   |  --help --&gt; print usage --&gt; [EXIT 0]
-</span><span class=""> 1761: 	+-----------+
-</span><span class=""> 1762: 	    |
-</span><span class=""> 1763: 	    v
-</span><span class=""> 1764: 	+-----------+  cpanfile is a symlink, or exists but is not a
-</span><span class=""> 1765: 	| GUARD     |  regular file --&gt; [DIE] &quot;Refusing to use &#39;cpanfile&#39;: ...&quot;
-</span><span class=""> 1766: 	+-----------+  (nothing is read or written)
+</span><span class=""> 1759: With the C&lt;content&gt; argument, START goes straight to PARSE: nothing is
+</span><span class=""> 1760: read, so neither C&lt;Cannot read&gt; nor the READ states can occur.
+</span><span class=""> 1761: 
+</span><span class=""> 1762: The command-line tool wraps this machine:
+</span><span class=""> 1763: 
+</span><span class=""> 1764: 	+-----------+  conflicting --with-develop/--no-develop --&gt; [EXIT 255]
+</span><span class=""> 1765: 	| OPTIONS   |  --help --&gt; print usage --&gt; [EXIT 0]
+</span><span class=""> 1766: 	+-----------+
 </span><span class=""> 1767: 	    |
 </span><span class=""> 1768: 	    v
-</span><span class=""> 1769: 	+-----------+  read existing cpanfile (if any) and, with read_makefile(),
-</span><span class=""> 1770: 	| READ      |  Makefile.PL - once; READ_UTF8/READ_RAW/DIE as above
-</span><span class=""> 1771: 	+-----------+
+</span><span class=""> 1769: 	+-----------+  cpanfile is a symlink, or exists but is not a
+</span><span class=""> 1770: 	| GUARD     |  regular file --&gt; [DIE] &quot;Refusing to use &#39;cpanfile&#39;: ...&quot;
+</span><span class=""> 1771: 	+-----------+  (nothing is read or written)
 </span><span class=""> 1772: 	    |
 </span><span class=""> 1773: 	    v
-</span><span class=""> 1774: 	generate(content =&gt; ...) from PARSE to RETURN, as above
-</span><span class=""> 1775: 	    |
-</span><span class=""> 1776: 	    v
-</span><span class=""> 1777: 	+-----------+  --check: parse the same text; missing modules --&gt; warn,
-</span><span class=""> 1778: 	| CHECK     |  exit status will be 1 (the output below still happens)
-</span><span class=""> 1779: 	+-----------+
-</span><span class=""> 1780: 	    |---- --diff    --&gt; print a diff, write nothing --&gt; [EXIT 0 or 1]
-</span><span class=""> 1781: 	    |---- --dry-run --&gt; print the text, write nothing --&gt; [EXIT 0 or 1]
-</span><span class=""> 1782: 	    v
-</span><span class=""> 1783: 	+-----------+  GUARD again, then write a temporary file and rename it
-</span><span class=""> 1784: 	| WRITE     |  over cpanfile; any failure --&gt; [DIE], old cpanfile kept,
-</span><span class=""> 1785: 	+-----------+  no temporary file left
-</span><span class=""> 1786: 	    |
+</span><span class=""> 1774: 	+-----------+  read existing cpanfile (if any) and, with read_makefile(),
+</span><span class=""> 1775: 	| READ      |  Makefile.PL - once; READ_UTF8/READ_RAW/DIE as above
+</span><span class=""> 1776: 	+-----------+
+</span><span class=""> 1777: 	    |
+</span><span class=""> 1778: 	    v
+</span><span class=""> 1779: 	generate(content =&gt; ...) from PARSE to RETURN, as above
+</span><span class=""> 1780: 	    |
+</span><span class=""> 1781: 	    v
+</span><span class=""> 1782: 	+-----------+  --check: parse the same text; missing modules --&gt; warn,
+</span><span class=""> 1783: 	| CHECK     |  exit status will be 1 (the output below still happens)
+</span><span class=""> 1784: 	+-----------+
+</span><span class=""> 1785: 	    |---- --diff    --&gt; print a diff, write nothing --&gt; [EXIT 0 or 1]
+</span><span class=""> 1786: 	    |---- --dry-run --&gt; print the text, write nothing --&gt; [EXIT 0 or 1]
 </span><span class=""> 1787: 	    v
-</span><span class=""> 1788: 	[EXIT 0 or 1]  &quot;cpanfile written successfully.&quot;
-</span><span class=""> 1789: 
-</span><span class=""> 1790: =head1 LICENSE AND COPYRIGHT
-</span><span class=""> 1791: 
-</span><span class=""> 1792: Copyright 2025-2026 Nigel Horne.
-</span><span class=""> 1793: 
-</span><span class=""> 1794: Usage is subject to the GPL2 licence terms.
-</span><span class=""> 1795: If you use it,
-</span><span class=""> 1796: please let me know.
-</span><span class=""> 1797: 
-</span><span class=""> 1798: =cut
-</span><span class=""> 1799: 
+</span><span class=""> 1788: 	+-----------+  GUARD again, then write a temporary file and rename it
+</span><span class=""> 1789: 	| WRITE     |  over cpanfile; any failure --&gt; [DIE], old cpanfile kept,
+</span><span class=""> 1790: 	+-----------+  no temporary file left
+</span><span class=""> 1791: 	    |
+</span><span class=""> 1792: 	    v
+</span><span class=""> 1793: 	[EXIT 0 or 1]  &quot;cpanfile written successfully.&quot;
+</span><span class=""> 1794: 
+</span><span class=""> 1795: =head1 LICENSE AND COPYRIGHT
+</span><span class=""> 1796: 
+</span><span class=""> 1797: Copyright 2025-2026 Nigel Horne.
+</span><span class=""> 1798: 
+</span><span class=""> 1799: Usage is subject to the GPL2 licence terms.
+</span><span class=""> 1800: If you use it,
+</span><span class=""> 1801: please let me know.
+</span><span class=""> 1802: 
+</span><span class=""> 1803: =cut
+</span><span class=""> 1804: 
 </span></pre>
 
 <script>
