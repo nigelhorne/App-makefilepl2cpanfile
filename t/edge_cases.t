@@ -2187,8 +2187,13 @@ subtest 'performance: pathological inputs complete in linear-ish time' => sub {
 		'long whitespace run inside a comment');
 	is $inner->{runtime}{requires}{A}{comment}, "a${run}b", 'inner whitespace kept, outer trimmed';
 
-	within_time_limit(sub { App::makefilepl2cpanfile::parse_prereqs('recommends => {' x $HOSTILE{bomb_depth}) },
-		'unclosed legacy blocks');
+	# Unclosed openers: the innermost level of each block regex once read
+	# on to the next '}' (to the end of the input here), once per opener.
+	for my $opener ('recommends => {', 'recommends => { x => {', 'PREREQ_PM => {',
+		'prereqs => {', 'prereqs => { runtime => {', 'prereqs => { runtime => { requires => {') {
+		within_time_limit(sub { App::makefilepl2cpanfile::parse_prereqs($opener x $HOSTILE{bomb_depth}) },
+			$opener eq 'recommends => {' ? 'unclosed legacy blocks' : "unclosed '$opener'");
+	}
 	within_time_limit(sub { App::makefilepl2cpanfile::parse_prereqs("PREREQ_PM => {" . ('{' x $HOSTILE{bomb_depth})) },
 		'brace bomb');
 	within_time_limit(sub { App::makefilepl2cpanfile::parse_prereqs(q{'} x $HOSTILE{bomb_depth} . "# PREREQ_PM => { 'X' => 0 }") },

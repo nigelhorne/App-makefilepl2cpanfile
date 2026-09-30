@@ -190,7 +190,7 @@ Readonly::Scalar my $DEVELOP_ENTRY_RE => qr/
 # Unicode bidirectional controls used by "Trojan Source" (CVE-2021-42574)
 # to make text display differently from how it is read.
 Readonly::Scalar my $UNSAFE_COMMENT_CHARS_RE =>
-	qr/[\x00-\x08\x0A-\x1F\x7F-\x9F\x{061C}\x{200E}\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}]/;
+	qr/[\x00-\x08\x0A-\x1F\x7F-\x9F\x{061C}\x{200E}\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}]/x;
 
 =head1 SYNOPSIS
 
@@ -645,7 +645,7 @@ sub generate {
 
 	# File tests and the reads below (including the config file) change
 	# errno; restore the caller's $! on every exit path.
-	local $!;
+	local $! = 0;
 
 	my $existing = $args->{existing} // '';
 	my $with_dev = $args->{with_develop} // 1;
@@ -664,16 +664,16 @@ sub generate {
 	# after the first.  Conclusion: only the first opener needs trying.
 	# The closing '};' must start a line, so a '};' inside an inline
 	# comment does not end the block early.
-	if ($existing =~ /$DEVELOP_OPEN_RE/g) {
+	if ($existing =~ /$DEVELOP_OPEN_RE/gx) {
 		my $open_end = pos $existing;
-		if ($existing =~ /^[ \t]*\};/mg) {
+		if ($existing =~ /^[ \t]*\};/mgx) {
 			my $dev_block = substr $existing, $open_end, $-[0] - $open_end;
 
 			# A commented-out line is not an entry.  '#' cannot occur in a
 			# valid module name or version, so stripping to end of line is safe.
-			$dev_block =~ s/\#[^\n]*+//g;
+			$dev_block =~ s/\#[^\n]*+//gx;
 
-			while ($dev_block =~ /$DEVELOP_ENTRY_RE/g) {
+			while ($dev_block =~ /$DEVELOP_ENTRY_RE/gx) {
 				# Save immediately: the validation regexes below would reset
 				# the capture variables.
 				my ($rel, $mod, $ver) = ($1, $2 // $3, $4 // $5);
@@ -779,8 +779,8 @@ sub read_makefile {
 	my $makefile = "@{[ $_[0] // 'Makefile.PL' ]}";
 
 	# File tests and reads change errno; restore the caller's $! and $@.
-	local $!;
-	local $@;
+	local $! = 0;
+	local $@ = q{};
 
 	Carp::croak "Cannot read '" . _printable($makefile) . q{'} unless -f $makefile && -r _;
 
@@ -794,9 +794,9 @@ sub read_makefile {
 		# matching keywords against that would misread an I/O error in,
 		# say, ~/src/utf8-tools/ as a decoding problem.  So objects are
 		# always rethrown, and only plain decoder messages are matched.
-		die $@ if ref $@ || $@ !~ /decode|ill-formed|utf/i;
+		die $@ if ref $@ || $@ !~ /decode|ill-formed|utf/ix;  ## no critic (RequireCarping) re-thrown unchanged, as documented; croak would append a location
 		Carp::carp "Warning: '" . _printable($makefile) . "' contains invalid UTF-8; reading as raw bytes: "
-			. _printable($@ =~ s/\n\z//r);
+			. _printable($@ =~ s/\n\z//rx);
 		$content = Path::Tiny::path($makefile)->slurp_raw;
 	}
 	return $content;
@@ -959,10 +959,15 @@ sub parse_prereqs {
 	# The regex allows up to four levels of brace nesting so that unusual
 	# Makefile.PL constructs (e.g. version objects) don't terminate the
 	# block match prematurely.
+	#
+	# In this and every block regex below, the innermost level is
+	# [^{}]*+, never [^}]*+: a failed attempt must stop at the next brace.
+	# Scanning on to the next '}' made each unclosed opener read to the
+	# end of the input, so many openers were quadratic.
 	while ($content =~ /
 		\b ($SIMPLE_KEY_RE) \s*=>\s* \{
 			( (?: [^{}]++
-			    | \{ (?: [^{}]++ | \{ (?: [^{}]++ | \{ [^}]*+ \} )* \} )* \}
+			    | \{ (?: [^{}]++ | \{ (?: [^{}]++ | \{ [^{}]*+ \} )* \} )* \}
 			  )*
 			)
 		\}
@@ -982,7 +987,7 @@ sub parse_prereqs {
 		\b prereqs \s*=>\s* \{
 			( (?: [^{}]++
 			    | \{ (?: [^{}]++
-			         | \{ (?: [^{}]++ | \{ (?: [^{}]++ | \{ [^}]*+ \} )* \} )* \}
+			         | \{ (?: [^{}]++ | \{ (?: [^{}]++ | \{ [^{}]*+ \} )* \} )* \}
 			      )* \}
 			  )*
 			)
@@ -1000,7 +1005,7 @@ sub parse_prereqs {
 		# Each direct child is a phase name mapping to a relationship hash.
 		while ($prereqs_block =~ /
 			\b (\w+) \s*=>\s* \{
-				( (?: [^{}]++ | \{ (?: [^{}]++ | \{ [^}]*+ \} )* \} )* )
+				( (?: [^{}]++ | \{ (?: [^{}]++ | \{ [^{}]*+ \} )* \} )* )
 			\}
 		/gsx) {
 			my ($phase_name, $phase_block) = ($1, $2);
@@ -1011,7 +1016,7 @@ sub parse_prereqs {
 			# Each child of the phase block is a relationship name.
 			while ($phase_block =~ /
 				\b (\w+) \s*=>\s* \{
-					( (?: [^{}]++ | \{ [^}]*+ \} )* )
+					( (?: [^{}]++ | \{ [^{}]*+ \} )* )
 				\}
 			/gsx) {
 				my ($rel, $rel_block) = ($1, $2);
@@ -1032,7 +1037,7 @@ sub parse_prereqs {
 	# already been handled above, so skip them.
 	while ($content =~ /
 		\b (requires|build_requires|configure_requires|recommends|suggests|conflicts) ['"]? \s*=>\s* \{
-			( (?: [^{}]++ | \{ [^}]*+ \} )* )
+			( (?: [^{}]++ | \{ [^{}]*+ \} )* )
 		\}
 	/gsx) {
 		my ($key, $block, $start) = ($1, $2, $-[0]);
@@ -1072,7 +1077,7 @@ sub parse_prereqs {
 sub _extract_pairs {
 	my ($block, $deps, $phase, $rel) = @_;
 
-	for my $line (split /\n/, $block) {
+	for my $line (split /\n/x, $block) {
 		# Capture any trailing inline comment before stripping it.
 		# (.*\S) is O(N): greedy .* scans to end, then gives back trailing
 		# spaces one by one until \S anchors on the last non-space char.
@@ -1085,10 +1090,10 @@ sub _extract_pairs {
 			# characters (which can expose new outer whitespace).  Both use
 			# $TRIMMED_RE, which is linear; see its definition.
 			my $after = substr $line, index($line, '#') + 1;
-			($comment) = $after =~ /\A$TRIMMED_RE/;
+			($comment) = $after =~ /\A$TRIMMED_RE/x;
 			if (defined $comment) {
-				$comment =~ s/$UNSAFE_COMMENT_CHARS_RE//g;
-				($comment) = $comment =~ /\A$TRIMMED_RE/;
+				$comment =~ s/$UNSAFE_COMMENT_CHARS_RE//gx;
+				($comment) = $comment =~ /\A$TRIMMED_RE/x;
 			}
 			$line = substr $line, 0, index($line, '#');
 		}
@@ -1097,7 +1102,7 @@ sub _extract_pairs {
 		my @pairs;
 		# Opening and closing quotes must match: with ['"]...['"] the key
 		# "A'B" was read as 'B" and recorded as a different module, B.
-		while ($line =~ /$PAIR_RE/g) {
+		while ($line =~ /$PAIR_RE/gx) {
 			push @pairs, [ $1 // $2, $3 // $4 // $5 ];
 		}
 
@@ -1134,7 +1139,7 @@ sub _extract_pairs {
 sub _parse_min_perl {
 	my $content = $_[0];
 	return undef if !defined $content || ref $content;	## no critic (ProhibitExplicitReturnUndef)
-	return undef unless $content =~ /\bMIN_PERL_VERSION\b\s*=>\s*$VALUE_TOKEN_RE/;	## no critic (ProhibitExplicitReturnUndef)
+	return undef unless $content =~ /\bMIN_PERL_VERSION\b\s*=>\s*$VALUE_TOKEN_RE/x;	## no critic (ProhibitExplicitReturnUndef)
 	my $ver = $1 // $2 // $3;
 	return _valid_version($ver) ? $ver : undef;
 }
@@ -1151,7 +1156,7 @@ sub _comment_spans {
 	my $content = $_[0];
 	my @spans;
 	my $offset = 0;
-	for my $line (split /\n/, $content, -1) {
+	for my $line (split /\n/x, $content, -1) {
 		# Most lines have no '#' at all; only the rest need the quote-aware
 		# scan, which finds the first '#' outside quoted strings (so that
 		# e.g. 'C#' is not mistaken for a comment) without building a copy.
@@ -1217,7 +1222,7 @@ sub _valid_requirement {
 #           characters replaced by \x{..} escapes; everything else as is.
 sub _printable {
 	my $text = "$_[0]";
-	$text =~ s/($UNSAFE_COMMENT_CHARS_RE)/sprintf '\\x{%X}', ord $1/ge;
+	$text =~ s/($UNSAFE_COMMENT_CHARS_RE)/sprintf '\\x{%X}', ord $1/gex;
 	return $text;
 }
 
@@ -1232,7 +1237,7 @@ sub _printable {
 sub _load_develop_config {
 	# Path::Tiny and YAML::Tiny use eval internally, which resets $@; keep the
 	# caller's value intact so an enclosing eval/$@ check is not disturbed.
-	local $@;
+	local $@ = q{};
 
 	# Guard: no usable home directory (containers, chroots, CI).  length()
 	# of undef is undef, so one test rejects both undef and ''.
@@ -1263,7 +1268,7 @@ sub _load_develop_config {
 	my $yaml = eval { YAML::Tiny->read("$cfg_path") };
 	unless ($yaml) {
 		my $err = $@ || YAML::Tiny->errstr() // q{};
-		$err =~ s/ at \S++ line \d++\.?\n?\z//;
+		$err =~ s/[ ]at[ ]\S++[ ]line[ ]\d++\.?\n?\z//x;
 		Carp::croak "Failed to parse $cfg_shown: " . _printable($err);
 	}
 
@@ -1330,7 +1335,7 @@ sub _emit {
 		# empty, yields no entries.  Conclusion: it yields no section.
 		next if $body eq q{};
 		push @sections, $phase eq 'runtime'
-			? $body =~ s/\n\z//r		# the blank-line separator is added by join
+			? $body =~ s/\n\z//rx		# the blank-line separator is added by join
 			: "on '$phase' => sub {\n$body};";
 	}
 
@@ -1401,7 +1406,7 @@ sub _has_version {
 	# Conclusion: two tests decide it.
 	return 0 unless defined $ver;
 	return $ver =~ /\A \s* >= \s* v? [0._]* \s* \z/x ? 0 : 1 if $ver =~ /[<>=!]/x;
-	return $ver =~ /[1-9]/ ? 1 : 0;
+	return $ver =~ /[1-9]/x ? 1 : 0;
 }
 
 

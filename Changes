@@ -1,5 +1,30 @@
 Revision history for App-makefilepl2cpanfile
 
+0.06
+	[ Security ]
+	Fix regular expressions that were quadratic on a Makefile.PL with
+	  many unclosed dependency blocks (PREREQ_PM, prereqs, recommends and
+	  the other META spec 1.x keys): 50,000 unclosed recommends blocks
+	  took over a minute on Perl 5.26 and now take a fraction of a second
+
+	[ Packaging ]
+	Minimum Perl is now 5.26, set by the test dependencies:
+	  Test::Permissions needs Params::Validate::Strict (5.26), and
+	  Test::Mockingbird needs 5.16.3.  The code itself still needs only
+	  5.14, but the 5.14 declared in 0.05 was already wrong: its test
+	  dependencies could not be installed on 5.14
+	New test dependency: Test::Permissions, replacing the private copy in
+	  t/lib
+
+	[ Testing ]
+	Permission tests probe the directory that holds their fixtures, and
+	  their skip messages say why chmod cannot revoke access (for
+	  example root, Windows, or a filesystem that ignores permissions)
+	Files and directories are locked with Test::Permissions' with_revoked,
+	  which restores the mode even if a check dies; three tests used to
+	  leave a mode-0 file behind
+	CI: the minimum-version job runs Perl 5.26 instead of 5.14
+
 0.05	Fri Sep 25 05:01:10 PM EDT 2026
 	[ Enhancements ]
 	Version ranges (e.g. '>= 1.2, < 2.0') are kept and written to the
