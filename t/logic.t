@@ -22,8 +22,7 @@ use warnings;
 # contradicting a premise are refused by the first guard able to see them.
 
 use Test::Most;
-use lib 't/lib';
-use Test::Permissions qw(can_revoke_read can_revoke_search);
+use Test::Permissions qw(can_revoke_read can_revoke_search why_not);
 use Test::Mockingbird;
 use Test::Returns;
 use File::Temp qw(tempdir);
@@ -312,8 +311,9 @@ subtest 'guards: each terminal state is reached first' => sub {
 	is $calls->(), 0, 'no home, no file, not a regular file: YAML never read';
 
 	SKIP: {
-		skip 'chmod cannot make a directory unsearchable here (root or Windows)', 2 unless can_revoke_search();
 		my ($g, $cfg) = use_home({ develop => {} });
+		my $home = $cfg->parent->parent;
+		skip why_not('search', $home), 2 unless can_revoke_search($home);
 		chmod 0, $cfg->parent->stringify;
 		throws_ok { App::makefilepl2cpanfile::_load_develop_config() }
 			qr/\AFailed to parse \Q$cfg\E: /, 'unexaminable path: refused';
@@ -410,7 +410,7 @@ subtest 'truth table: makefile guard (-f AND -r)' => sub {
 		[ 0, 0, "$dir_locked",  'directory, unreadable' ],
 	);
 	SKIP: {
-		skip 'chmod cannot make a file unreadable here (root or Windows)', 4 * 2 unless can_revoke_read();
+		skip why_not('read', $dir), 4 * 2 unless can_revoke_read($dir);
 		chmod 0, "$file_locked";
 		chmod 0, "$dir_locked";
 		for my $row (@rows) {

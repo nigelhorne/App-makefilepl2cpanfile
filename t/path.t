@@ -25,8 +25,7 @@ use warnings;
 use Test::Most;
 use Test::Mockingbird;
 use Test::Returns;
-use lib 't/lib';
-use Test::Permissions qw(can_revoke_read can_revoke_search);
+use Test::Permissions qw(can_revoke_read can_revoke_search why_not);
 use File::Temp qw(tempdir);
 use Path::Tiny;
 use POSIX qw(EIO);
@@ -221,8 +220,9 @@ subtest 'generate() paths' => sub {
 	took('G.1');
 
 	SKIP: {
-		skip 'chmod cannot make a file unreadable here (root or Windows)', 1 unless can_revoke_read();
 		my $locked = make_mf(q{});
+		my $dir    = path($locked)->parent;
+		skip why_not('read', $dir), 1 unless can_revoke_read($dir);
 		chmod 0, $locked;
 		throws_ok { App::makefilepl2cpanfile::generate(makefile => $locked) }
 			qr/\ACannot read '\Q$locked\E' at /, 'G.17: -f true, -r false -> croak';
@@ -445,8 +445,8 @@ subtest '_load_develop_config() paths' => sub {
 		took('L.4');
 	}
 	SKIP: {
-		skip 'chmod cannot make a directory unsearchable here (root or Windows)', 1 unless can_revoke_search();
-		my ($g, $cfg) = use_home({ develop => {} });
+		my ($g, $cfg, $home) = use_home({ develop => {} });
+		skip why_not('search', $home), 1 unless can_revoke_search($home);
 		chmod 0, $cfg->parent->stringify;
 		throws_ok { $load->() } qr/\AFailed to parse \Q$cfg\E: \S/, 'L.5: other stat error';
 		chmod 0755, $cfg->parent->stringify;

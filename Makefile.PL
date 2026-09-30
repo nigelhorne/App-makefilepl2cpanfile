@@ -34,6 +34,7 @@ WriteMakefile(
 		'Test::Most' => 0,
 		'File::Temp' => 0,
 		'Test::Mockingbird' => '0.13',	# around, mock_scoped, spy, unmock, restore
+		'Test::Permissions' => 0,	# can_revoke_*, why_not
 		'Test::Returns' => 0.04,
 		'Test::Without::Module' => 0,
 	}, PREREQ_PM => {

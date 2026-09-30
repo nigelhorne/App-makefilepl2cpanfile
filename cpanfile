@@ -23,6 +23,7 @@ on 'test' => sub {
 	requires 'Test::Memory::Cycle';
 	requires 'Test::Mockingbird', '0.13';   # around, mock_scoped, spy, unmock, restore
 	requires 'Test::Most';
+	requires 'Test::Permissions';   # can_revoke_*, why_not
 	requires 'Test::Returns', '0.04';
 	requires 'Test::Without::Module';
 };

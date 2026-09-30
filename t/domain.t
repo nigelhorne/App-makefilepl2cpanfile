@@ -10,8 +10,7 @@ use warnings;
 # sides.  Each input has its own subtest.
 
 use Test::Most;
-use lib 't/lib';
-use Test::Permissions qw(can_revoke_read);
+use Test::Permissions qw(can_revoke_read why_not);
 use Test::Mockingbird;
 use Test::Returns;
 use Config;
@@ -153,8 +152,8 @@ subtest 'domain: generate() makefile' => sub {
 	}
 	throws_ok { gen(makefile => [$mf]) } qr/\ACannot read 'ARRAY\(0x[0-9a-f]+\)' at /, 'refused: reference';
 	SKIP: {
-		skip 'chmod cannot make a file unreadable here (root or Windows)', 1 unless can_revoke_read();
 		my $locked = make_mf($MF_ONE);
+		skip why_not('read', $locked->parent), 1 unless can_revoke_read($locked->parent);
 		chmod 0, "$locked";
 		throws_ok { gen(makefile => "$locked") } qr/\ACannot read '\Q$locked\E' at /, 'refused: unreadable';
 	}

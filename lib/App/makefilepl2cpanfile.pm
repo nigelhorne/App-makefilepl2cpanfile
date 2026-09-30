@@ -1439,11 +1439,6 @@ sub _has_version {
 # TODO: Consolidate the test suite: move duplicated helpers (empty_home,
 #       make_mf, use_home, run_cli) into t/lib, and merge the overlap
 #       between function.t, unit.t and extended_tests.t.
-# TODO: Once Test::Permissions is on CPAN, add it to TEST_REQUIRES and
-#       delete t/lib/Test/Permissions.pm in the same change (the local
-#       copy has the same package name, so use lib 't/lib' would still load
-#       it).  Pass the fixture directory to can_revoke_read/_search and use
-#       why_not() as the skip message.
 # TODO: Readonly hashes and arrays (%PHASE_MAP, %VALID_PHASE, %VALID_REL,
 #       %LEGACY_KEY, @REL_ORDER, @PHASE_ORDER, %DEFAULT_DEVELOP) are tied,
 #       adding overhead to every access; use plain lexicals or constant
