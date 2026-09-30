@@ -22,7 +22,7 @@ use warnings;
 # contradicting a premise are refused by the first guard able to see them.
 
 use Test::Most;
-use Test::Permissions qw(can_revoke_read can_revoke_search why_not);
+use Test::Permissions qw(can_revoke_read can_revoke_search why_not with_revoked);
 use Test::Mockingbird;
 use Test::Returns;
 use File::Temp qw(tempdir);
@@ -314,10 +314,10 @@ subtest 'guards: each terminal state is reached first' => sub {
 		my ($g, $cfg) = use_home({ develop => {} });
 		my $home = $cfg->parent->parent;
 		skip why_not('search', $home), 2 unless can_revoke_search($home);
-		chmod 0, $cfg->parent->stringify;
-		throws_ok { App::makefilepl2cpanfile::_load_develop_config() }
-			qr/\AFailed to parse \Q$cfg\E: /, 'unexaminable path: refused';
-		chmod 0755, $cfg->parent->stringify;
+		with_revoked(search => $cfg->parent, sub {
+			throws_ok { App::makefilepl2cpanfile::_load_develop_config() }
+				qr/\AFailed to parse \Q$cfg\E: /, 'unexaminable path: refused';
+		});
 		is $calls->(), 0, 'and YAML was never read';
 	}
 
@@ -411,15 +411,16 @@ subtest 'truth table: makefile guard (-f AND -r)' => sub {
 	);
 	SKIP: {
 		skip why_not('read', $dir), 4 * 2 unless can_revoke_read($dir);
-		chmod 0, "$file_locked";
-		chmod 0, "$dir_locked";
-		for my $row (@rows) {
-			my ($is_file, $readable, $path, $name) = @{$row};
-			my $died = !eval { App::makefilepl2cpanfile::generate(makefile => $path, with_develop => 0); 1 };
-			like $@, qr/\ACannot read '\Q$path\E' at /, "$name: documented message" if $died;
-			de_morgan_ok($is_file, $readable, $died, $name);
-		}
-		chmod 0700, "$dir_locked";
+		with_revoked(read => $file_locked, sub {
+			with_revoked(search => $dir_locked, sub {
+				for my $row (@rows) {
+					my ($is_file, $readable, $path, $name) = @{$row};
+					my $died = !eval { App::makefilepl2cpanfile::generate(makefile => $path, with_develop => 0); 1 };
+					like $@, qr/\ACannot read '\Q$path\E' at /, "$name: documented message" if $died;
+					de_morgan_ok($is_file, $readable, $died, $name);
+				}
+			});
+		});
 	}
 };
 

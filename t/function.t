@@ -2,7 +2,7 @@ use strict;
 use warnings;
 
 use Test::Most;
-use Test::Permissions qw(can_revoke_read why_not);
+use Test::Permissions qw(can_revoke_read why_not with_revoked);
 use Test::Memory::Cycle;
 use Test::Mockingbird;
 use Test::Returns;
@@ -796,9 +796,10 @@ subtest 'generate - orchestration and error handling' => sub {
 		skip why_not('read', $dir), 1 unless can_revoke_read($dir);
 		my $locked = path($dir)->child('locked.PL');
 		$locked->spew_utf8("WriteMakefile();\n");
-		chmod 0, "$locked";
-		throws_ok { $generate->(makefile => "$locked") }
-			qr/\ACannot read '\Q$locked\E'/, 'croaks for an unreadable file';
+		with_revoked(read => "$locked", sub {
+			throws_ok { $generate->(makefile => "$locked") }
+				qr/\ACannot read '\Q$locked\E'/, 'croaks for an unreadable file';
+		});
 	}
 
 	# ---- Default makefile argument is Makefile.PL in the current directory ----

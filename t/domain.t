@@ -10,7 +10,7 @@ use warnings;
 # sides.  Each input has its own subtest.
 
 use Test::Most;
-use Test::Permissions qw(can_revoke_read why_not);
+use Test::Permissions qw(can_revoke_read why_not with_revoked);
 use Test::Mockingbird;
 use Test::Returns;
 use Config;
@@ -154,8 +154,9 @@ subtest 'domain: generate() makefile' => sub {
 	SKIP: {
 		my $locked = make_mf($MF_ONE);
 		skip why_not('read', $locked->parent), 1 unless can_revoke_read($locked->parent);
-		chmod 0, "$locked";
-		throws_ok { gen(makefile => "$locked") } qr/\ACannot read '\Q$locked\E' at /, 'refused: unreadable';
+		with_revoked(read => "$locked", sub {
+			throws_ok { gen(makefile => "$locked") } qr/\ACannot read '\Q$locked\E' at /, 'refused: unreadable';
+		});
 	}
 
 	# Boundary: file name length at NAME_MAX and one past it.  pathconf is

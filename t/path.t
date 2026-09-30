@@ -25,7 +25,7 @@ use warnings;
 use Test::Most;
 use Test::Mockingbird;
 use Test::Returns;
-use Test::Permissions qw(can_revoke_read can_revoke_search why_not);
+use Test::Permissions qw(can_revoke_read can_revoke_search why_not with_revoked);
 use File::Temp qw(tempdir);
 use Path::Tiny;
 use POSIX qw(EIO);
@@ -223,10 +223,10 @@ subtest 'generate() paths' => sub {
 		my $locked = make_mf(q{});
 		my $dir    = path($locked)->parent;
 		skip why_not('read', $dir), 1 unless can_revoke_read($dir);
-		chmod 0, $locked;
-		throws_ok { App::makefilepl2cpanfile::generate(makefile => $locked) }
-			qr/\ACannot read '\Q$locked\E' at /, 'G.17: -f true, -r false -> croak';
-		chmod 0600, $locked;
+		with_revoked(read => $locked, sub {
+			throws_ok { App::makefilepl2cpanfile::generate(makefile => $locked) }
+				qr/\ACannot read '\Q$locked\E' at /, 'G.17: -f true, -r false -> croak';
+		});
 	}
 	took('G.17');
 
@@ -447,9 +447,9 @@ subtest '_load_develop_config() paths' => sub {
 	SKIP: {
 		my ($g, $cfg, $home) = use_home({ develop => {} });
 		skip why_not('search', $home), 1 unless can_revoke_search($home);
-		chmod 0, $cfg->parent->stringify;
-		throws_ok { $load->() } qr/\AFailed to parse \Q$cfg\E: \S/, 'L.5: other stat error';
-		chmod 0755, $cfg->parent->stringify;
+		with_revoked(search => $cfg->parent, sub {
+			throws_ok { $load->() } qr/\AFailed to parse \Q$cfg\E: \S/, 'L.5: other stat error';
+		});
 	}
 	took('L.5');
 	{

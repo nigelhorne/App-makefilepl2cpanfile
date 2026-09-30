@@ -48,7 +48,7 @@ use warnings;
 # it does have (File::HomeDir, Path::Tiny, YAML::Tiny).
 
 use Test::Most;
-use Test::Permissions qw(can_revoke_create can_revoke_read can_revoke_search why_not);
+use Test::Permissions qw(can_revoke_create can_revoke_read can_revoke_search why_not with_revoked);
 use Test::Mockingbird;
 use File::Temp qw(tempdir);
 use Path::Tiny;
@@ -967,13 +967,12 @@ subtest 'generate: unreadable Makefile.PL (mode 000) must croak' => sub {
 		my $g   = empty_home();
 		my $mf  = path($dir)->child('Makefile.PL');
 		$mf->spew_utf8($MF_SIMPLE);
-		chmod 0000, "$mf";
 
-		throws_ok {
-			App::makefilepl2cpanfile::generate(makefile => "$mf")
-		} qr/Cannot read/, 'mode-000 Makefile.PL causes croak';
-
-		chmod 0644, "$mf";    # restore so temp-cleanup can remove it
+		with_revoked(read => "$mf", sub {
+			throws_ok {
+				App::makefilepl2cpanfile::generate(makefile => "$mf")
+			} qr/Cannot read/, 'mode-000 Makefile.PL causes croak';
+		});
 	}
 };
 
@@ -1148,16 +1147,16 @@ subtest 'upstream: config path cannot be examined (stat() failure) - croaks' => 
 		my $cfg_dir = $home->child('.config');
 		$cfg_dir->mkpath;
 		$cfg_dir->child('makefilepl2cpanfile.yml')->spew_utf8("develop:\n  X: 1\n");
-		chmod 0, "$cfg_dir";
 		my $g  = mock_scoped 'File::HomeDir::my_home' => sub { "$home" };
 		my $mf = make_mf($MF_SIMPLE);
 		my $msg_eacces = do { local $! = POSIX::EACCES(); "$!" };
 
-		throws_ok {
-			App::makefilepl2cpanfile::generate(makefile => "$mf", with_develop => 1)
-		} qr/\AFailed to parse \Q$cfg_dir\E\/makefilepl2cpanfile\.yml: \Q$msg_eacces\E at /,
-			'stat() failure on the config path croaks with the errno text';
-		chmod 0755, "$cfg_dir";
+		with_revoked(search => "$cfg_dir", sub {
+			throws_ok {
+				App::makefilepl2cpanfile::generate(makefile => "$mf", with_develop => 1)
+			} qr/\AFailed to parse \Q$cfg_dir\E\/makefilepl2cpanfile\.yml: \Q$msg_eacces\E at /,
+				'stat() failure on the config path croaks with the errno text';
+		});
 	}
 };
 
@@ -1901,11 +1900,11 @@ subtest 'filesystem: hostile config file locations' => sub {
 		my $cfg  = $home->child('.config', 'makefilepl2cpanfile.yml');
 		$cfg->parent->mkpath;
 		$cfg->spew_utf8("develop:\n  X: 1\n");
-		chmod 0, "$cfg";
 		my $g = mock_scoped 'File::HomeDir::my_home' => sub { "$home" };
-		throws_ok { App::makefilepl2cpanfile::generate(makefile => "$mf") }
-			qr/\AFailed to parse \Q$cfg\E: \S.* at /, 'unreadable config: documented croak with the reason';
-		chmod 0600, "$cfg";
+		with_revoked(read => "$cfg", sub {
+			throws_ok { App::makefilepl2cpanfile::generate(makefile => "$mf") }
+				qr/\AFailed to parse \Q$cfg\E: \S.* at /, 'unreadable config: documented croak with the reason';
+		});
 	}
 };
 
@@ -2133,9 +2132,7 @@ END_PERL
 		skip why_not('create', $dir), 4 unless can_revoke_create($dir);
 		$dir->child('Makefile.PL')->spew_utf8($MF_SIMPLE);
 		$dir->child($HOSTILE{cpanfile})->spew_utf8($old);
-		chmod 0555, "$dir";
-		my ($out, $err, $exit) = $run->($dir, $BIN_PATH);
-		chmod 0755, "$dir";
+		my ($out, $err, $exit) = with_revoked(create => "$dir", sub { $run->($dir, $BIN_PATH) });
 		isnt $exit, 0, 'read-only directory: non-zero exit';
 		isnt $err, q{}, 'read-only directory: error reported';
 		unlike $out, qr/\Q$HOSTILE{written}\E/, 'read-only directory: no success message';
