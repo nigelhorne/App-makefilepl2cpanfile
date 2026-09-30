@@ -1,6 +1,6 @@
 Revision history for App-makefilepl2cpanfile
 
-0.06	Wed Sep 30 07:40:30 PM EDT 2026
+0.06	Wed Sep 30 07:44:13 PM EDT 2026
 	[ Security ]
 	Reading a Makefile.PL with many unclosed dependency blocks
 	  (PREREQ_PM, prereqs, recommends and the other META spec 1.x keys)

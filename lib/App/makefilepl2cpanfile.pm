@@ -13,8 +13,6 @@ use YAML::Tiny ();
 use File::HomeDir ();
 use Fcntl ();
 
-=encoding utf-8
-
 =head1 NAME
 
 App::makefilepl2cpanfile - Convert Makefile.PL to a cpanfile automatically
@@ -1632,6 +1630,8 @@ L<https://github.com/nigelhorne/App-makefilepl2cpanfile/issues>.
 =head1 AUTHOR
 
 Nigel Horne E<lt>njh@nigelhorne.comE<gt>
+
+=encoding utf-8
 
 =head1 FORMAL SPECIFICATION
 
