@@ -1,0 +1,14 @@
+# Perl::Critic profile for `perlcritic --severity 3 lib/`.  These policies
+# conflict with the project's deliberate style; everything else applies.
+
+# The house style indents with tabs.
+[-CodeLayout::ProhibitHardTabs]
+
+# Subroutines read single arguments as my $x = $_[0]; multi-argument
+# subroutines unpack @_ in one statement.
+[-Subroutines::RequireArgUnpacking]
+
+# Every long regex is written with /x, one commented part per line, and
+# possessive quantifiers so it stays linear; splitting an alternation or a
+# character class into qr// pieces would make it harder to read, not easier.
+[-RegularExpressions::ProhibitComplexRegexes]

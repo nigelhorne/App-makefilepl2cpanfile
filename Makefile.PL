@@ -39,6 +39,9 @@ WriteMakefile(
 		'Test::Without::Module' => 0,
 	}, PREREQ_PM => {
 		'autodie' => 0,
+		'Carp' => 0,
+		'Fcntl' => 0,	# S_ISREG
+		'Getopt::Long' => 0,	# bin/makefilepl2cpanfile
 		'File::HomeDir' => 0,
 		'Path::Tiny' => '0.034',	# errors as Path::Tiny::Error objects
 		'Params::Get' => 0.17,

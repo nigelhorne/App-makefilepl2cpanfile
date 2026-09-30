@@ -1,13 +1,20 @@
 Revision history for App-makefilepl2cpanfile
 
-0.06
+0.06	Wed Sep 30 07:40:30 PM EDT 2026
 	[ Security ]
-	Fix regular expressions that were quadratic on a Makefile.PL with
-	  many unclosed dependency blocks (PREREQ_PM, prereqs, recommends and
-	  the other META spec 1.x keys): 50,000 unclosed recommends blocks
-	  took over a minute on Perl 5.26 and now take a fraction of a second
-
-	[ Packaging ]
+	Reading a Makefile.PL with many unclosed dependency blocks
+	  (PREREQ_PM, prereqs, recommends and the other META spec 1.x keys)
+	  took time proportional to the square of its size: 50,000 unclosed
+	  recommends blocks took over a minute on Perl 5.26.  Dependency blocks
+	  are now found by matching braces in one pass, so reading takes time
+	  in proportion to the size of the file
+	[ Documentation ]
+	The documentation now states that reading is linear in the size of
+	  the input, and that an unmatched brace inside a string or comment
+	  within a dependency list can hide its entries.  The limitation on
+	  lists nested more than four braces deep is gone: lists are read at
+	  any depth
+	[ Enhancements ]
 	Minimum Perl is now 5.26, set by the test dependencies:
 	  Test::Permissions needs Params::Validate::Strict (5.26), and
 	  Test::Mockingbird needs 5.16.3.  The code itself still needs only
@@ -15,7 +22,8 @@ Revision history for App-makefilepl2cpanfile
 	  dependencies could not be installed on 5.14
 	New test dependency: Test::Permissions, replacing the private copy in
 	  t/lib
-
+	The core modules Carp, Fcntl and Getopt::Long are now declared as
+	  dependencies
 	[ Testing ]
 	Permission tests probe the directory that holds their fixtures, and
 	  their skip messages say why chmod cannot revoke access (for
@@ -23,7 +31,10 @@ Revision history for App-makefilepl2cpanfile
 	Files and directories are locked with Test::Permissions' with_revoked,
 	  which restores the mode even if a check dies; three tests used to
 	  leave a mode-0 file behind
-	CI: the minimum-version job runs Perl 5.26 instead of 5.14
+	Tests that dependency lists are read at every nesting depth, and
+	  timing tests for more shapes of unclosed dependency blocks
+	CI: the minimum-version job runs Perl 5.26 instead of 5.14, in its
+	  own workflow (u26.yml)
 
 0.05	Fri Sep 25 05:01:10 PM EDT 2026
 	[ Enhancements ]

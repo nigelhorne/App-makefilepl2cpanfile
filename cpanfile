@@ -2,7 +2,10 @@
 
 requires 'perl', '5.026';
 
+requires 'Carp';
+requires 'Fcntl';   # S_ISREG
 requires 'File::HomeDir';
+requires 'Getopt::Long';   # bin/makefilepl2cpanfile
 requires 'IPC::System::Simple';
 requires 'Params::Get', '0.17';
 requires 'Path::Tiny', '0.034';   # errors as Path::Tiny::Error objects

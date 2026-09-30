@@ -1,0 +1,85 @@
+---
+# Tests the declared minimum Perl (MIN_PERL_VERSION in Makefile.PL) on
+# Ubuntu.  Written by hand and kept separate from perl-ci.yml, which
+# App::GHGen generates and may overwrite.  Change perl-version below when
+# MIN_PERL_VERSION changes.
+name: Minimum Perl (5.26)
+
+'on':
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    name: Perl 5.26 on ubuntu-latest
+    env:
+      AUTOMATED_TESTING: 1
+      NO_NETWORK_TESTING: 1
+      NONINTERACTIVE_TESTING: 1
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Perl
+        id: setup-perl
+        uses: shogo82148/actions-setup-perl@v1.44.0
+        with:
+          perl-version: '5.26'
+
+      - name: Get exact Perl binary version for cache key
+        id: perl-version
+        shell: perl {0}
+        run: |
+          use Config;
+          my $sum = 0;
+          if (open(my $fh, '<:raw', $^X)) {
+              $sum += unpack('%32C*', $_) while read $fh, $_, 65536;
+          }
+          open(my $out, '>>', $ENV{GITHUB_OUTPUT}) or die $!;
+          print $out "version=$Config{version}-$Config{archname}-$sum\n";
+
+      - name: Cache CPAN modules
+        uses: actions/cache@v6
+        with:
+          path: ~/perl5
+          key: ${{ runner.os }}-perl-${{ steps.perl-version.outputs.version }}-${{ hashFiles('cpanfile') }}
+          restore-keys: |
+            ${{ runner.os }}-perl-${{ steps.perl-version.outputs.version }}-
+
+      - name: Install cpanm and local::lib
+        run: cpanm --notest --local-lib=~/perl5 local::lib
+
+      - name: Install DB_File, needed for a lot of CPAN modules
+        run: |
+          sudo apt update
+          sudo apt install libdb-dev libperl-dev
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          eval $(perl -I ~/perl5/lib/perl5 -Mlocal::lib)
+          cpanm --notest --installdeps --verbose .
+
+      - name: Run tests
+        shell: bash
+        run: |
+          eval $(perl -I ~/perl5/lib/perl5 -Mlocal::lib)
+          prove -lr t/
+
+      - name: Show cpanm build log on failure
+        if: failure()
+        run: tail -100 "$HOME/.cpanm/work/*/build.log"
