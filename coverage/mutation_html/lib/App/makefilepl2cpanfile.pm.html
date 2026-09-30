@@ -1809,369 +1809,364 @@ is( func(VALUE_AT_BOUNDARY), EXPECTED, &#39;Test boundary behaviour&#39; );
 </span><span class=""> 1439: # TODO: Consolidate the test suite: move duplicated helpers (empty_home,
 </span><span class=""> 1440: #       make_mf, use_home, run_cli) into t/lib, and merge the overlap
 </span><span class=""> 1441: #       between function.t, unit.t and extended_tests.t.
-</span><span class=""> 1442: # TODO: Once Test::Permissions is on CPAN, add it to TEST_REQUIRES and
-</span><span class=""> 1443: #       delete t/lib/Test/Permissions.pm in the same change (the local
-</span><span class=""> 1444: #       copy has the same package name, so use lib &#39;t/lib&#39; would still load
-</span><span class=""> 1445: #       it).  Pass the fixture directory to can_revoke_read/_search and use
-</span><span class=""> 1446: #       why_not() as the skip message.
-</span><span class=""> 1447: # TODO: Readonly hashes and arrays (%PHASE_MAP, %VALID_PHASE, %VALID_REL,
-</span><span class=""> 1448: #       %LEGACY_KEY, @REL_ORDER, @PHASE_ORDER, %DEFAULT_DEVELOP) are tied,
-</span><span class=""> 1449: #       adding overhead to every access; use plain lexicals or constant
-</span><span class=""> 1450: #       lists.
-</span><span class=""> 1451: # TODO: In the command-line tool, rename the temporary file directly
-</span><span class=""> 1452: #       instead of Path::Tiny&#39;s move (File::Copy::move moves INTO a
-</span><span class=""> 1453: #       directory; only the non-regular-file guard prevents that today),
-</span><span class=""> 1454: #       and close the small race between the symlink check and the write.
-</span><span class=""> 1455: # TODO: Consider a size limit for Makefile.PL and the existing cpanfile, so
-</span><span class=""> 1456: #       a huge hostile file cannot exhaust memory.
-</span><span class=""> 1457: # TODO: CI matrix: a Perl 5.14 job (the declared minimum), Windows and
-</span><span class=""> 1458: #       macOS runners, and Devel::Cover for the command-line tool&#39;s
-</span><span class=""> 1459: #       subprocesses (via PERL5OPT).
-</span><span class=""> 1460: 
-</span><span class=""> 1461: 1;
-</span><span class=""> 1462: 
-</span><span class=""> 1463: __END__
-</span><span class=""> 1464: 
-</span><span class=""> 1465: =head1 COMMON PITFALLS
-</span><span class=""> 1466: 
-</span><span class=""> 1467: =over 4
-</span><span class=""> 1468: 
-</span><span class=""> 1469: =item * B&lt;Code in Makefile.PL is not run.&gt;  Dependencies that are built
-</span><span class=""> 1470: by code are not seen, for example C&lt;PREREQ_PM =E&lt;gt&gt; \%deps&gt; or a list
-</span><span class=""> 1471: returned by a function.  Entries inside a condition, such as
-</span><span class=""> 1472: C&lt;$^O eq &#39;MSWin32&#39; ? (&#39;Win32&#39; =E&lt;gt&gt; 0) : ()&gt;, are seen but become
-</span><span class=""> 1473: unconditional.  Write such dependencies as plain entries, or add them to
-</span><span class=""> 1474: the F&lt;cpanfile&gt; another way.
+</span><span class=""> 1442: # TODO: Readonly hashes and arrays (%PHASE_MAP, %VALID_PHASE, %VALID_REL,
+</span><span class=""> 1443: #       %LEGACY_KEY, @REL_ORDER, @PHASE_ORDER, %DEFAULT_DEVELOP) are tied,
+</span><span class=""> 1444: #       adding overhead to every access; use plain lexicals or constant
+</span><span class=""> 1445: #       lists.
+</span><span class=""> 1446: # TODO: In the command-line tool, rename the temporary file directly
+</span><span class=""> 1447: #       instead of Path::Tiny&#39;s move (File::Copy::move moves INTO a
+</span><span class=""> 1448: #       directory; only the non-regular-file guard prevents that today),
+</span><span class=""> 1449: #       and close the small race between the symlink check and the write.
+</span><span class=""> 1450: # TODO: Consider a size limit for Makefile.PL and the existing cpanfile, so
+</span><span class=""> 1451: #       a huge hostile file cannot exhaust memory.
+</span><span class=""> 1452: # TODO: CI matrix: a Perl 5.14 job (the declared minimum), Windows and
+</span><span class=""> 1453: #       macOS runners, and Devel::Cover for the command-line tool&#39;s
+</span><span class=""> 1454: #       subprocesses (via PERL5OPT).
+</span><span class=""> 1455: 
+</span><span class=""> 1456: 1;
+</span><span class=""> 1457: 
+</span><span class=""> 1458: __END__
+</span><span class=""> 1459: 
+</span><span class=""> 1460: =head1 COMMON PITFALLS
+</span><span class=""> 1461: 
+</span><span class=""> 1462: =over 4
+</span><span class=""> 1463: 
+</span><span class=""> 1464: =item * B&lt;Code in Makefile.PL is not run.&gt;  Dependencies that are built
+</span><span class=""> 1465: by code are not seen, for example C&lt;PREREQ_PM =E&lt;gt&gt; \%deps&gt; or a list
+</span><span class=""> 1466: returned by a function.  Entries inside a condition, such as
+</span><span class=""> 1467: C&lt;$^O eq &#39;MSWin32&#39; ? (&#39;Win32&#39; =E&lt;gt&gt; 0) : ()&gt;, are seen but become
+</span><span class=""> 1468: unconditional.  Write such dependencies as plain entries, or add them to
+</span><span class=""> 1469: the F&lt;cpanfile&gt; another way.
+</span><span class=""> 1470: 
+</span><span class=""> 1471: =item * B&lt;Only the develop section of an existing cpanfile is kept.&gt;
+</span><span class=""> 1472: Hand edits anywhere else (for example a C&lt;feature&gt; block or an extra
+</span><span class=""> 1473: C&lt;on &#39;test&#39;&gt; line) are lost when you regenerate.  Put hand-written
+</span><span class=""> 1474: entries in C&lt;on &#39;develop&#39; =E&lt;gt&gt; sub { ... }&gt;.
 </span><span class=""> 1475: 
-</span><span class=""> 1476: =item * B&lt;Only the develop section of an existing cpanfile is kept.&gt;
-</span><span class=""> 1477: Hand edits anywhere else (for example a C&lt;feature&gt; block or an extra
-</span><span class=""> 1478: C&lt;on &#39;test&#39;&gt; line) are lost when you regenerate.  Put hand-written
-</span><span class=""> 1479: entries in C&lt;on &#39;develop&#39; =E&lt;gt&gt; sub { ... }&gt;.
-</span><span class=""> 1480: 
-</span><span class=""> 1481: =item * B&lt;Conditions inside the kept develop section are removed.&gt;  An
-</span><span class=""> 1482: C&lt;if (...) { requires &#39;X&#39; }&gt; inside the develop block is carried over as
-</span><span class=""> 1483: a plain C&lt;requires &#39;X&#39;&gt;.  Comments in the develop block are not kept.
-</span><span class=""> 1484: 
-</span><span class=""> 1485: =item * B&lt;Which entry wins.&gt;  When the same module is listed twice in the
-</span><span class=""> 1486: same phase and relationship, the first one wins.  The simple keys
-</span><span class=""> 1487: (C&lt;PREREQ_PM&gt; and friends) are read before C&lt;prereqs&gt; blocks, and entries
-</span><span class=""> 1488: from F&lt;Makefile.PL&gt; win over entries in the existing develop section.
-</span><span class=""> 1489: The same module under two different relationships (for example
-</span><span class=""> 1490: C&lt;requires&gt; and C&lt;recommends&gt;) is kept twice.
-</span><span class=""> 1491: 
-</span><span class=""> 1492: =item * B&lt;The configuration file replaces the default tools.&gt;  If you
-</span><span class=""> 1493: list only C&lt;My::Tool&gt;, then C&lt;Perl::Critic&gt; and the others are no longer
-</span><span class=""> 1494: added.  List them too if you want them.
+</span><span class=""> 1476: =item * B&lt;Conditions inside the kept develop section are removed.&gt;  An
+</span><span class=""> 1477: C&lt;if (...) { requires &#39;X&#39; }&gt; inside the develop block is carried over as
+</span><span class=""> 1478: a plain C&lt;requires &#39;X&#39;&gt;.  Comments in the develop block are not kept.
+</span><span class=""> 1479: 
+</span><span class=""> 1480: =item * B&lt;Which entry wins.&gt;  When the same module is listed twice in the
+</span><span class=""> 1481: same phase and relationship, the first one wins.  The simple keys
+</span><span class=""> 1482: (C&lt;PREREQ_PM&gt; and friends) are read before C&lt;prereqs&gt; blocks, and entries
+</span><span class=""> 1483: from F&lt;Makefile.PL&gt; win over entries in the existing develop section.
+</span><span class=""> 1484: The same module under two different relationships (for example
+</span><span class=""> 1485: C&lt;requires&gt; and C&lt;recommends&gt;) is kept twice.
+</span><span class=""> 1486: 
+</span><span class=""> 1487: =item * B&lt;The configuration file replaces the default tools.&gt;  If you
+</span><span class=""> 1488: list only C&lt;My::Tool&gt;, then C&lt;Perl::Critic&gt; and the others are no longer
+</span><span class=""> 1489: added.  List them too if you want them.
+</span><span class=""> 1490: 
+</span><span class=""> 1491: =item * B&lt;undef means &quot;use the default&quot;.&gt;  C&lt;makefile =E&lt;gt&gt; undef&gt; reads
+</span><span class=""> 1492: F&lt;Makefile.PL&gt;; C&lt;existing =E&lt;gt&gt; undef&gt; is the same as C&lt;&#39;&#39;&gt;; and
+</span><span class=""> 1493: C&lt;with_develop =E&lt;gt&gt; undef&gt; means B&lt;true&gt;.  Use C&lt;with_develop =E&lt;gt&gt; 0&gt;
+</span><span class=""> 1494: to turn developer tools off.
 </span><span class=""> 1495: 
-</span><span class=""> 1496: =item * B&lt;undef means &quot;use the default&quot;.&gt;  C&lt;makefile =E&lt;gt&gt; undef&gt; reads
-</span><span class=""> 1497: F&lt;Makefile.PL&gt;; C&lt;existing =E&lt;gt&gt; undef&gt; is the same as C&lt;&#39;&#39;&gt;; and
-</span><span class=""> 1498: C&lt;with_develop =E&lt;gt&gt; undef&gt; means B&lt;true&gt;.  Use C&lt;with_develop =E&lt;gt&gt; 0&gt;
-</span><span class=""> 1499: to turn developer tools off.
-</span><span class=""> 1500: 
-</span><span class=""> 1501: =item * B&lt;parse_prereqs(undef) is silent.&gt;  It returns an empty hash
-</span><span class=""> 1502: reference with no warning, so a failed file read can look like &quot;no
-</span><span class=""> 1503: dependencies&quot;.  Check that the read worked before you call it.
-</span><span class=""> 1504: 
-</span><span class=""> 1505: =item * B&lt;The output depends on who runs it.&gt;  With C&lt;with_develop&gt; on,
-</span><span class=""> 1506: the tool list comes from the home directory of the current user.  Use
-</span><span class=""> 1507: C&lt;with_develop =E&lt;gt&gt; 0&gt; when every computer must produce the same file.
-</span><span class=""> 1508: 
-</span><span class=""> 1509: =item * B&lt;generate() does not write any file.&gt;  It returns the text.
-</span><span class=""> 1510: Save it yourself (see L&lt;/SYNOPSIS&gt;) or use the command-line tool.
-</span><span class=""> 1511: 
-</span><span class=""> 1512: =item * B&lt;Relative paths&gt; in C&lt;makefile&gt; are relative to the current
-</span><span class=""> 1513: working directory, not to your script.
+</span><span class=""> 1496: =item * B&lt;parse_prereqs(undef) is silent.&gt;  It returns an empty hash
+</span><span class=""> 1497: reference with no warning, so a failed file read can look like &quot;no
+</span><span class=""> 1498: dependencies&quot;.  Check that the read worked before you call it.
+</span><span class=""> 1499: 
+</span><span class=""> 1500: =item * B&lt;The output depends on who runs it.&gt;  With C&lt;with_develop&gt; on,
+</span><span class=""> 1501: the tool list comes from the home directory of the current user.  Use
+</span><span class=""> 1502: C&lt;with_develop =E&lt;gt&gt; 0&gt; when every computer must produce the same file.
+</span><span class=""> 1503: 
+</span><span class=""> 1504: =item * B&lt;generate() does not write any file.&gt;  It returns the text.
+</span><span class=""> 1505: Save it yourself (see L&lt;/SYNOPSIS&gt;) or use the command-line tool.
+</span><span class=""> 1506: 
+</span><span class=""> 1507: =item * B&lt;Relative paths&gt; in C&lt;makefile&gt; are relative to the current
+</span><span class=""> 1508: working directory, not to your script.
+</span><span class=""> 1509: 
+</span><span class=""> 1510: =item * B&lt;Warnings are not errors.&gt;  Problems such as invalid UTF-8 or a
+</span><span class=""> 1511: bad configuration entry are reported with C&lt;warn&gt; (through L&lt;Carp&gt;) and
+</span><span class=""> 1512: processing continues.  Catch them with C&lt;$SIG{__WARN__}&gt; if you need to
+</span><span class=""> 1513: act on them.
 </span><span class=""> 1514: 
-</span><span class=""> 1515: =item * B&lt;Warnings are not errors.&gt;  Problems such as invalid UTF-8 or a
-</span><span class=""> 1516: bad configuration entry are reported with C&lt;warn&gt; (through L&lt;Carp&gt;) and
-</span><span class=""> 1517: processing continues.  Catch them with C&lt;$SIG{__WARN__}&gt; if you need to
-</span><span class=""> 1518: act on them.
-</span><span class=""> 1519: 
-</span><span class=""> 1520: =back
+</span><span class=""> 1515: =back
+</span><span class=""> 1516: 
+</span><span class=""> 1517: =head1 DESIGN NOTES
+</span><span class=""> 1518: 
+</span><span class=""> 1519: Some checks are made once, where data enters, and relied on afterwards.
+</span><span class=""> 1520: Each rule below is proved by F&lt;t/logic.t&gt;.
 </span><span class=""> 1521: 
-</span><span class=""> 1522: =head1 DESIGN NOTES
+</span><span class=""> 1522: =over 4
 </span><span class=""> 1523: 
-</span><span class=""> 1524: Some checks are made once, where data enters, and relied on afterwards.
-</span><span class=""> 1525: Each rule below is proved by F&lt;t/logic.t&gt;.
-</span><span class=""> 1526: 
-</span><span class=""> 1527: =over 4
-</span><span class=""> 1528: 
-</span><span class=""> 1529: =item * B&lt;Versions.&gt;  Every version is checked when it is read (from the
-</span><span class=""> 1530: F&lt;Makefile.PL&gt;, the existing F&lt;cpanfile&gt; or the configuration file) and
-</span><span class=""> 1531: replaced by C&lt;0&gt; if it is not a version number or version range.  A
-</span><span class=""> 1532: version number is zero exactly when none of its digits is 1 to 9, and a
-</span><span class=""> 1533: range means &quot;any version&quot; only when it is C&lt;E&lt;gt&gt;=&gt; a zero version.  So,
-</span><span class=""> 1534: when the output is written, those two tests decide whether to print a
-</span><span class=""> 1535: requirement.
+</span><span class=""> 1524: =item * B&lt;Versions.&gt;  Every version is checked when it is read (from the
+</span><span class=""> 1525: F&lt;Makefile.PL&gt;, the existing F&lt;cpanfile&gt; or the configuration file) and
+</span><span class=""> 1526: replaced by C&lt;0&gt; if it is not a version number or version range.  A
+</span><span class=""> 1527: version number is zero exactly when none of its digits is 1 to 9, and a
+</span><span class=""> 1528: range means &quot;any version&quot; only when it is C&lt;E&lt;gt&gt;=&gt; a zero version.  So,
+</span><span class=""> 1529: when the output is written, those two tests decide whether to print a
+</span><span class=""> 1530: requirement.
+</span><span class=""> 1531: 
+</span><span class=""> 1532: =item * B&lt;Comments.&gt;  An empty comment is stored as &quot;no comment&quot; when it
+</span><span class=""> 1533: is read, and entries from other sources have no comment.  So, when the
+</span><span class=""> 1534: output is written, a comment that exists is never empty and can be
+</span><span class=""> 1535: printed without further checks.
 </span><span class=""> 1536: 
-</span><span class=""> 1537: =item * B&lt;Comments.&gt;  An empty comment is stored as &quot;no comment&quot; when it
-</span><span class=""> 1538: is read, and entries from other sources have no comment.  So, when the
-</span><span class=""> 1539: output is written, a comment that exists is never empty and can be
-</span><span class=""> 1540: printed without further checks.
+</span><span class=""> 1537: =item * B&lt;Developer tools.&gt;  A tool must not be added if the develop
+</span><span class=""> 1538: phase already lists it under any relationship.  So the set of listed
+</span><span class=""> 1539: modules is built once, and every configured tool outside that set is
+</span><span class=""> 1540: added.
 </span><span class=""> 1541: 
-</span><span class=""> 1542: =item * B&lt;Developer tools.&gt;  A tool must not be added if the develop
-</span><span class=""> 1543: phase already lists it under any relationship.  So the set of listed
-</span><span class=""> 1544: modules is built once, and every configured tool outside that set is
-</span><span class=""> 1545: added.
-</span><span class=""> 1546: 
-</span><span class=""> 1547: =item * B&lt;Speed.&gt;  Parsing takes time proportional to the size of the
-</span><span class=""> 1548: F&lt;Makefile.PL&gt;, however its blocks are arranged: every position test
-</span><span class=""> 1549: (is this block inside a comment, or inside a C&lt;prereqs&gt; block?) is a
-</span><span class=""> 1550: binary search over sorted, non-overlapping ranges.  Lines without a
-</span><span class=""> 1551: C&lt;#&gt; skip the comment checks, the four simple keys are found in one
-</span><span class=""> 1552: pass, and the patterns used on every line are compiled once.
+</span><span class=""> 1542: =item * B&lt;Speed.&gt;  Parsing takes time proportional to the size of the
+</span><span class=""> 1543: F&lt;Makefile.PL&gt;, however its blocks are arranged: every position test
+</span><span class=""> 1544: (is this block inside a comment, or inside a C&lt;prereqs&gt; block?) is a
+</span><span class=""> 1545: binary search over sorted, non-overlapping ranges.  Lines without a
+</span><span class=""> 1546: C&lt;#&gt; skip the comment checks, the four simple keys are found in one
+</span><span class=""> 1547: pass, and the patterns used on every line are compiled once.
+</span><span class=""> 1548: 
+</span><span class=""> 1549: =item * B&lt;Order of checks.&gt;  Each function stops at the first check that
+</span><span class=""> 1550: fails: an unreadable F&lt;Makefile.PL&gt; is refused before anything is read,
+</span><span class=""> 1551: and the configuration file is only parsed once it is known to exist and
+</span><span class=""> 1552: to be a regular file.
 </span><span class=""> 1553: 
-</span><span class=""> 1554: =item * B&lt;Order of checks.&gt;  Each function stops at the first check that
-</span><span class=""> 1555: fails: an unreadable F&lt;Makefile.PL&gt; is refused before anything is read,
-</span><span class=""> 1556: and the configuration file is only parsed once it is known to exist and
-</span><span class=""> 1557: to be a regular file.
-</span><span class=""> 1558: 
-</span><span class=""> 1559: =back
-</span><span class=""> 1560: 
-</span><span class=""> 1561: =head1 LIMITATIONS
+</span><span class=""> 1554: =back
+</span><span class=""> 1555: 
+</span><span class=""> 1556: =head1 LIMITATIONS
+</span><span class=""> 1557: 
+</span><span class=""> 1558: =over 4
+</span><span class=""> 1559: 
+</span><span class=""> 1560: =item * The F&lt;Makefile.PL&gt; is read with patterns, not run, so dependencies
+</span><span class=""> 1561: that are computed by code cannot be found (see L&lt;/COMMON PITFALLS&gt;).
 </span><span class=""> 1562: 
-</span><span class=""> 1563: =over 4
-</span><span class=""> 1564: 
-</span><span class=""> 1565: =item * The F&lt;Makefile.PL&gt; is read with patterns, not run, so dependencies
-</span><span class=""> 1566: that are computed by code cannot be found (see L&lt;/COMMON PITFALLS&gt;).
-</span><span class=""> 1567: 
-</span><span class=""> 1568: =item * Dependency lists nested more than four braces deep inside a
-</span><span class=""> 1569: single entry are not fully read.  Normal F&lt;Makefile.PL&gt; files never
-</span><span class=""> 1570: come close to this.
+</span><span class=""> 1563: =item * Dependency lists nested more than four braces deep inside a
+</span><span class=""> 1564: single entry are not fully read.  Normal F&lt;Makefile.PL&gt; files never
+</span><span class=""> 1565: come close to this.
+</span><span class=""> 1566: 
+</span><span class=""> 1567: =item * Only one C&lt;on &#39;develop&#39;&gt; section of an existing F&lt;cpanfile&gt; is
+</span><span class=""> 1568: used: the first one.
+</span><span class=""> 1569: 
+</span><span class=""> 1570: =back
 </span><span class=""> 1571: 
-</span><span class=""> 1572: =item * Only one C&lt;on &#39;develop&#39;&gt; section of an existing F&lt;cpanfile&gt; is
-</span><span class=""> 1573: used: the first one.
-</span><span class=""> 1574: 
-</span><span class=""> 1575: =back
-</span><span class=""> 1576: 
-</span><span class=""> 1577: =head1 SEE ALSO
-</span><span class=""> 1578: 
-</span><span class=""> 1579: =over 4
-</span><span class=""> 1580: 
-</span><span class=""> 1581: =item * L&lt;makefilepl2cpanfile&gt; - the command-line tool
-</span><span class=""> 1582: 
-</span><span class=""> 1583: =item * L&lt;Module::CPANfile&gt;, L&lt;cpanfile&gt; - the F&lt;cpanfile&gt; format
-</span><span class=""> 1584: 
-</span><span class=""> 1585: =item * L&lt;CPAN::Meta::Spec&gt; - the meaning of phases and relationships
-</span><span class=""> 1586: 
-</span><span class=""> 1587: =item * L&lt;ExtUtils::MakeMaker&gt; - the F&lt;Makefile.PL&gt; format
-</span><span class=""> 1588: 
-</span><span class=""> 1589: =item * L&lt;Test Dashboard|https://nigelhorne.github.io/App-makefilepl2cpanfile/coverage/&gt;
-</span><span class=""> 1590: 
-</span><span class=""> 1591: =back
-</span><span class=""> 1592: 
-</span><span class=""> 1593: =head1 SUPPORT
+</span><span class=""> 1572: =head1 SEE ALSO
+</span><span class=""> 1573: 
+</span><span class=""> 1574: =over 4
+</span><span class=""> 1575: 
+</span><span class=""> 1576: =item * L&lt;makefilepl2cpanfile&gt; - the command-line tool
+</span><span class=""> 1577: 
+</span><span class=""> 1578: =item * L&lt;Module::CPANfile&gt;, L&lt;cpanfile&gt; - the F&lt;cpanfile&gt; format
+</span><span class=""> 1579: 
+</span><span class=""> 1580: =item * L&lt;CPAN::Meta::Spec&gt; - the meaning of phases and relationships
+</span><span class=""> 1581: 
+</span><span class=""> 1582: =item * L&lt;ExtUtils::MakeMaker&gt; - the F&lt;Makefile.PL&gt; format
+</span><span class=""> 1583: 
+</span><span class=""> 1584: =item * L&lt;Test Dashboard|https://nigelhorne.github.io/App-makefilepl2cpanfile/coverage/&gt;
+</span><span class=""> 1585: 
+</span><span class=""> 1586: =back
+</span><span class=""> 1587: 
+</span><span class=""> 1588: =head1 SUPPORT
+</span><span class=""> 1589: 
+</span><span class=""> 1590: This module is provided as-is without any warranty.
+</span><span class=""> 1591: 
+</span><span class=""> 1592: Please report bugs and feature requests at
+</span><span class=""> 1593: L&lt;https://github.com/nigelhorne/App-makefilepl2cpanfile/issues&gt;.
 </span><span class=""> 1594: 
-</span><span class=""> 1595: This module is provided as-is without any warranty.
+</span><span class=""> 1595: =head1 AUTHOR
 </span><span class=""> 1596: 
-</span><span class=""> 1597: Please report bugs and feature requests at
-</span><span class=""> 1598: L&lt;https://github.com/nigelhorne/App-makefilepl2cpanfile/issues&gt;.
-</span><span class=""> 1599: 
-</span><span class=""> 1600: =head1 AUTHOR
-</span><span class=""> 1601: 
-</span><span class=""> 1602: Nigel Horne E&lt;lt&gt;njh@nigelhorne.comE&lt;gt&gt;
-</span><span class=""> 1603: 
-</span><span class=""> 1604: =head1 FORMAL SPECIFICATION
-</span><span class=""> 1605: 
-</span><span class=""> 1606: The specifications below use Z notation.  They describe what each
-</span><span class=""> 1607: function computes; the English sections above are the normative
-</span><span class=""> 1608: description for everyday use.
-</span><span class=""> 1609: 
-</span><span class=""> 1610: =head2 Basic types and helpers
-</span><span class=""> 1611: 
-</span><span class=""> 1612: 	[CHAR, PATH]
-</span><span class=""> 1613: 	Str       == seq CHAR
-</span><span class=""> 1614: 	ModName   == { s : Str | s matches [A-Za-z_][A-Za-z0-9_]*(::[A-Za-z0-9_]+)* }
-</span><span class=""> 1615: 	VersionStr == { s : Str | s matches v?[0-9._]+ &acirc;&#136;&sect; (&acirc;&#136;&#131; c &acirc;&#136;&#136; ran s &acirc;&#128;&cent; c &acirc;&#136;&#136; &#39;0&#39;..&#39;9&#39;) }
-</span><span class=""> 1616: 	Op        ::= &gt;= | &lt;= | == | != | &gt; | &lt;
-</span><span class=""> 1617: 	Requirement == VersionStr &acirc;&#136;&ordf; { &acirc;&#129;&#128;/ &acirc;&#159;&uml; o&acirc;&#130;&#129; &acirc;&#129;&#128; v&acirc;&#130;&#129;, &quot;, &quot; &acirc;&#129;&#128; o&acirc;&#130;&#130; &acirc;&#129;&#128; v&acirc;&#130;&#130;, &acirc;&#128;&brvbar; &acirc;&#159;&copy; | o&aacute;&micro;&cent; &acirc;&#136;&#136; Op, v&aacute;&micro;&cent; &acirc;&#136;&#136; VersionStr }
-</span><span class=""> 1618: 	Phase     ::= runtime | configure | build | test | develop
-</span><span class=""> 1619: 	Rel       ::= requires | recommends | suggests | conflicts
-</span><span class=""> 1620: 	Entry     == [ version : Requirement &acirc;&#136;&ordf; {0}; comment : Str &acirc;&#136;&ordf; {&acirc;&#138;&yen;} ]
-</span><span class=""> 1621: 	LEGACY    == { requires &acirc;&#134;&brvbar; (runtime, requires), build_requires &acirc;&#134;&brvbar; (build, requires),
-</span><span class=""> 1622: 	               configure_requires &acirc;&#134;&brvbar; (configure, requires), recommends &acirc;&#134;&brvbar; (runtime, recommends),
-</span><span class=""> 1623: 	               suggests &acirc;&#134;&brvbar; (runtime, suggests), conflicts &acirc;&#134;&brvbar; (runtime, conflicts) }
-</span><span class=""> 1624: 	DepMap    == Phase &acirc;&#135;&cedil; (Rel &acirc;&#135;&cedil; (ModName &acirc;&#135;&cedil; Entry))
-</span><span class=""> 1625: 
-</span><span class=""> 1626: 	-- Left-biased merge: entries already present win.
-</span><span class=""> 1627: 	_&acirc;&#138;&#149;&acirc;&#130;&#151;_ : DepMap &Atilde;&#151; DepMap -&gt; DepMap
-</span><span class=""> 1628: 	a &acirc;&#138;&#149;&acirc;&#130;&#151; b == a &acirc;&#136;&ordf; { p &acirc;&#134;&brvbar; (r &acirc;&#134;&brvbar; (m &acirc;&#134;&brvbar; e)) &acirc;&#136;&#136; b | m &acirc;&#136;&#137; dom(a(p)(r)) }
-</span><span class=""> 1629: 
-</span><span class=""> 1630: 	-- Environment read by generate (it is never modified).
-</span><span class=""> 1631: 	Env &acirc;&#137;&#153; [ fs : PATH &acirc;&#135;&cedil; seq BYTE; home : PATH &acirc;&#136;&ordf; {&acirc;&#138;&yen;} ]
-</span><span class=""> 1632: 	cfg(E) == E.home &acirc;&#129;&#128; &quot;/.config/makefilepl2cpanfile.yml&quot;
-</span><span class=""> 1633: 
-</span><span class=""> 1634: =head2 parse_prereqs
-</span><span class=""> 1635: 
-</span><span class=""> 1636: 	parse_prereqs : (Str &acirc;&#136;&ordf; {&acirc;&#138;&yen;}) -&gt; DepMap
+</span><span class=""> 1597: Nigel Horne E&lt;lt&gt;njh@nigelhorne.comE&lt;gt&gt;
+</span><span class=""> 1598: 
+</span><span class=""> 1599: =head1 FORMAL SPECIFICATION
+</span><span class=""> 1600: 
+</span><span class=""> 1601: The specifications below use Z notation.  They describe what each
+</span><span class=""> 1602: function computes; the English sections above are the normative
+</span><span class=""> 1603: description for everyday use.
+</span><span class=""> 1604: 
+</span><span class=""> 1605: =head2 Basic types and helpers
+</span><span class=""> 1606: 
+</span><span class=""> 1607: 	[CHAR, PATH]
+</span><span class=""> 1608: 	Str       == seq CHAR
+</span><span class=""> 1609: 	ModName   == { s : Str | s matches [A-Za-z_][A-Za-z0-9_]*(::[A-Za-z0-9_]+)* }
+</span><span class=""> 1610: 	VersionStr == { s : Str | s matches v?[0-9._]+ &acirc;&#136;&sect; (&acirc;&#136;&#131; c &acirc;&#136;&#136; ran s &acirc;&#128;&cent; c &acirc;&#136;&#136; &#39;0&#39;..&#39;9&#39;) }
+</span><span class=""> 1611: 	Op        ::= &gt;= | &lt;= | == | != | &gt; | &lt;
+</span><span class=""> 1612: 	Requirement == VersionStr &acirc;&#136;&ordf; { &acirc;&#129;&#128;/ &acirc;&#159;&uml; o&acirc;&#130;&#129; &acirc;&#129;&#128; v&acirc;&#130;&#129;, &quot;, &quot; &acirc;&#129;&#128; o&acirc;&#130;&#130; &acirc;&#129;&#128; v&acirc;&#130;&#130;, &acirc;&#128;&brvbar; &acirc;&#159;&copy; | o&aacute;&micro;&cent; &acirc;&#136;&#136; Op, v&aacute;&micro;&cent; &acirc;&#136;&#136; VersionStr }
+</span><span class=""> 1613: 	Phase     ::= runtime | configure | build | test | develop
+</span><span class=""> 1614: 	Rel       ::= requires | recommends | suggests | conflicts
+</span><span class=""> 1615: 	Entry     == [ version : Requirement &acirc;&#136;&ordf; {0}; comment : Str &acirc;&#136;&ordf; {&acirc;&#138;&yen;} ]
+</span><span class=""> 1616: 	LEGACY    == { requires &acirc;&#134;&brvbar; (runtime, requires), build_requires &acirc;&#134;&brvbar; (build, requires),
+</span><span class=""> 1617: 	               configure_requires &acirc;&#134;&brvbar; (configure, requires), recommends &acirc;&#134;&brvbar; (runtime, recommends),
+</span><span class=""> 1618: 	               suggests &acirc;&#134;&brvbar; (runtime, suggests), conflicts &acirc;&#134;&brvbar; (runtime, conflicts) }
+</span><span class=""> 1619: 	DepMap    == Phase &acirc;&#135;&cedil; (Rel &acirc;&#135;&cedil; (ModName &acirc;&#135;&cedil; Entry))
+</span><span class=""> 1620: 
+</span><span class=""> 1621: 	-- Left-biased merge: entries already present win.
+</span><span class=""> 1622: 	_&acirc;&#138;&#149;&acirc;&#130;&#151;_ : DepMap &Atilde;&#151; DepMap -&gt; DepMap
+</span><span class=""> 1623: 	a &acirc;&#138;&#149;&acirc;&#130;&#151; b == a &acirc;&#136;&ordf; { p &acirc;&#134;&brvbar; (r &acirc;&#134;&brvbar; (m &acirc;&#134;&brvbar; e)) &acirc;&#136;&#136; b | m &acirc;&#136;&#137; dom(a(p)(r)) }
+</span><span class=""> 1624: 
+</span><span class=""> 1625: 	-- Environment read by generate (it is never modified).
+</span><span class=""> 1626: 	Env &acirc;&#137;&#153; [ fs : PATH &acirc;&#135;&cedil; seq BYTE; home : PATH &acirc;&#136;&ordf; {&acirc;&#138;&yen;} ]
+</span><span class=""> 1627: 	cfg(E) == E.home &acirc;&#129;&#128; &quot;/.config/makefilepl2cpanfile.yml&quot;
+</span><span class=""> 1628: 
+</span><span class=""> 1629: =head2 parse_prereqs
+</span><span class=""> 1630: 
+</span><span class=""> 1631: 	parse_prereqs : (Str &acirc;&#136;&ordf; {&acirc;&#138;&yen;}) -&gt; DepMap
+</span><span class=""> 1632: 
+</span><span class=""> 1633: 	parse_prereqs(s) ==
+</span><span class=""> 1634: 	  if s = &acirc;&#138;&yen; &acirc;&#136;&uml; is_ref(s) then &acirc;&#136;&#133;
+</span><span class=""> 1635: 	  else simple(s&#39;) &acirc;&#138;&#149;&acirc;&#130;&#151; structured(s&#39;) &acirc;&#138;&#149;&acirc;&#130;&#151; legacy(s&#39;)
+</span><span class=""> 1636: 	  where s&#39; == s with every &#39;#&#39; comment removed
 </span><span class=""> 1637: 
-</span><span class=""> 1638: 	parse_prereqs(s) ==
-</span><span class=""> 1639: 	  if s = &acirc;&#138;&yen; &acirc;&#136;&uml; is_ref(s) then &acirc;&#136;&#133;
-</span><span class=""> 1640: 	  else simple(s&#39;) &acirc;&#138;&#149;&acirc;&#130;&#151; structured(s&#39;) &acirc;&#138;&#149;&acirc;&#130;&#151; legacy(s&#39;)
-</span><span class=""> 1641: 	  where s&#39; == s with every &#39;#&#39; comment removed
-</span><span class=""> 1642: 
-</span><span class=""> 1643: 	simple(s)     == &acirc;&#139;&#131; { {PHASE_MAP(k) &acirc;&#134;&brvbar; {requires &acirc;&#134;&brvbar; pairs(b)}}
-</span><span class=""> 1644: 	                     | k &acirc;&#136;&#136; {PREREQ_PM, BUILD_REQUIRES, TEST_REQUIRES, CONFIGURE_REQUIRES},
-</span><span class=""> 1645: 	                       b &acirc;&#136;&#136; blocks(k, s) }
-</span><span class=""> 1646: 	structured(s) == &acirc;&#139;&#131; { {p &acirc;&#134;&brvbar; {r &acirc;&#134;&brvbar; pairs(b)}}
-</span><span class=""> 1647: 	                     | P &acirc;&#136;&#136; blocks(prereqs, s), (p &acirc;&#134;&brvbar; (r &acirc;&#134;&brvbar; b)) &acirc;&#136;&#136; P, p &acirc;&#136;&#136; Phase, r &acirc;&#136;&#136; Rel }
-</span><span class=""> 1648: 	legacy(s)     == &acirc;&#139;&#131; { {first(LEGACY(k)) &acirc;&#134;&brvbar; {second(LEGACY(k)) &acirc;&#134;&brvbar; pairs(b)}}
-</span><span class=""> 1649: 	                     | k &acirc;&#136;&#136; dom LEGACY, b &acirc;&#136;&#136; blocks(k, s),
-</span><span class=""> 1650: 	                       &Acirc;&not; (&acirc;&#136;&#131; P &acirc;&#136;&#136; blocks(prereqs, s) &acirc;&#128;&cent; b &acirc;&#138;&#134; P) }
-</span><span class=""> 1651: 	pairs(b)      == { m &acirc;&#134;&brvbar; &acirc;&#159;&uml; if v &acirc;&#136;&#136; Requirement then v else 0, comment(m, b) &acirc;&#159;&copy;
-</span><span class=""> 1652: 	                     | (&#39;m&#39; =&gt; v) &acirc;&#136;&#136; b, m &acirc;&#136;&#136; ModName }
-</span><span class=""> 1653: 	-- comment(m, b): the line&#39;s comment if m is the last valid entry on it
+</span><span class=""> 1638: 	simple(s)     == &acirc;&#139;&#131; { {PHASE_MAP(k) &acirc;&#134;&brvbar; {requires &acirc;&#134;&brvbar; pairs(b)}}
+</span><span class=""> 1639: 	                     | k &acirc;&#136;&#136; {PREREQ_PM, BUILD_REQUIRES, TEST_REQUIRES, CONFIGURE_REQUIRES},
+</span><span class=""> 1640: 	                       b &acirc;&#136;&#136; blocks(k, s) }
+</span><span class=""> 1641: 	structured(s) == &acirc;&#139;&#131; { {p &acirc;&#134;&brvbar; {r &acirc;&#134;&brvbar; pairs(b)}}
+</span><span class=""> 1642: 	                     | P &acirc;&#136;&#136; blocks(prereqs, s), (p &acirc;&#134;&brvbar; (r &acirc;&#134;&brvbar; b)) &acirc;&#136;&#136; P, p &acirc;&#136;&#136; Phase, r &acirc;&#136;&#136; Rel }
+</span><span class=""> 1643: 	legacy(s)     == &acirc;&#139;&#131; { {first(LEGACY(k)) &acirc;&#134;&brvbar; {second(LEGACY(k)) &acirc;&#134;&brvbar; pairs(b)}}
+</span><span class=""> 1644: 	                     | k &acirc;&#136;&#136; dom LEGACY, b &acirc;&#136;&#136; blocks(k, s),
+</span><span class=""> 1645: 	                       &Acirc;&not; (&acirc;&#136;&#131; P &acirc;&#136;&#136; blocks(prereqs, s) &acirc;&#128;&cent; b &acirc;&#138;&#134; P) }
+</span><span class=""> 1646: 	pairs(b)      == { m &acirc;&#134;&brvbar; &acirc;&#159;&uml; if v &acirc;&#136;&#136; Requirement then v else 0, comment(m, b) &acirc;&#159;&copy;
+</span><span class=""> 1647: 	                     | (&#39;m&#39; =&gt; v) &acirc;&#136;&#136; b, m &acirc;&#136;&#136; ModName }
+</span><span class=""> 1648: 	-- comment(m, b): the line&#39;s comment if m is the last valid entry on it
+</span><span class=""> 1649: 
+</span><span class=""> 1650: 	post  &acirc;&#136;&#128; p &acirc;&#134;&brvbar; R &acirc;&#136;&#136; result &acirc;&#128;&cent; R &acirc;&#137;&nbsp; &acirc;&#136;&#133; &acirc;&#136;&sect; (&acirc;&#136;&#128; r &acirc;&#134;&brvbar; M &acirc;&#136;&#136; R &acirc;&#128;&cent; M &acirc;&#137;&nbsp; &acirc;&#136;&#133;)
+</span><span class=""> 1651: 	      &acirc;&#136;&sect; no I/O &acirc;&#136;&sect; no warnings
+</span><span class=""> 1652: 
+</span><span class=""> 1653: =head2 generate
 </span><span class=""> 1654: 
-</span><span class=""> 1655: 	post  &acirc;&#136;&#128; p &acirc;&#134;&brvbar; R &acirc;&#136;&#136; result &acirc;&#128;&cent; R &acirc;&#137;&nbsp; &acirc;&#136;&#133; &acirc;&#136;&sect; (&acirc;&#136;&#128; r &acirc;&#134;&brvbar; M &acirc;&#136;&#136; R &acirc;&#128;&cent; M &acirc;&#137;&nbsp; &acirc;&#136;&#133;)
-</span><span class=""> 1656: 	      &acirc;&#136;&sect; no I/O &acirc;&#136;&sect; no warnings
-</span><span class=""> 1657: 
-</span><span class=""> 1658: =head2 generate
-</span><span class=""> 1659: 
-</span><span class=""> 1660: 	Args &acirc;&#137;&#153; [ content : Str &acirc;&#136;&ordf; {&acirc;&#138;&yen;}; makefile : Str; existing : Str; with_develop : &eth;&#157;&#148;&sup1; ]
+</span><span class=""> 1655: 	Args &acirc;&#137;&#153; [ content : Str &acirc;&#136;&ordf; {&acirc;&#138;&yen;}; makefile : Str; existing : Str; with_develop : &eth;&#157;&#148;&sup1; ]
+</span><span class=""> 1656: 
+</span><span class=""> 1657: 	generate : Args &Atilde;&#151; Env &acirc;&#135;&cedil; Str
+</span><span class=""> 1658: 
+</span><span class=""> 1659: 	pre   (a.content &acirc;&#137;&nbsp; &acirc;&#138;&yen; &acirc;&#136;&uml; string(a.makefile) &acirc;&#136;&#136; dom E.fs &acirc;&#136;&sect; regular(a.makefile) &acirc;&#136;&sect; readable(a.makefile))
+</span><span class=""> 1660: 	      &acirc;&#136;&sect; (a.with_develop &acirc;&#135;&#146; cfg(E) &acirc;&#136;&#137; dom E.fs &acirc;&#136;&uml; &Acirc;&not; regular(cfg(E)) &acirc;&#136;&uml; yaml_ok(cfg(E)))
 </span><span class=""> 1661: 
-</span><span class=""> 1662: 	generate : Args &Atilde;&#151; Env &acirc;&#135;&cedil; Str
-</span><span class=""> 1663: 
-</span><span class=""> 1664: 	pre   (a.content &acirc;&#137;&nbsp; &acirc;&#138;&yen; &acirc;&#136;&uml; string(a.makefile) &acirc;&#136;&#136; dom E.fs &acirc;&#136;&sect; regular(a.makefile) &acirc;&#136;&sect; readable(a.makefile))
-</span><span class=""> 1665: 	      &acirc;&#136;&sect; (a.with_develop &acirc;&#135;&#146; cfg(E) &acirc;&#136;&#137; dom E.fs &acirc;&#136;&uml; &Acirc;&not; regular(cfg(E)) &acirc;&#136;&uml; yaml_ok(cfg(E)))
-</span><span class=""> 1666: 
-</span><span class=""> 1667: 	generate(a, E) ==
-</span><span class=""> 1668: 	  let content == if a.content &acirc;&#137;&nbsp; &acirc;&#138;&yen; then a.content else decode_utf8_or_raw(E.fs(a.makefile))
-</span><span class=""> 1669: 	      deps    == parse_prereqs(content)
-</span><span class=""> 1670: 	      kept    == { r &acirc;&#134;&brvbar; { m &acirc;&#134;&brvbar; &acirc;&#159;&uml; if v &acirc;&#136;&#136; Requirement then v else 0, &acirc;&#138;&yen; &acirc;&#159;&copy; }
-</span><span class=""> 1671: 	                   | (r m v) &acirc;&#136;&#136; develop_entries(a.existing) \ comments, m &acirc;&#136;&#136; ModName }
-</span><span class=""> 1672: 	      dev     == deps &acirc;&#138;&#149;&acirc;&#130;&#151; {develop &acirc;&#134;&brvbar; kept}
-</span><span class=""> 1673: 	      listed  == &acirc;&#139;&#131; { dom(dev(develop)(r)) | r &acirc;&#136;&#136; Rel }
-</span><span class=""> 1674: 	      tools   == if E.home = &acirc;&#138;&yen; &acirc;&#136;&uml; E.home = &quot;&quot; &acirc;&#136;&uml; &Acirc;&not; regular(cfg(E)) then DEFAULT_DEVELOP
-</span><span class=""> 1675: 	                 else valid_entries(yaml(cfg(E)).develop)
-</span><span class=""> 1676: 	      final   == if a.with_develop
-</span><span class=""> 1677: 	                 then dev &acirc;&#138;&#149;&acirc;&#130;&#151; {develop &acirc;&#134;&brvbar; {requires &acirc;&#134;&brvbar; { m &acirc;&#134;&brvbar; &acirc;&#159;&uml;v, &acirc;&#138;&yen;&acirc;&#159;&copy; | (m &acirc;&#134;&brvbar; v) &acirc;&#136;&#136; tools, m &acirc;&#136;&#137; listed }}}
-</span><span class=""> 1678: 	                 else dev
-</span><span class=""> 1679: 	  in  emit(final, min_perl(content))
-</span><span class=""> 1680: 
-</span><span class=""> 1681: 	post  result &acirc;&#136;&#136; Str
-</span><span class=""> 1682: 	      &acirc;&#136;&sect; prefix(result, HEADER &acirc;&#129;&#128; &quot;\n&quot;) &acirc;&#136;&sect; last(result) = &#39;\n&#39; &acirc;&#136;&sect; &Acirc;&not; suffix(result, &quot;\n\n&quot;)
-</span><span class=""> 1683: 	      &acirc;&#136;&sect; E&acirc;&#128;&sup2; = E                           -- nothing is written
-</span><span class=""> 1684: 	      &acirc;&#136;&sect; $@&acirc;&#128;&sup2; = $@ &acirc;&#136;&sect; $!&acirc;&#128;&sup2; = $! &acirc;&#136;&sect; $_&acirc;&#128;&sup2; = $_
-</span><span class=""> 1685: 	      -- every value from a file or the environment in a message is
-</span><span class=""> 1686: 	      -- printable(v): control and bidi characters as \x{..}
+</span><span class=""> 1662: 	generate(a, E) ==
+</span><span class=""> 1663: 	  let content == if a.content &acirc;&#137;&nbsp; &acirc;&#138;&yen; then a.content else decode_utf8_or_raw(E.fs(a.makefile))
+</span><span class=""> 1664: 	      deps    == parse_prereqs(content)
+</span><span class=""> 1665: 	      kept    == { r &acirc;&#134;&brvbar; { m &acirc;&#134;&brvbar; &acirc;&#159;&uml; if v &acirc;&#136;&#136; Requirement then v else 0, &acirc;&#138;&yen; &acirc;&#159;&copy; }
+</span><span class=""> 1666: 	                   | (r m v) &acirc;&#136;&#136; develop_entries(a.existing) \ comments, m &acirc;&#136;&#136; ModName }
+</span><span class=""> 1667: 	      dev     == deps &acirc;&#138;&#149;&acirc;&#130;&#151; {develop &acirc;&#134;&brvbar; kept}
+</span><span class=""> 1668: 	      listed  == &acirc;&#139;&#131; { dom(dev(develop)(r)) | r &acirc;&#136;&#136; Rel }
+</span><span class=""> 1669: 	      tools   == if E.home = &acirc;&#138;&yen; &acirc;&#136;&uml; E.home = &quot;&quot; &acirc;&#136;&uml; &Acirc;&not; regular(cfg(E)) then DEFAULT_DEVELOP
+</span><span class=""> 1670: 	                 else valid_entries(yaml(cfg(E)).develop)
+</span><span class=""> 1671: 	      final   == if a.with_develop
+</span><span class=""> 1672: 	                 then dev &acirc;&#138;&#149;&acirc;&#130;&#151; {develop &acirc;&#134;&brvbar; {requires &acirc;&#134;&brvbar; { m &acirc;&#134;&brvbar; &acirc;&#159;&uml;v, &acirc;&#138;&yen;&acirc;&#159;&copy; | (m &acirc;&#134;&brvbar; v) &acirc;&#136;&#136; tools, m &acirc;&#136;&#137; listed }}}
+</span><span class=""> 1673: 	                 else dev
+</span><span class=""> 1674: 	  in  emit(final, min_perl(content))
+</span><span class=""> 1675: 
+</span><span class=""> 1676: 	post  result &acirc;&#136;&#136; Str
+</span><span class=""> 1677: 	      &acirc;&#136;&sect; prefix(result, HEADER &acirc;&#129;&#128; &quot;\n&quot;) &acirc;&#136;&sect; last(result) = &#39;\n&#39; &acirc;&#136;&sect; &Acirc;&not; suffix(result, &quot;\n\n&quot;)
+</span><span class=""> 1678: 	      &acirc;&#136;&sect; E&acirc;&#128;&sup2; = E                           -- nothing is written
+</span><span class=""> 1679: 	      &acirc;&#136;&sect; $@&acirc;&#128;&sup2; = $@ &acirc;&#136;&sect; $!&acirc;&#128;&sup2; = $! &acirc;&#136;&sect; $_&acirc;&#128;&sup2; = $_
+</span><span class=""> 1680: 	      -- every value from a file or the environment in a message is
+</span><span class=""> 1681: 	      -- printable(v): control and bidi characters as \x{..}
+</span><span class=""> 1682: 
+</span><span class=""> 1683: 	-- Failure cases (the function dies):
+</span><span class=""> 1684: 	a.content = &acirc;&#138;&yen; &acirc;&#136;&sect; (&Acirc;&not; regular(a.makefile) &acirc;&#136;&uml; &Acirc;&not; readable(a.makefile))  &acirc;&#135;&#146;  croak(&quot;Cannot read &#39;&quot; &acirc;&#129;&#128; a.makefile &acirc;&#129;&#128; &quot;&#39;&quot;)
+</span><span class=""> 1685: 	a.with_develop &acirc;&#136;&sect; regular(cfg(E)) &acirc;&#136;&sect; &Acirc;&not; yaml_ok(cfg(E))  &acirc;&#135;&#146;  croak(&quot;Failed to parse &quot; &acirc;&#129;&#128; cfg(E) &acirc;&#129;&#128; &quot;: &quot; &acirc;&#129;&#128; err)
+</span><span class=""> 1686: 	a.with_develop &acirc;&#136;&sect; stat(cfg(E)) fails with errno &acirc;&#136;&#137; {ENOENT, ENOTDIR}  &acirc;&#135;&#146;  croak(&quot;Failed to parse &quot; &acirc;&#129;&#128; cfg(E) &acirc;&#129;&#128; &quot;: &quot; &acirc;&#129;&#128; errno)
 </span><span class=""> 1687: 
-</span><span class=""> 1688: 	-- Failure cases (the function dies):
-</span><span class=""> 1689: 	a.content = &acirc;&#138;&yen; &acirc;&#136;&sect; (&Acirc;&not; regular(a.makefile) &acirc;&#136;&uml; &Acirc;&not; readable(a.makefile))  &acirc;&#135;&#146;  croak(&quot;Cannot read &#39;&quot; &acirc;&#129;&#128; a.makefile &acirc;&#129;&#128; &quot;&#39;&quot;)
-</span><span class=""> 1690: 	a.with_develop &acirc;&#136;&sect; regular(cfg(E)) &acirc;&#136;&sect; &Acirc;&not; yaml_ok(cfg(E))  &acirc;&#135;&#146;  croak(&quot;Failed to parse &quot; &acirc;&#129;&#128; cfg(E) &acirc;&#129;&#128; &quot;: &quot; &acirc;&#129;&#128; err)
-</span><span class=""> 1691: 	a.with_develop &acirc;&#136;&sect; stat(cfg(E)) fails with errno &acirc;&#136;&#137; {ENOENT, ENOTDIR}  &acirc;&#135;&#146;  croak(&quot;Failed to parse &quot; &acirc;&#129;&#128; cfg(E) &acirc;&#129;&#128; &quot;: &quot; &acirc;&#129;&#128; errno)
-</span><span class=""> 1692: 
-</span><span class=""> 1693: =head1 STATE DIAGRAM
+</span><span class=""> 1688: =head1 STATE DIAGRAM
+</span><span class=""> 1689: 
+</span><span class=""> 1690: The module keeps no state between calls: every call starts at START and
+</span><span class=""> 1691: ends at RETURN or at an error.  The diagram shows the states that one
+</span><span class=""> 1692: call to C&lt;generate()&gt; passes through.  C&lt;parse_prereqs()&gt; is the single
+</span><span class=""> 1693: step PARSE.
 </span><span class=""> 1694: 
-</span><span class=""> 1695: The module keeps no state between calls: every call starts at START and
-</span><span class=""> 1696: ends at RETURN or at an error.  The diagram shows the states that one
-</span><span class=""> 1697: call to C&lt;generate()&gt; passes through.  C&lt;parse_prereqs()&gt; is the single
-</span><span class=""> 1698: step PARSE.
-</span><span class=""> 1699: 
-</span><span class=""> 1700: 	+-------+
-</span><span class=""> 1701: 	| START |  generate(%args) is called
-</span><span class=""> 1702: 	+-------+
-</span><span class=""> 1703: 	    |
-</span><span class=""> 1704: 	    | makefile is a readable regular file?
-</span><span class=""> 1705: 	    |---- no ------------------------------------&gt; [DIE] croak &quot;Cannot read &#39;...&#39;&quot;
-</span><span class=""> 1706: 	    | yes
-</span><span class=""> 1707: 	    v
-</span><span class=""> 1708: 	+------------+  read as UTF-8
-</span><span class=""> 1709: 	| READ_UTF8  |---- decode error --&gt; +-----------+  carp &quot;invalid UTF-8&quot;
-</span><span class=""> 1710: 	+------------+                      | READ_RAW  |  (read the raw bytes)
-</span><span class=""> 1711: 	    |     \                         +-----------+
-</span><span class=""> 1712: 	    |      \                             |---- raw read fails --&gt; [DIE] error passed on
-</span><span class=""> 1713: 	    |       \---- other I/O error --------------------------&gt; [DIE] error passed on
-</span><span class=""> 1714: 	    | ok                                 |
-</span><span class=""> 1715: 	    v                                    |
-</span><span class=""> 1716: 	+------------+ &lt;-------------------------+
-</span><span class=""> 1717: 	|   PARSE    |  parse_prereqs(content); find MIN_PERL_VERSION
-</span><span class=""> 1718: 	+------------+  (pure: no I/O, no warnings)
-</span><span class=""> 1719: 	    |
-</span><span class=""> 1720: 	    | existing has an on &#39;develop&#39; section?
-</span><span class=""> 1721: 	    |---- no ----------------------------+
-</span><span class=""> 1722: 	    | yes                                |
-</span><span class=""> 1723: 	    v                                    |
-</span><span class=""> 1724: 	+------------+  copy entries; drop       |
-</span><span class=""> 1725: 	|   MERGE    |  bad names; carp and      |
-</span><span class=""> 1726: 	+------------+  drop bad versions        |
-</span><span class=""> 1727: 	    |                                    |
-</span><span class=""> 1728: 	    +&lt;-----------------------------------+
-</span><span class=""> 1729: 	    |
-</span><span class=""> 1730: 	    | with_develop true?
-</span><span class=""> 1731: 	    |---- no ----------------------------------------------+
-</span><span class=""> 1732: 	    | yes                                                  |
-</span><span class=""> 1733: 	    v                                                      |
-</span><span class=""> 1734: 	+------------+  no home dir, or config path missing        |
-</span><span class=""> 1735: 	| CONFIG     |  or not a regular file -------&gt; DEFAULTS    |
-</span><span class=""> 1736: 	+------------+                                   |         |
-</span><span class=""> 1737: 	    | config is a regular file                   |         |
-</span><span class=""> 1738: 	    |---- stat/read/YAML error --&gt; [DIE] croak &quot;Failed to parse ...&quot;
-</span><span class=""> 1739: 	    v                                            |         |
-</span><span class=""> 1740: 	+------------+  no develop: key --&gt; carp --&gt; DEFAULTS      |
-</span><span class=""> 1741: 	| VALIDATE   |  bad name    --&gt; carp, skip entry           |
-</span><span class=""> 1742: 	+------------+  bad version --&gt; carp, version 0            |
-</span><span class=""> 1743: 	    |                                            |         |
-</span><span class=""> 1744: 	    v                                            v         |
-</span><span class=""> 1745: 	+------------+ &lt;---------------------------------+         |
-</span><span class=""> 1746: 	|   INJECT   |  add tools not already in develop           |
-</span><span class=""> 1747: 	+------------+                                             |
-</span><span class=""> 1748: 	    |                                                      |
-</span><span class=""> 1749: 	    v                                                      |
-</span><span class=""> 1750: 	+------------+ &lt;-------------------------------------------+
-</span><span class=""> 1751: 	|    EMIT    |  format the text (sorted, fixed order)
-</span><span class=""> 1752: 	+------------+
-</span><span class=""> 1753: 	    |
-</span><span class=""> 1754: 	    v
-</span><span class=""> 1755: 	+--------+
-</span><span class=""> 1756: 	| RETURN |  the cpanfile text; no file written;
-</span><span class=""> 1757: 	+--------+  caller&#39;s $@, $! and $_ unchanged
+</span><span class=""> 1695: 	+-------+
+</span><span class=""> 1696: 	| START |  generate(%args) is called
+</span><span class=""> 1697: 	+-------+
+</span><span class=""> 1698: 	    |
+</span><span class=""> 1699: 	    | makefile is a readable regular file?
+</span><span class=""> 1700: 	    |---- no ------------------------------------&gt; [DIE] croak &quot;Cannot read &#39;...&#39;&quot;
+</span><span class=""> 1701: 	    | yes
+</span><span class=""> 1702: 	    v
+</span><span class=""> 1703: 	+------------+  read as UTF-8
+</span><span class=""> 1704: 	| READ_UTF8  |---- decode error --&gt; +-----------+  carp &quot;invalid UTF-8&quot;
+</span><span class=""> 1705: 	+------------+                      | READ_RAW  |  (read the raw bytes)
+</span><span class=""> 1706: 	    |     \                         +-----------+
+</span><span class=""> 1707: 	    |      \                             |---- raw read fails --&gt; [DIE] error passed on
+</span><span class=""> 1708: 	    |       \---- other I/O error --------------------------&gt; [DIE] error passed on
+</span><span class=""> 1709: 	    | ok                                 |
+</span><span class=""> 1710: 	    v                                    |
+</span><span class=""> 1711: 	+------------+ &lt;-------------------------+
+</span><span class=""> 1712: 	|   PARSE    |  parse_prereqs(content); find MIN_PERL_VERSION
+</span><span class=""> 1713: 	+------------+  (pure: no I/O, no warnings)
+</span><span class=""> 1714: 	    |
+</span><span class=""> 1715: 	    | existing has an on &#39;develop&#39; section?
+</span><span class=""> 1716: 	    |---- no ----------------------------+
+</span><span class=""> 1717: 	    | yes                                |
+</span><span class=""> 1718: 	    v                                    |
+</span><span class=""> 1719: 	+------------+  copy entries; drop       |
+</span><span class=""> 1720: 	|   MERGE    |  bad names; carp and      |
+</span><span class=""> 1721: 	+------------+  drop bad versions        |
+</span><span class=""> 1722: 	    |                                    |
+</span><span class=""> 1723: 	    +&lt;-----------------------------------+
+</span><span class=""> 1724: 	    |
+</span><span class=""> 1725: 	    | with_develop true?
+</span><span class=""> 1726: 	    |---- no ----------------------------------------------+
+</span><span class=""> 1727: 	    | yes                                                  |
+</span><span class=""> 1728: 	    v                                                      |
+</span><span class=""> 1729: 	+------------+  no home dir, or config path missing        |
+</span><span class=""> 1730: 	| CONFIG     |  or not a regular file -------&gt; DEFAULTS    |
+</span><span class=""> 1731: 	+------------+                                   |         |
+</span><span class=""> 1732: 	    | config is a regular file                   |         |
+</span><span class=""> 1733: 	    |---- stat/read/YAML error --&gt; [DIE] croak &quot;Failed to parse ...&quot;
+</span><span class=""> 1734: 	    v                                            |         |
+</span><span class=""> 1735: 	+------------+  no develop: key --&gt; carp --&gt; DEFAULTS      |
+</span><span class=""> 1736: 	| VALIDATE   |  bad name    --&gt; carp, skip entry           |
+</span><span class=""> 1737: 	+------------+  bad version --&gt; carp, version 0            |
+</span><span class=""> 1738: 	    |                                            |         |
+</span><span class=""> 1739: 	    v                                            v         |
+</span><span class=""> 1740: 	+------------+ &lt;---------------------------------+         |
+</span><span class=""> 1741: 	|   INJECT   |  add tools not already in develop           |
+</span><span class=""> 1742: 	+------------+                                             |
+</span><span class=""> 1743: 	    |                                                      |
+</span><span class=""> 1744: 	    v                                                      |
+</span><span class=""> 1745: 	+------------+ &lt;-------------------------------------------+
+</span><span class=""> 1746: 	|    EMIT    |  format the text (sorted, fixed order)
+</span><span class=""> 1747: 	+------------+
+</span><span class=""> 1748: 	    |
+</span><span class=""> 1749: 	    v
+</span><span class=""> 1750: 	+--------+
+</span><span class=""> 1751: 	| RETURN |  the cpanfile text; no file written;
+</span><span class=""> 1752: 	+--------+  caller&#39;s $@, $! and $_ unchanged
+</span><span class=""> 1753: 
+</span><span class=""> 1754: With the C&lt;content&gt; argument, START goes straight to PARSE: nothing is
+</span><span class=""> 1755: read, so neither C&lt;Cannot read&gt; nor the READ states can occur.
+</span><span class=""> 1756: 
+</span><span class=""> 1757: The command-line tool wraps this machine:
 </span><span class=""> 1758: 
-</span><span class=""> 1759: With the C&lt;content&gt; argument, START goes straight to PARSE: nothing is
-</span><span class=""> 1760: read, so neither C&lt;Cannot read&gt; nor the READ states can occur.
-</span><span class=""> 1761: 
-</span><span class=""> 1762: The command-line tool wraps this machine:
-</span><span class=""> 1763: 
-</span><span class=""> 1764: 	+-----------+  conflicting --with-develop/--no-develop --&gt; [EXIT 255]
-</span><span class=""> 1765: 	| OPTIONS   |  --help --&gt; print usage --&gt; [EXIT 0]
-</span><span class=""> 1766: 	+-----------+
+</span><span class=""> 1759: 	+-----------+  conflicting --with-develop/--no-develop --&gt; [EXIT 255]
+</span><span class=""> 1760: 	| OPTIONS   |  --help --&gt; print usage --&gt; [EXIT 0]
+</span><span class=""> 1761: 	+-----------+
+</span><span class=""> 1762: 	    |
+</span><span class=""> 1763: 	    v
+</span><span class=""> 1764: 	+-----------+  cpanfile is a symlink, or exists but is not a
+</span><span class=""> 1765: 	| GUARD     |  regular file --&gt; [DIE] &quot;Refusing to use &#39;cpanfile&#39;: ...&quot;
+</span><span class=""> 1766: 	+-----------+  (nothing is read or written)
 </span><span class=""> 1767: 	    |
 </span><span class=""> 1768: 	    v
-</span><span class=""> 1769: 	+-----------+  cpanfile is a symlink, or exists but is not a
-</span><span class=""> 1770: 	| GUARD     |  regular file --&gt; [DIE] &quot;Refusing to use &#39;cpanfile&#39;: ...&quot;
-</span><span class=""> 1771: 	+-----------+  (nothing is read or written)
+</span><span class=""> 1769: 	+-----------+  read existing cpanfile (if any) and, with read_makefile(),
+</span><span class=""> 1770: 	| READ      |  Makefile.PL - once; READ_UTF8/READ_RAW/DIE as above
+</span><span class=""> 1771: 	+-----------+
 </span><span class=""> 1772: 	    |
 </span><span class=""> 1773: 	    v
-</span><span class=""> 1774: 	+-----------+  read existing cpanfile (if any) and, with read_makefile(),
-</span><span class=""> 1775: 	| READ      |  Makefile.PL - once; READ_UTF8/READ_RAW/DIE as above
-</span><span class=""> 1776: 	+-----------+
-</span><span class=""> 1777: 	    |
-</span><span class=""> 1778: 	    v
-</span><span class=""> 1779: 	generate(content =&gt; ...) from PARSE to RETURN, as above
-</span><span class=""> 1780: 	    |
-</span><span class=""> 1781: 	    v
-</span><span class=""> 1782: 	+-----------+  --check: parse the same text; missing modules --&gt; warn,
-</span><span class=""> 1783: 	| CHECK     |  exit status will be 1 (the output below still happens)
-</span><span class=""> 1784: 	+-----------+
-</span><span class=""> 1785: 	    |---- --diff    --&gt; print a diff, write nothing --&gt; [EXIT 0 or 1]
-</span><span class=""> 1786: 	    |---- --dry-run --&gt; print the text, write nothing --&gt; [EXIT 0 or 1]
+</span><span class=""> 1774: 	generate(content =&gt; ...) from PARSE to RETURN, as above
+</span><span class=""> 1775: 	    |
+</span><span class=""> 1776: 	    v
+</span><span class=""> 1777: 	+-----------+  --check: parse the same text; missing modules --&gt; warn,
+</span><span class=""> 1778: 	| CHECK     |  exit status will be 1 (the output below still happens)
+</span><span class=""> 1779: 	+-----------+
+</span><span class=""> 1780: 	    |---- --diff    --&gt; print a diff, write nothing --&gt; [EXIT 0 or 1]
+</span><span class=""> 1781: 	    |---- --dry-run --&gt; print the text, write nothing --&gt; [EXIT 0 or 1]
+</span><span class=""> 1782: 	    v
+</span><span class=""> 1783: 	+-----------+  GUARD again, then write a temporary file and rename it
+</span><span class=""> 1784: 	| WRITE     |  over cpanfile; any failure --&gt; [DIE], old cpanfile kept,
+</span><span class=""> 1785: 	+-----------+  no temporary file left
+</span><span class=""> 1786: 	    |
 </span><span class=""> 1787: 	    v
-</span><span class=""> 1788: 	+-----------+  GUARD again, then write a temporary file and rename it
-</span><span class=""> 1789: 	| WRITE     |  over cpanfile; any failure --&gt; [DIE], old cpanfile kept,
-</span><span class=""> 1790: 	+-----------+  no temporary file left
-</span><span class=""> 1791: 	    |
-</span><span class=""> 1792: 	    v
-</span><span class=""> 1793: 	[EXIT 0 or 1]  &quot;cpanfile written successfully.&quot;
-</span><span class=""> 1794: 
-</span><span class=""> 1795: =head1 LICENSE AND COPYRIGHT
-</span><span class=""> 1796: 
-</span><span class=""> 1797: Copyright 2025-2026 Nigel Horne.
-</span><span class=""> 1798: 
-</span><span class=""> 1799: Usage is subject to the GPL2 licence terms.
-</span><span class=""> 1800: If you use it,
-</span><span class=""> 1801: please let me know.
-</span><span class=""> 1802: 
-</span><span class=""> 1803: =cut
-</span><span class=""> 1804: 
+</span><span class=""> 1788: 	[EXIT 0 or 1]  &quot;cpanfile written successfully.&quot;
+</span><span class=""> 1789: 
+</span><span class=""> 1790: =head1 LICENSE AND COPYRIGHT
+</span><span class=""> 1791: 
+</span><span class=""> 1792: Copyright 2025-2026 Nigel Horne.
+</span><span class=""> 1793: 
+</span><span class=""> 1794: Usage is subject to the GPL2 licence terms.
+</span><span class=""> 1795: If you use it,
+</span><span class=""> 1796: please let me know.
+</span><span class=""> 1797: 
+</span><span class=""> 1798: =cut
+</span><span class=""> 1799: 
 </span></pre>
 
 <script>
