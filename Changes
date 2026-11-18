@@ -1,6 +1,6 @@
 Revision history for App-makefilepl2cpanfile
 
-0.07
+0.07	Tue Nov 17 09:19:45 PM EST 2026
 	[ Bug Fixes ]
 	Quoted keys in a Makefile.PL were ignored: 'PREREQ_PM' => { ... },
 	  'TEST_REQUIRES', 'CONFIGURE_REQUIRES', 'BUILD_REQUIRES', 'prereqs'
