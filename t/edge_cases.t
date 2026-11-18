@@ -2,9 +2,17 @@ use strict;
 use warnings;
 
 # Slow or loaded smokers set PERL_TEST_TIME_OUT_FACTOR to stretch time limits.
-my $TIME_FACTOR = (defined $ENV{PERL_TEST_TIME_OUT_FACTOR}
-	&& $ENV{PERL_TEST_TIME_OUT_FACTOR} =~ /\A[0-9]+(?:\.[0-9]+)?\z/
-	&& $ENV{PERL_TEST_TIME_OUT_FACTOR} >= 1) ? $ENV{PERL_TEST_TIME_OUT_FACTOR} : 1;
+# Anything that is not a number of at least 1 means "no stretching".
+sub time_factor {
+	my $raw = $_[0];
+	return 1 unless defined $raw && $raw =~ /\A[0-9]+(?:\.[0-9]+)?\z/ && $raw >= 1;
+	return $raw;
+}
+my $TIME_FACTOR = time_factor($ENV{PERL_TEST_TIME_OUT_FACTOR});
+
+# Wall-clock limits depend on the machine, so an installer's run only checks
+# that the code finishes; the limits are enforced for the author and release.
+my $TIMED = $ENV{AUTHOR_TESTING} || $ENV{RELEASE_TESTING};
 
 # Destructive, boundary-condition, pathological, and security tests.
 #
@@ -896,7 +904,7 @@ subtest 'parse_prereqs: 100-level brace nesting completes within time limit' => 
 		my $timed_out = 0;
 
 		local $SIG{ALRM} = sub { $timed_out = 1; die "TIMEOUT\n" };
-		alarm($ALARM_SECS);
+		alarm($ALARM_SECS) if $TIMED;
 
 		my $content = 'PREREQ_PM => '
 			. ('{' x 100)
@@ -1482,7 +1490,7 @@ sub within_time_limit {
 	my $start = Time::HiRes::time();
 	my $r = eval {
 		local $SIG{ALRM} = sub { die "timeout\n" };
-		alarm $HOSTILE{time_limit} * 2;
+		alarm $HOSTILE{time_limit} * 2 if $TIMED;
 		my $v = $code->();
 		alarm 0;
 		$v;
@@ -1490,8 +1498,13 @@ sub within_time_limit {
 	alarm 0;
 	my $elapsed = Time::HiRes::time() - $start;
 	diag sprintf('%s: %.3fs', $name, $elapsed) if $ENV{TEST_VERBOSE};
-	ok !$@ && $elapsed < $HOSTILE{time_limit}, "$name: completes within $HOSTILE{time_limit}s"
-		or diag "error: $@ elapsed: $elapsed";
+	if($TIMED) {
+		ok !$@ && $elapsed < $HOSTILE{time_limit}, "$name: completes within $HOSTILE{time_limit}s"
+			or diag "error: $@ elapsed: $elapsed";
+	} else {
+		ok !$@, "$name: completes (the time limit is enforced under AUTHOR_TESTING)"
+			or diag "error: $@";
+	}
 	return $r;
 }
 
@@ -2254,6 +2267,15 @@ subtest 'context: $_ is never written, even when read-only or tied' => sub {
 	my @plist  = App::makefilepl2cpanfile::parse_prereqs($MF_FULL_FOR_TOPIC);
 	is scalar @plist, 1, 'parse_prereqs in list context returns one hashref';
 	returns_is($plist[0], { type => 'hashref' }, 'and it is a hashref');
+};
+
+subtest 'time_factor: PERL_TEST_TIME_OUT_FACTOR is honoured only when it is a number >= 1' => sub {
+	my %cases = (
+		'1' => 1, '3' => 3, '2.5' => 2.5, '10' => 10,
+		'0' => 1, '0.5' => 1, '-2' => 1, 'abc' => 1, '1e9' => 1, '' => 1, '3 ' => 1,
+	);
+	is time_factor($_), $cases{$_}, "'$_' gives $cases{$_}" for sort keys %cases;
+	is time_factor(undef), 1, 'unset gives 1';
 };
 
 done_testing();

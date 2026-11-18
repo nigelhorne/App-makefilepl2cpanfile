@@ -19,11 +19,11 @@ App::makefilepl2cpanfile - Convert Makefile.PL to a cpanfile automatically
 
 =head1 VERSION
 
-This document describes App::makefilepl2cpanfile version 0.06.
+This document describes App::makefilepl2cpanfile version 0.07.
 
 =cut
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 # -----------------------------------------------------------------------
 # Constants
@@ -276,7 +276,9 @@ thousands of unclosed braces) cannot make the tool hang.
 =over 4
 
 =item * C<PREREQ_PM>, C<BUILD_REQUIRES>, C<TEST_REQUIRES> and
-C<CONFIGURE_REQUIRES>.  These become C<requires> lines in the C<runtime>,
+C<CONFIGURE_REQUIRES>.  The key may be bare or in single or double quotes
+(C<'PREREQ_PM' =E<gt> { ... }>), and the same goes for C<prereqs>, its
+phase and relationship names, and C<MIN_PERL_VERSION>.  These become C<requires> lines in the C<runtime>,
 C<build>, C<test> and C<configure> phases.
 
 =item * C<prereqs =E<gt> { PHASE =E<gt> { RELATIONSHIP =E<gt> { ... } } }>
