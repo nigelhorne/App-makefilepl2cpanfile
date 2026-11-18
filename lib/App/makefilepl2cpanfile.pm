@@ -159,10 +159,10 @@ Readonly::Scalar my $SIMPLE_KEY_RE => qr/
 
 # Openers of dependency blocks: each captures its key in $1 and ends with
 # the '{', whose block _blocks() then takes from the matching-brace table.
-Readonly::Scalar my $SIMPLE_OPEN_RE  => qr/ \b ($SIMPLE_KEY_RE) \s*+ => \s*+ \{ /x;
-Readonly::Scalar my $PREREQS_OPEN_RE => qr/ \b (prereqs) \s*+ => \s*+ \{ /x;
+Readonly::Scalar my $SIMPLE_OPEN_RE  => qr/ \b ($SIMPLE_KEY_RE) ['"]? \s*+ => \s*+ \{ /x;
+Readonly::Scalar my $PREREQS_OPEN_RE => qr/ \b (prereqs) ['"]? \s*+ => \s*+ \{ /x;
 # A child of a prereqs or phase block: a phase or relationship name.
-Readonly::Scalar my $CHILD_OPEN_RE   => qr/ \b (\w++) \s*+ => \s*+ \{ /x;
+Readonly::Scalar my $CHILD_OPEN_RE   => qr/ \b (\w++) ['"]? \s*+ => \s*+ \{ /x;
 # The META spec 1.x top-level keys of %LEGACY_KEY, optionally quoted.
 Readonly::Scalar my $LEGACY_OPEN_RE  => qr/
 	\b ( requires | build_requires | configure_requires | recommends | suggests | conflicts )
@@ -1169,7 +1169,7 @@ sub _extract_pairs {
 sub _parse_min_perl {
 	my $content = $_[0];
 	return undef if !defined $content || ref $content;	## no critic (ProhibitExplicitReturnUndef)
-	return undef unless $content =~ /\bMIN_PERL_VERSION\b\s*=>\s*$VALUE_TOKEN_RE/x;	## no critic (ProhibitExplicitReturnUndef)
+	return undef unless $content =~ /\bMIN_PERL_VERSION\b['"]?\s*=>\s*$VALUE_TOKEN_RE/x;	## no critic (ProhibitExplicitReturnUndef)
 	my $ver = $1 // $2 // $3;
 	return _valid_version($ver) ? $ver : undef;
 }

@@ -1,5 +1,14 @@
 Revision history for App-makefilepl2cpanfile
 
+0.07
+	[ Bug Fixes ]
+	Quoted keys in a Makefile.PL were ignored: 'PREREQ_PM' => { ... },
+	  'TEST_REQUIRES', 'CONFIGURE_REQUIRES', 'BUILD_REQUIRES', 'prereqs'
+	  (with its quoted phase and relationship names) and
+	  'MIN_PERL_VERSION' produced no output, so the cpanfile could lack
+	  the runtime and test sections and the perl requirement.  Both
+	  single and double quotes are now accepted
+
 0.06	Wed Sep 30 07:44:13 PM EDT 2026
 	[ Security ]
 	Reading a Makefile.PL with many unclosed dependency blocks
