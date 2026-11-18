@@ -1,6 +1,11 @@
 use strict;
 use warnings;
 
+# Slow or loaded smokers set PERL_TEST_TIME_OUT_FACTOR to stretch time limits.
+my $TIME_FACTOR = (defined $ENV{PERL_TEST_TIME_OUT_FACTOR}
+	&& $ENV{PERL_TEST_TIME_OUT_FACTOR} =~ /\A[0-9]+(?:\.[0-9]+)?\z/
+	&& $ENV{PERL_TEST_TIME_OUT_FACTOR} >= 1) ? $ENV{PERL_TEST_TIME_OUT_FACTOR} : 1;
+
 # Destructive, boundary-condition, pathological, and security tests.
 #
 # Two bugs were discovered during test authoring and fixed in the library:
@@ -887,7 +892,7 @@ subtest 'parse_prereqs: 100-level brace nesting completes within time limit' => 
 	SKIP: {
 		skip 'alarm() is unreliable on this platform', 3 if $^O eq 'MSWin32';
 
-		Readonly my $ALARM_SECS => 5;
+		Readonly my $ALARM_SECS => 5 * $TIME_FACTOR;
 		my $timed_out = 0;
 
 		local $SIG{ALRM} = sub { $timed_out = 1; die "TIMEOUT\n" };
@@ -1424,7 +1429,7 @@ subtest 'io-failure-integrity: $! and $@ contract after successful generate()' =
 
 Readonly my %HOSTILE => (
 	header        => '# Generated from Makefile.PL using makefilepl2cpanfile',
-	time_limit    => 5,			# seconds; generous, catches quadratic blow-ups
+	time_limit    => 5 * $TIME_FACTOR,	# seconds; generous, catches quadratic blow-ups
 	many_blocks   => 20_000,		# one-line Makefile.PL with this many hashes
 	huge_name_len => 100_000,
 	huge_ver_len  => 10_000,
