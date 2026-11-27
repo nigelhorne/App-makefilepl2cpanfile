@@ -1019,12 +1019,12 @@ Approximate LCSAJ segments: 105<br>
 </span><span class="">  678: 	# re-scanned to the end of the string from every unclosed opener, which
 </span><span class="">  679: 	# is quadratic.  Premise: any closing line after a later opener is also
 </span><span class="">  680: 	# after the first.  Conclusion: only the first opener needs trying.
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  681: 	# The closing &#39;};&#39; must start a line, so a &#39;};&#39; inside an inline
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  682: 	# comment does not end the block early.
+</span><span class="">  681: 	# The closing &#39;};&#39; must start a line, so a &#39;};&#39; inside an inline
+</span><span class="">  682: 	# comment does not end the block early.
 </span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  683: 	if ($existing =~ /$DEVELOP_OPEN_RE/gx) {
 </span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  684: 		my $open_end = pos $existing;
-</span><span class="">  685: 		if ($existing =~ /^[ \t]*\};/mgx) {
-</span><span class="">  686: 			my $dev_block = substr $existing, $open_end, $-[0] - $open_end;
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  685: 		if ($existing =~ /^[ \t]*\};/mgx) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  686: 			my $dev_block = substr $existing, $open_end, $-[0] - $open_end;
 </span><span class="">  687: 
 </span><span class="">  688: 			# A commented-out line is not an entry.  &#39;#&#39; cannot occur in a
 </span><span class="">  689: 			# valid module name or version, so stripping to end of line is safe.
@@ -1038,19 +1038,19 @@ Approximate LCSAJ segments: 105<br>
 </span><span class="">  697: 				# SECURITY: the version is written back inside a single-quoted
 </span><span class="">  698: 				# literal; a value such as &#39;\&#39; would escape the closing quote and
 </span><span class="">  699: 				# turn following entries into executable code.
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  700: 				# length(undef) is undef, so one test covers &quot;absent&quot; and &quot;empty&quot;:
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  701: 				# only a non-empty version can be invalid.
-</span><span class="">  702: 				if (length($ver // q{}) &amp;&amp; !_valid_requirement($ver)) {
-</span><span class="">  703: 					Carp::carp &quot;Ignoring invalid version for &#39;$mod&#39; in existing cpanfile: &#39;&quot; . _printable($ver) . q{&#39;};
+</span><span class="">  700: 				# length(undef) is undef, so one test covers &quot;absent&quot; and &quot;empty&quot;:
+</span><span class="">  701: 				# only a non-empty version can be invalid.
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  702: 				if (length($ver // q{}) &amp;&amp; !_valid_requirement($ver)) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  703: 					Carp::carp &quot;Ignoring invalid version for &#39;$mod&#39; in existing cpanfile: &#39;&quot; . _printable($ver) . q{&#39;};
 </span><span class="">  704: 					$ver = 0;
 </span><span class="">  705: 				}
 </span><span class="">  706: 				$deps-&gt;{develop}{$rel}{$mod} //= { version =&gt; $ver || 0, comment =&gt; undef };
 </span><span class="">  707: 			}
 </span><span class="">  708: 		}
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  709: 	}
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  710: 
-</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">711 → 711 → 726</span></span>  711: 	if ($with_dev) {
-</span><span class="">  712: 		my $config = _load_develop_config();
+</span><span class="">  709: 	}
+</span><span class="">  710: 
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">711 → 711 → 726</span></span>  711: 	if ($with_dev) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  712: 		my $config = _load_develop_config();
 </span><span class="">  713: 
 </span><span class="">  714: 		# Premise 1: a listed tool must never be added again or overwritten.
 </span><span class="">  715: 		# Premise 2: &quot;listed&quot; means present under any relationship.
@@ -1062,10 +1062,10 @@ Approximate LCSAJ segments: 105<br>
 </span><span class="">  721: 		for my $mod (grep { !$listed{$_} } keys %{$config}) {
 </span><span class="">  722: 			$deps-&gt;{develop}{requires}{$mod} = { version =&gt; $config-&gt;{$mod}, comment =&gt; undef };
 </span><span class="">  723: 		}
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  724: 	}
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  725: 
-</span><span class="">  726: 	return _emit($deps, $min_perl);
-</span><span class="">  727: }
+</span><span class="">  724: 	}
+</span><span class="">  725: 
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  726: 	return _emit($deps, $min_perl);
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  727: }
 </span><span class="">  728: 
 </span><span class="">  729: =head2 read_makefile($path)
 </span><span class="">  730: 
@@ -1140,10 +1140,10 @@ Approximate LCSAJ segments: 105<br>
 </span><span class="">  799: 	local $@ = q{};
 </span><span class="">  800: 
 </span><span class="">  801: 	Carp::croak &quot;Cannot read &#39;&quot; . _printable($makefile) . q{&#39;} unless -f $makefile &amp;&amp; -r _;
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  802: 
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  803: 	my $content;
-</span><span class="">  804: 	if (!eval { $content = Path::Tiny::path($makefile)-&gt;slurp_utf8; 1 }) {
-</span><span class="">  805: 		# Only degrade gracefully for encoding errors; re-throw true I/O
+</span><span class="">  802: 
+</span><span class="">  803: 	my $content;
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  804: 	if (!eval { $content = Path::Tiny::path($makefile)-&gt;slurp_utf8; 1 }) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class="">  805: 		# Only degrade gracefully for encoding errors; re-throw true I/O
 </span><span class="">  806: 		# failures so callers can distinguish a corrupt file from an
 </span><span class="">  807: 		# unreadable one.  Path::Tiny reports I/O failures as
 </span><span class="">  808: 		# Path::Tiny::Error objects, whose text includes the file&#39;s path:
@@ -1153,10 +1153,10 @@ Approximate LCSAJ segments: 105<br>
 </span><span class="">  812: 		die $@ if ref $@ || $@ !~ /decode|ill-formed|utf/ix;  ## no critic (RequireCarping) re-thrown unchanged, as documented; croak would append a location
 </span><span class="">  813: 		Carp::carp &quot;Warning: &#39;&quot; . _printable($makefile) . &quot;&#39; contains invalid UTF-8; reading as raw bytes: &quot;
 </span><span class="">  814: 			. _printable($@ =~ s/\n\z//rx);
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  815: 		$content = Path::Tiny::path($makefile)-&gt;slurp_raw;
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  816: 	}
-</span><span class="">  817: 	return $content;
-</span><span class="">  818: }
+</span><span class="">  815: 		$content = Path::Tiny::path($makefile)-&gt;slurp_raw;
+</span><span class="">  816: 	}
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic.">  817: 	return $content;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="">  818: }
 </span><span class="">  819: 
 </span><span class="">  820: =head2 parse_prereqs($content)
 </span><span class="">  821: 
@@ -1363,10 +1363,10 @@ Approximate LCSAJ segments: 105<br>
 </span><span class=""> 1022: 		next if _in_comment(\@prereqs_spans, $at);
 </span><span class=""> 1023: 		next if _in_comment($comments, $at);
 </span><span class=""> 1024: 		_extract_pairs($block, \%deps, @{ $LEGACY_KEY{$key} });
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1025: 	}
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1026: 
-</span><span class=""> 1027: 	return \%deps;
-</span><span class=""> 1028: }
+</span><span class=""> 1025: 	}
+</span><span class=""> 1026: 
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1027: 	return \%deps;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1028: }
 </span><span class=""> 1029: 
 </span><span class=""> 1030: # -----------------------------------------------------------------------
 </span><span class=""> 1031: 
@@ -1384,16 +1384,16 @@ Approximate LCSAJ segments: 105<br>
 </span><span class=""> 1043: # and comments, as the balanced-brace patterns this replaced did.
 </span><span class=""> 1044: sub _brace_pairs {
 </span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">1045 → 1047 → 1054</span></span> 1045: 	my $content = $_[0];
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1046: 	my (%close_of, @open);
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1047: 	while ($content =~ /[{}]/gx) {
-</span><span class=""> 1048: 		if (substr($content, $-[0], 1) eq &#39;{&#39;) {
-</span><span class=""> 1049: 			push @open, $-[0];
+</span><span class=""> 1046: 	my (%close_of, @open);
+</span><span class=""> 1047: 	while ($content =~ /[{}]/gx) {
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1048: 		if (substr($content, $-[0], 1) eq &#39;{&#39;) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1049: 			push @open, $-[0];
 </span><span class=""> 1050: 		} elsif (@open) {
 </span><span class=""> 1051: 			$close_of{ pop @open } = $-[0];
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1052: 		}
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1053: 	}
-</span><span class=""> 1054: 	return \%close_of;
-</span><span class=""> 1055: }
+</span><span class=""> 1052: 		}
+</span><span class=""> 1053: 	}
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1054: 	return \%close_of;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1055: }
 </span><span class=""> 1056: 
 </span><span class=""> 1057: # -----------------------------------------------------------------------
 </span><span class=""> 1058: 
@@ -1421,10 +1421,10 @@ Approximate LCSAJ segments: 105<br>
 </span><span class=""> 1080: 		my ($key, $at, $opening) = ($1, $base + $-[0], $base + $+[0] - 1);
 </span><span class=""> 1081: 		my $closing = $pairs-&gt;{$opening} // next;
 </span><span class=""> 1082: 		push @blocks, [ $key, $at, $opening + 1, substr($text, $opening + 1 - $base, $closing - $opening - 1), $closing + 1 ];
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1083: 		pos($text) = $closing + 1 - $base;
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1084: 	}
-</span><span class=""> 1085: 	return \@blocks;
-</span><span class=""> 1086: }
+</span><span class=""> 1083: 		pos($text) = $closing + 1 - $base;
+</span><span class=""> 1084: 	}
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1085: 	return \@blocks;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1086: }
 </span><span class=""> 1087: 
 </span><span class=""> 1088: # -----------------------------------------------------------------------
 </span><span class=""> 1089: # Private helpers
@@ -1456,12 +1456,14 @@ Approximate LCSAJ segments: 105<br>
 </span><span class=""> 1115: 		# spaces one by one until \S anchors on the last non-space char.
 </span><span class=""> 1116: 		# Avoids the super-linear behaviour of (.+?)\s*$ which re-evaluates
 </span><span class=""> 1117: 		# \s*$ at every expanded position of the lazy quantifier.
-</span><span class="survived-3 tooltip" data-tooltip="Boundary mutation survived. Add tests around edge values (e.g. min, max, off-by-one)."> 1118: 		my $comment;
+</span><span class=""> 1118: 		my $comment;
+</span><span class=""> 1119: 		# Most lines have no &#39;#&#39;: index() is far cheaper than the regexes.
+</span><span class="survived-3 tooltip" data-tooltip="Boundary mutation survived. Add tests around edge values (e.g. min, max, off-by-one)."> 1120: 		if (index($line, &#39;#&#39;) &gt;= 0) {
 </span>
 					<details class="mutant-details">
 					<summary>Mutants (Total: 4, Killed: 1, Survived: 3)</summary>
 					<ul>
-				<li><b>NUM_BOUNDARY_1118_25_&gt;: Numeric boundary flip &gt;= to &gt;</b><br>HIGH: Likely missing edge-case test (boundary value)
+				<li><b>NUM_BOUNDARY_1120_25_&gt;: Numeric boundary flip &gt;= to &gt;</b><br>HIGH: Likely missing edge-case test (boundary value)
 
 								<div class="suggested-test">
 								<div class="suggest-label">🧪 Suggested Test</div>
@@ -1469,7 +1471,7 @@ Approximate LCSAJ segments: 105<br>
 is( func(VALUE_AT_BOUNDARY), EXPECTED, &#39;Test boundary behaviour&#39; );
 </pre>
 								</div>
-							</li><li><b>NUM_BOUNDARY_1118_25_&lt;: Numeric boundary flip &gt;= to &lt;</b><br>HIGH: Likely missing edge-case test (boundary value)
+							</li><li><b>NUM_BOUNDARY_1120_25_&lt;: Numeric boundary flip &gt;= to &lt;</b><br>HIGH: Likely missing edge-case test (boundary value)
 
 								<div class="suggested-test">
 								<div class="suggest-label">🧪 Suggested Test</div>
@@ -1477,7 +1479,7 @@ is( func(VALUE_AT_BOUNDARY), EXPECTED, &#39;Test boundary behaviour&#39; );
 is( func(VALUE_AT_BOUNDARY), EXPECTED, &#39;Test boundary behaviour&#39; );
 </pre>
 								</div>
-							</li><li><b>NUM_BOUNDARY_1118_25_&lt;=: Numeric boundary flip &gt;= to &lt;=</b><br>HIGH: Likely missing edge-case test (boundary value)
+							</li><li><b>NUM_BOUNDARY_1120_25_&lt;=: Numeric boundary flip &gt;= to &lt;=</b><br>HIGH: Likely missing edge-case test (boundary value)
 
 								<div class="suggested-test">
 								<div class="suggest-label">🧪 Suggested Test</div>
@@ -1486,15 +1488,13 @@ is( func(VALUE_AT_BOUNDARY), EXPECTED, &#39;Test boundary behaviour&#39; );
 </pre>
 								</div>
 							</li></ul></details>
-<span class=""> 1119: 		# Most lines have no &#39;#&#39;: index() is far cheaper than the regexes.
-</span><span class=""> 1120: 		if (index($line, &#39;#&#39;) &gt;= 0) {
-</span><span class=""> 1121: 			# Text after the first &#39;#&#39;, then again after removing unsafe
+<span class=""> 1121: 			# Text after the first &#39;#&#39;, then again after removing unsafe
 </span><span class=""> 1122: 			# characters (which can expose new outer whitespace).  Both use
 </span><span class=""> 1123: 			# $TRIMMED_RE, which is linear; see its definition.
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1124: 			my $after = substr $line, index($line, &#39;#&#39;) + 1;
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1125: 			($comment) = $after =~ /\A$TRIMMED_RE/x;
-</span><span class=""> 1126: 			if (defined $comment) {
-</span><span class=""> 1127: 				$comment =~ s/$UNSAFE_COMMENT_CHARS_RE//gx;
+</span><span class=""> 1124: 			my $after = substr $line, index($line, &#39;#&#39;) + 1;
+</span><span class=""> 1125: 			($comment) = $after =~ /\A$TRIMMED_RE/x;
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1126: 			if (defined $comment) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1127: 				$comment =~ s/$UNSAFE_COMMENT_CHARS_RE//gx;
 </span><span class=""> 1128: 				($comment) = $comment =~ /\A$TRIMMED_RE/x;
 </span><span class=""> 1129: 			}
 </span><span class=""> 1130: 			$line = substr $line, 0, index($line, &#39;#&#39;);
@@ -1523,10 +1523,10 @@ is( func(VALUE_AT_BOUNDARY), EXPECTED, &#39;Test boundary behaviour&#39; );
 </span><span class=""> 1153: 			$ver = 0 unless _valid_requirement($ver);
 </span><span class=""> 1154: 			# First occurrence wins - do not overwrite already-parsed entries.
 </span><span class=""> 1155: 			# A trailing comment belongs to the entry it follows: the last.
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1156: 			$deps-&gt;{$phase}{$rel}{$mod} //= {
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1157: 				version =&gt; $ver,
-</span><span class=""> 1158: 				comment =&gt; $i == $#pairs ? $comment : undef,
-</span><span class=""> 1159: 			};
+</span><span class=""> 1156: 			$deps-&gt;{$phase}{$rel}{$mod} //= {
+</span><span class=""> 1157: 				version =&gt; $ver,
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1158: 				comment =&gt; $i == $#pairs ? $comment : undef,
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1159: 			};
 </span><span class=""> 1160: 		}
 </span><span class=""> 1161: 	}
 </span><span class=""> 1162: 
@@ -1538,13 +1538,13 @@ is( func(VALUE_AT_BOUNDARY), EXPECTED, &#39;Test boundary behaviour&#39; );
 </span><span class=""> 1168: # Purpose:  Extract the MIN_PERL_VERSION value from Makefile.PL text.
 </span><span class=""> 1169: # Entry:    $_[0] - raw Makefile.PL content string.
 </span><span class=""> 1170: # Exit:     The version string (e.g. &#39;5.010&#39;), or undef if not declared.
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1171: sub _parse_min_perl {
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1172: 	my $content = $_[0];
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1173: 	return undef if !defined $content || ref $content;	## no critic (ProhibitExplicitReturnUndef)
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1174: 	return undef unless $content =~ /\bMIN_PERL_VERSION\b[&#39;&quot;]?\s*=&gt;\s*$VALUE_TOKEN_RE/x;	## no critic (ProhibitExplicitReturnUndef)
+</span><span class=""> 1171: sub _parse_min_perl {
+</span><span class=""> 1172: 	my $content = $_[0];
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1173: 	return undef if !defined $content || ref $content;	## no critic (ProhibitExplicitReturnUndef)
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1174: 	return undef unless $content =~ /\bMIN_PERL_VERSION\b[&#39;&quot;]?\s*=&gt;\s*$VALUE_TOKEN_RE/x;	## no critic (ProhibitExplicitReturnUndef)
 </span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1175: 	my $ver = $1 // $2 // $3;
-</span><span class=""> 1176: 	return _valid_version($ver) ? $ver : undef;
-</span><span class=""> 1177: }
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1176: 	return _valid_version($ver) ? $ver : undef;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1177: }
 </span><span class=""> 1178: 
 </span><span class=""> 1179: # _comment_spans
 </span><span class=""> 1180: #
@@ -1560,15 +1560,15 @@ is( func(VALUE_AT_BOUNDARY), EXPECTED, &#39;Test boundary behaviour&#39; );
 </span><span class=""> 1190: 	my $offset = 0;
 </span><span class=""> 1191: 	for my $line (split /\n/x, $content, -1) {
 </span><span class=""> 1192: 		# Most lines have no &#39;#&#39; at all; only the rest need the quote-aware
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1193: 		# scan, which finds the first &#39;#&#39; outside quoted strings (so that
-</span><p> <b> Mutants (Total: 4, Killed: 4, Survived: 0)</b><p><span class=""> 1194: 		# e.g. &#39;C#&#39; is not mistaken for a comment) without building a copy.
-</span><span class=""> 1195: 		if (index($line, &#39;#&#39;) &gt;= 0 &amp;&amp; $line =~ $TO_COMMENT_RE) {
-</span><span class=""> 1196: 			push @spans, [ $offset + $+[0] - 1, $offset + length $line ];
+</span><span class=""> 1193: 		# scan, which finds the first &#39;#&#39; outside quoted strings (so that
+</span><span class=""> 1194: 		# e.g. &#39;C#&#39; is not mistaken for a comment) without building a copy.
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1195: 		if (index($line, &#39;#&#39;) &gt;= 0 &amp;&amp; $line =~ $TO_COMMENT_RE) {
+</span><p> <b> Mutants (Total: 4, Killed: 4, Survived: 0)</b><p><span class=""> 1196: 			push @spans, [ $offset + $+[0] - 1, $offset + length $line ];
 </span><span class=""> 1197: 		}
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1198: 		$offset += length($line) + 1;
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1199: 	}
-</span><span class=""> 1200: 	return \@spans;
-</span><span class=""> 1201: }
+</span><span class=""> 1198: 		$offset += length($line) + 1;
+</span><span class=""> 1199: 	}
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1200: 	return \@spans;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1201: }
 </span><span class=""> 1202: 
 </span><span class=""> 1203: # _in_comment
 </span><span class=""> 1204: #
@@ -1576,17 +1576,17 @@ is( func(VALUE_AT_BOUNDARY), EXPECTED, &#39;Test boundary behaviour&#39; );
 </span><span class=""> 1206: # Entry:    $_[0] - ArrayRef from _comment_spans; $_[1] - offset.
 </span><span class=""> 1207: # Exit:     Boolean.  Binary search, so O(log n) per query.
 </span><span class=""> 1208: sub _in_comment {
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">1209 → 1211 → 1218</span></span> 1209: 	my ($spans, $pos) = @_;
-</span><p> <b> Mutants (Total: 3, Killed: 3, Survived: 0)</b><p><span class=""> 1210: 	my ($lo, $hi) = (0, $#{$spans});
-</span><span class=""> 1211: 	while ($lo &lt;= $hi) {
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1212: 		my $mid = int(($lo + $hi) / 2);
-</span><p> <b> Mutants (Total: 4, Killed: 4, Survived: 0)</b><p><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1213: 		my ($start, $end) = @{ $spans-&gt;[$mid] };
-</span><p> <b> Mutants (Total: 3, Killed: 3, Survived: 0)</b><p><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1214: 		if ($pos &lt; $start) { $hi = $mid - 1 }
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1215: 		elsif ($pos &gt;= $end) { $lo = $mid + 1 }
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1216: 		else { return 1 }
+</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">1209 → 1211 → 1218</span></span> 1209: 	my ($spans, $pos) = @_;
+</span><span class=""> 1210: 	my ($lo, $hi) = (0, $#{$spans});
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1211: 	while ($lo &lt;= $hi) {
+</span><p> <b> Mutants (Total: 3, Killed: 3, Survived: 0)</b><p><span class=""> 1212: 		my $mid = int(($lo + $hi) / 2);
+</span><span class=""> 1213: 		my ($start, $end) = @{ $spans-&gt;[$mid] };
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1214: 		if ($pos &lt; $start) { $hi = $mid - 1 }
+</span><p> <b> Mutants (Total: 4, Killed: 4, Survived: 0)</b><p><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1215: 		elsif ($pos &gt;= $end) { $lo = $mid + 1 }
+</span><p> <b> Mutants (Total: 3, Killed: 3, Survived: 0)</b><p><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1216: 		else { return 1 }
 </span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1217: 	}
-</span><span class=""> 1218: 	return 0;
-</span><span class=""> 1219: }
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1218: 	return 0;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1219: }
 </span><span class=""> 1220: 
 </span><span class=""> 1221: # _valid_version
 </span><span class=""> 1222: #
@@ -1595,10 +1595,10 @@ is( func(VALUE_AT_BOUNDARY), EXPECTED, &#39;Test boundary behaviour&#39; );
 </span><span class=""> 1225: # Entry:    $_[0] - candidate version string.
 </span><span class=""> 1226: # Exit:     Boolean: an optional leading &#39;v&#39; followed only by ASCII digits,
 </span><span class=""> 1227: #           dots and underscores, with at least one digit.
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1228: sub _valid_version {
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1229: 	my $ver = $_[0];
-</span><span class=""> 1230: 	return defined $ver &amp;&amp; $ver =~ $VERSION_RE ? 1 : 0;
-</span><span class=""> 1231: }
+</span><span class=""> 1228: sub _valid_version {
+</span><span class=""> 1229: 	my $ver = $_[0];
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1230: 	return defined $ver &amp;&amp; $ver =~ $VERSION_RE ? 1 : 0;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1231: }
 </span><span class=""> 1232: 
 </span><span class=""> 1233: # _valid_requirement
 </span><span class=""> 1234: #
@@ -1607,10 +1607,10 @@ is( func(VALUE_AT_BOUNDARY), EXPECTED, &#39;Test boundary behaviour&#39; );
 </span><span class=""> 1237: #           version (see _valid_version) or a CPAN::Meta version range.
 </span><span class=""> 1238: # Entry:    $_[0] - candidate string.
 </span><span class=""> 1239: # Exit:     Boolean.
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1240: sub _valid_requirement {
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1241: 	my $req = $_[0];
-</span><span class=""> 1242: 	return defined $req &amp;&amp; $req =~ $REQUIREMENT_RE ? 1 : 0;
-</span><span class=""> 1243: }
+</span><span class=""> 1240: sub _valid_requirement {
+</span><span class=""> 1241: 	my $req = $_[0];
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1242: 	return defined $req &amp;&amp; $req =~ $REQUIREMENT_RE ? 1 : 0;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1243: }
 </span><span class=""> 1244: 
 </span><span class=""> 1245: # _printable
 </span><span class=""> 1246: #
@@ -1623,10 +1623,10 @@ is( func(VALUE_AT_BOUNDARY), EXPECTED, &#39;Test boundary behaviour&#39; );
 </span><span class=""> 1253: # Exit:     The string with control characters and bidirectional-override
 </span><span class=""> 1254: #           characters replaced by \x{..} escapes; everything else as is.
 </span><span class=""> 1255: sub _printable {
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1256: 	my $text = &quot;$_[0]&quot;;
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1257: 	$text =~ s/($UNSAFE_COMMENT_CHARS_RE)/sprintf &#39;\\x{%X}&#39;, ord $1/gex;
-</span><span class=""> 1258: 	return $text;
-</span><span class=""> 1259: }
+</span><span class=""> 1256: 	my $text = &quot;$_[0]&quot;;
+</span><span class=""> 1257: 	$text =~ s/($UNSAFE_COMMENT_CHARS_RE)/sprintf &#39;\\x{%X}&#39;, ord $1/gex;
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1258: 	return $text;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1259: }
 </span><span class=""> 1260: 
 </span><span class=""> 1261: # _load_develop_config
 </span><span class=""> 1262: #
@@ -1651,10 +1651,10 @@ is( func(VALUE_AT_BOUNDARY), EXPECTED, &#39;Test boundary behaviour&#39; );
 </span><span class=""> 1281: 
 </span><span class=""> 1282: 	# Guard: the path cannot be examined.  A missing file means &quot;use the
 </span><span class=""> 1283: 	# defaults&quot;; any other stat failure (EACCES, ELOOP, stale NFS...) must not
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1284: 	# silently change the output.
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1285: 	my @stat = stat &quot;$cfg_path&quot;;
-</span><span class=""> 1286: 	unless (@stat) {
-</span><span class=""> 1287: 		Carp::croak &quot;Failed to parse $cfg_shown: $!&quot; unless $!{ENOENT} || $!{ENOTDIR};
+</span><span class=""> 1284: 	# silently change the output.
+</span><span class=""> 1285: 	my @stat = stat &quot;$cfg_path&quot;;
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1286: 	unless (@stat) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1287: 		Carp::croak &quot;Failed to parse $cfg_shown: $!&quot; unless $!{ENOENT} || $!{ENOTDIR};
 </span><span class=""> 1288: 		return {%DEFAULT_DEVELOP};
 </span><span class=""> 1289: 	}
 </span><span class=""> 1290: 
@@ -1666,20 +1666,20 @@ is( func(VALUE_AT_BOUNDARY), EXPECTED, &#39;Test boundary behaviour&#39; );
 </span><span class=""> 1296: 	# Guard: unreadable or invalid YAML.  YAML::Tiny reports failure by dying
 </span><span class=""> 1297: 	# (current versions) or by returning false with errstr set (older ones);
 </span><span class=""> 1298: 	# both become the single documented message, without YAML::Tiny&#39;s own
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1299: 	# location.
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1300: 	my $yaml = eval { YAML::Tiny-&gt;read(&quot;$cfg_path&quot;) };
-</span><span class=""> 1301: 	unless ($yaml) {
-</span><span class=""> 1302: 		my $err = $@ || YAML::Tiny-&gt;errstr() // q{};
+</span><span class=""> 1299: 	# location.
+</span><span class=""> 1300: 	my $yaml = eval { YAML::Tiny-&gt;read(&quot;$cfg_path&quot;) };
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1301: 	unless ($yaml) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1302: 		my $err = $@ || YAML::Tiny-&gt;errstr() // q{};
 </span><span class=""> 1303: 		$err =~ s/[ ]at[ ]\S++[ ]line[ ]\d++\.?\n?\z//x;
 </span><span class=""> 1304: 		Carp::croak &quot;Failed to parse $cfg_shown: &quot; . _printable($err);
 </span><span class=""> 1305: 	}
 </span><span class=""> 1306: 
 </span><span class=""> 1307: 	# Guard: no develop hash.  Checking the document&#39;s type first means a
 </span><span class=""> 1308: 	# document that is not a hash is never dereferenced.
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">1309 → 1311 → 1320</span></span> 1309: 	my $doc     = $yaml-&gt;[0];
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1310: 	my $develop = ref $doc eq &#39;HASH&#39; ? $doc-&gt;{develop} : undef;
-</span><span class=""> 1311: 	unless (ref $develop eq &#39;HASH&#39;) {
-</span><span class=""> 1312: 		Carp::carp &quot;No &#39;develop&#39; key found in $cfg_shown; using defaults&quot;;
+</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">1309 → 1311 → 1320</span></span> 1309: 	my $doc     = $yaml-&gt;[0];
+</span><span class=""> 1310: 	my $develop = ref $doc eq &#39;HASH&#39; ? $doc-&gt;{develop} : undef;
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1311: 	unless (ref $develop eq &#39;HASH&#39;) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1312: 		Carp::carp &quot;No &#39;develop&#39; key found in $cfg_shown; using defaults&quot;;
 </span><span class=""> 1313: 		return {%DEFAULT_DEVELOP};
 </span><span class=""> 1314: 	}
 </span><span class=""> 1315: 
@@ -1687,24 +1687,24 @@ is( func(VALUE_AT_BOUNDARY), EXPECTED, &#39;Test boundary behaviour&#39; );
 </span><span class=""> 1317: 	# use.  Keys are arbitrary strings: without this guard a key such as
 </span><span class=""> 1318: 	# &quot;Safe&#39;; system(&#39;evil&#39;); requires &#39;X&quot; would close the quoted literal in
 </span><span class=""> 1319: 	# _fmt_dep and inject code into the generated cpanfile, which cpanm runs.
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">1320 → 1321 → 1336</span></span> 1320: 	my %clean;
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1321: 	for my $mod (keys %{$develop}) {
-</span><span class=""> 1322: 		unless ($mod =~ $MODULE_NAME_RE) {
-</span><span class=""> 1323: 			Carp::carp &quot;Skipping invalid module name in $cfg_shown: &#39;&quot; . _printable($mod) . q{&#39;};
+</span><span class=""><span class="lcsaj-tip"><span class="lcsaj-dot">●</span><span class="lcsaj-tip-text">1320 → 1321 → 1336</span></span> 1320: 	my %clean;
+</span><span class=""> 1321: 	for my $mod (keys %{$develop}) {
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1322: 		unless ($mod =~ $MODULE_NAME_RE) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1323: 			Carp::carp &quot;Skipping invalid module name in $cfg_shown: &#39;&quot; . _printable($mod) . q{&#39;};
 </span><span class=""> 1324: 			next;
 </span><span class=""> 1325: 		}
 </span><span class=""> 1326: 		# Premise 1: a null value means &quot;any version&quot;, i.e. 0.
 </span><span class=""> 1327: 		# Premise 2: _valid_requirement accepts &#39;0&#39; (it contains a digit).
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1328: 		# Conclusion: &#39;&#39; is the only extra value that needs allowing.
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1329: 		my $v = $develop-&gt;{$mod} // 0;
-</span><span class=""> 1330: 		unless ($v eq q{} || _valid_requirement($v)) {
-</span><span class=""> 1331: 			Carp::carp &quot;Skipping invalid version for &#39;$mod&#39; in $cfg_shown: &#39;&quot; . _printable($v) . q{&#39;};
+</span><span class=""> 1328: 		# Conclusion: &#39;&#39; is the only extra value that needs allowing.
+</span><span class=""> 1329: 		my $v = $develop-&gt;{$mod} // 0;
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1330: 		unless ($v eq q{} || _valid_requirement($v)) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1331: 			Carp::carp &quot;Skipping invalid version for &#39;$mod&#39; in $cfg_shown: &#39;&quot; . _printable($v) . q{&#39;};
 </span><span class=""> 1332: 			$v = 0;
 </span><span class=""> 1333: 		}
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1334: 		$clean{$mod} = $v;
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1335: 	}
-</span><span class=""> 1336: 	return \%clean;
-</span><span class=""> 1337: }
+</span><span class=""> 1334: 		$clean{$mod} = $v;
+</span><span class=""> 1335: 	}
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1336: 	return \%clean;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1337: }
 </span><span class=""> 1338: 
 </span><span class=""> 1339: # _emit
 </span><span class=""> 1340: #
@@ -1739,10 +1739,10 @@ is( func(VALUE_AT_BOUNDARY), EXPECTED, &#39;Test boundary behaviour&#39; );
 </span><span class=""> 1369: 		push @sections, $phase eq &#39;runtime&#39;
 </span><span class=""> 1370: 			? $body =~ s/\n\z//rx		# the blank-line separator is added by join
 </span><span class=""> 1371: 			: &quot;on &#39;$phase&#39; =&gt; sub {\n$body};&quot;;
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1372: 	}
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1373: 
-</span><span class=""> 1374: 	return join(&quot;\n\n&quot;, @sections) . &quot;\n&quot;;
-</span><span class=""> 1375: }
+</span><span class=""> 1372: 	}
+</span><span class=""> 1373: 
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1374: 	return join(&quot;\n\n&quot;, @sections) . &quot;\n&quot;;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1375: }
 </span><span class=""> 1376: 
 </span><span class=""> 1377: # _phase_entries
 </span><span class=""> 1378: #
@@ -1756,10 +1756,10 @@ is( func(VALUE_AT_BOUNDARY), EXPECTED, &#39;Test boundary behaviour&#39; );
 </span><span class=""> 1386: 	my @entries;
 </span><span class=""> 1387: 	for my $rel (@REL_ORDER) {
 </span><span class=""> 1388: 		my $mods = $phase-&gt;{$rel} || {};
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1389: 		push @entries, [ $rel, $_, $mods-&gt;{$_} ] for sort keys %{$mods};
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1390: 	}
-</span><span class=""> 1391: 	return \@entries;
-</span><span class=""> 1392: }
+</span><span class=""> 1389: 		push @entries, [ $rel, $_, $mods-&gt;{$_} ] for sort keys %{$mods};
+</span><span class=""> 1390: 	}
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1391: 	return \@entries;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1392: }
 </span><span class=""> 1393: 
 </span><span class=""> 1394: # _fmt_dep
 </span><span class=""> 1395: #
@@ -1778,16 +1778,16 @@ is( func(VALUE_AT_BOUNDARY), EXPECTED, &#39;Test boundary behaviour&#39; );
 </span><span class=""> 1408: 
 </span><span class=""> 1409: 	# Premise 1: every producer of entries stores a comment that is undef
 </span><span class=""> 1410: 	# or non-empty (_extract_pairs turns an empty comment into undef; merged
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1411: 	# and configured entries have none).  Premise 2: _fmt_dep is only called
-</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1412: 	# by _emit on such entries.  Conclusion: defined() is sufficient.
-</span><span class=""> 1413: 	if (defined $entry-&gt;{comment}) {
-</span><span class=""> 1414: 		$line .= &quot;;   # $entry-&gt;{comment}\n&quot;;
+</span><span class=""> 1411: 	# and configured entries have none).  Premise 2: _fmt_dep is only called
+</span><span class=""> 1412: 	# by _emit on such entries.  Conclusion: defined() is sufficient.
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1413: 	if (defined $entry-&gt;{comment}) {
+</span><p> <b> Mutants (Total: 1, Killed: 1, Survived: 0)</b><p><span class=""> 1414: 		$line .= &quot;;   # $entry-&gt;{comment}\n&quot;;
 </span><span class=""> 1415: 	} else {
 </span><span class=""> 1416: 		$line .= &quot;;\n&quot;;
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1417: 	}
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1418: 
-</span><span class=""> 1419: 	return $line;
-</span><span class=""> 1420: }
+</span><span class=""> 1417: 	}
+</span><span class=""> 1418: 
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1419: 	return $line;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1420: }
 </span><span class=""> 1421: 
 </span><span class=""> 1422: # _has_version
 </span><span class=""> 1423: #
@@ -1804,12 +1804,12 @@ is( func(VALUE_AT_BOUNDARY), EXPECTED, &#39;Test boundary behaviour&#39; );
 </span><span class=""> 1434: 	# &#39;_&#39;, optional &#39;v&#39;) or a range, which always contains an operator.
 </span><span class=""> 1435: 	# Premise 2: a single version is zero exactly when none of its digits is
 </span><span class=""> 1436: 	# 1-9 (&#39;0&#39;, &#39;0.000&#39;, &#39;v0.0.0&#39;, &#39;0_0&#39;); a range means &quot;any version&quot; only
-</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1437: 	# when it is &#39;&gt;=&#39; a zero version.
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1438: 	# Conclusion: two tests decide it.
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1439: 	return 0 unless defined $ver;
-</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1440: 	return $ver =~ /\A \s* &gt;= \s* v? [0._]* \s* \z/x ? 0 : 1 if $ver =~ /[&lt;&gt;=!]/x;
-</span><span class=""> 1441: 	return $ver =~ /[1-9]/x ? 1 : 0;
-</span><span class=""> 1442: }
+</span><span class=""> 1437: 	# when it is &#39;&gt;=&#39; a zero version.
+</span><span class=""> 1438: 	# Conclusion: two tests decide it.
+</span><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1439: 	return 0 unless defined $ver;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1440: 	return $ver =~ /\A \s* &gt;= \s* v? [0._]* \s* \z/x ? 0 : 1 if $ver =~ /[&lt;&gt;=!]/x;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class="killed tooltip" data-tooltip="Mutations here were killed. Tests are effectively covering this logic."> 1441: 	return $ver =~ /[1-9]/x ? 1 : 0;
+</span><p> <b> Mutants (Total: 2, Killed: 2, Survived: 0)</b><p><span class=""> 1442: }
 </span><span class=""> 1443: 
 </span><span class=""> 1444: 
 </span><span class=""> 1445: # -----------------------------------------------------------------------
